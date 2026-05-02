@@ -330,39 +330,6 @@ func (s *ticketService) AssignTicket(req request.AssignTicketRequest, operator *
 	return nil
 }
 
-func (s *ticketService) BatchAssignTickets(req request.BatchAssignTicketRequest, operator *dto.AuthPrincipal) error {
-	if operator == nil {
-		return errorsx.Unauthorized("未登录或登录已过期")
-	}
-	ticketIDs := normalizeInt64IDs(req.TicketIDs)
-	if len(ticketIDs) == 0 {
-		return errorsx.InvalidParam("请选择工单")
-	}
-	assignedEvents := make([]events.TicketAssignedEvent, 0, len(ticketIDs))
-	if err := sqls.WithTransaction(func(ctx *sqls.TxContext) error {
-		for _, ticketID := range ticketIDs {
-			event, err := s.assignTicketTx(ctx.Tx, request.AssignTicketRequest{
-				TicketID: ticketID,
-				ToUserID: req.ToUserID,
-				Reason:   req.Reason,
-			}, operator)
-			if err != nil {
-				return err
-			}
-			if event != nil {
-				assignedEvents = append(assignedEvents, *event)
-			}
-		}
-		return nil
-	}); err != nil {
-		return err
-	}
-	for i := range assignedEvents {
-		eventbus.PublishAsync(context.Background(), assignedEvents[i])
-	}
-	return nil
-}
-
 func (s *ticketService) ChangeStatus(req request.ChangeTicketStatusRequest, operator *dto.AuthPrincipal) error {
 	if operator == nil {
 		return errorsx.Unauthorized("未登录或登录已过期")

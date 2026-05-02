@@ -8,7 +8,6 @@ import { toast } from "sonner"
 import { OptionCombobox, type ComboboxOption } from "@/components/option-combobox"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import {
   Table,
@@ -36,7 +35,6 @@ import {
 } from "@/lib/api/ticket"
 import { cn, formatDateTime } from "@/lib/utils"
 import { EditDialog } from "./_components/edit"
-import { TicketAssignDialog } from "./_components/ticket-assign-dialog"
 import { TicketDetailDialog } from "./_components/ticket-detail-dialog"
 import { TicketStatusBadge } from "./_components/ticket-status-badge"
 
@@ -115,8 +113,6 @@ export default function TicketsPage() {
   const [assigneeOptions, setAssigneeOptions] = useState<ComboboxOption[]>([assigneeAllOption])
   const [tagOptions, setTagOptions] = useState<ComboboxOption[]>([tagAllOption])
   const [loading, setLoading] = useState(false)
-  const [selectedTicketIds, setSelectedTicketIds] = useState<Set<number>>(new Set())
-  const [batchAssignOpen, setBatchAssignOpen] = useState(false)
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
@@ -136,9 +132,6 @@ export default function TicketsPage() {
       ] satisfies Array<{ key: QuickViewKey; label: string; count: number }>,
     [summary],
   )
-
-  const selectedIds = useMemo(() => Array.from(selectedTicketIds), [selectedTicketIds])
-  const allPageSelected = tickets.length > 0 && tickets.every((ticket) => selectedTicketIds.has(ticket.id))
 
   const loadData = useCallback(async () => {
     const seq = loadSeqRef.current + 1
@@ -176,7 +169,6 @@ export default function TicketsPage() {
       }
       setTickets(Array.isArray(ticketData.results) ? ticketData.results : [])
       setSummary(summaryData ?? emptySummary)
-      setSelectedTicketIds(new Set())
     } catch (error) {
       if (loadSeqRef.current !== seq) {
         return
@@ -228,32 +220,6 @@ export default function TicketsPage() {
       active = false
     }
   }, [])
-
-  function toggleTicket(ticketId: number, checked: boolean) {
-    setSelectedTicketIds((current) => {
-      const next = new Set(current)
-      if (checked) {
-        next.add(ticketId)
-      } else {
-        next.delete(ticketId)
-      }
-      return next
-    })
-  }
-
-  function togglePage(checked: boolean) {
-    setSelectedTicketIds((current) => {
-      const next = new Set(current)
-      tickets.forEach((ticket) => {
-        if (checked) {
-          next.add(ticket.id)
-        } else {
-          next.delete(ticket.id)
-        }
-      })
-      return next
-    })
-  }
 
   function resetFilters() {
     setQuickView("all")
@@ -366,32 +332,10 @@ export default function TicketsPage() {
         </Button>
       </div>
 
-      <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
-        <div className="text-sm text-muted-foreground">
-          已选择 <span className="font-medium text-foreground">{selectedTicketIds.size}</span> 张工单
-        </div>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={selectedTicketIds.size === 0}
-          onClick={() => setBatchAssignOpen(true)}
-        >
-          批量指派
-        </Button>
-      </div>
-
       <div className="overflow-hidden rounded-lg border border-border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-10">
-                <Checkbox
-                  checked={allPageSelected}
-                  onCheckedChange={(checked) => togglePage(!!checked)}
-                  aria-label="选择当前页工单"
-                />
-              </TableHead>
               <TableHead>工单</TableHead>
               <TableHead className="w-28">状态</TableHead>
               <TableHead className="w-36">负责人</TableHead>
@@ -402,20 +346,13 @@ export default function TicketsPage() {
           <TableBody>
             {tickets.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-12 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={5} className="py-12 text-center text-sm text-muted-foreground">
                   {loading ? "加载中..." : "暂无工单"}
                 </TableCell>
               </TableRow>
             ) : (
               tickets.map((ticket) => (
                 <TableRow key={ticket.id}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedTicketIds.has(ticket.id)}
-                      onCheckedChange={(checked) => toggleTicket(ticket.id, !!checked)}
-                      aria-label={`选择工单 ${ticket.ticketNo}`}
-                    />
-                  </TableCell>
                   <TableCell>
                     <div className="min-w-0 space-y-1">
                       <div className="truncate text-sm font-medium">{ticket.title}</div>
@@ -470,13 +407,6 @@ export default function TicketsPage() {
         </Table>
       </div>
 
-      <TicketAssignDialog
-        open={batchAssignOpen}
-        ticketId={null}
-        ticketIds={selectedIds}
-        onOpenChange={setBatchAssignOpen}
-        onSuccess={loadData}
-      />
       <EditDialog
         open={createOpen}
         saving={savingCreate}

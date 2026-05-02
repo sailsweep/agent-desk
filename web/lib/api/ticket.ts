@@ -186,17 +186,6 @@ export function assignTicket(payload: {
   })
 }
 
-export function batchAssignTickets(payload: {
-  ticketIds: number[]
-  toUserId: number
-  reason?: string
-}) {
-  return request<void>("/api/dashboard/ticket/batch_assign", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  })
-}
-
 export function changeTicketStatus(payload: {
   ticketId: number
   status: TicketStatus

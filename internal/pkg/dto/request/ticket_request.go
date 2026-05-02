@@ -43,12 +43,6 @@ type CreateTicketProgressRequest struct {
 	Content  string `json:"content"`
 }
 
-type BatchAssignTicketRequest struct {
-	TicketIDs []int64 `json:"ticketIds"`
-	ToUserID  int64   `json:"toUserId"`
-	Reason    string  `json:"reason"`
-}
-
 type SaveTicketViewRequest struct {
 	ID      int64          `json:"id"`
 	Name    string         `json:"name"`
