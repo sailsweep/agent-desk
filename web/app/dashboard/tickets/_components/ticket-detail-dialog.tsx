@@ -7,8 +7,8 @@ import { toast } from "sonner"
 import { type CustomerFormSavePayload } from "@/components/customer-form"
 import { CustomerFormDialog } from "@/components/customer-form-dialog"
 import { CustomerLinkOrCreateDialog } from "@/components/customer-link-or-create-dialog"
+import { ContentEditor } from "@/components/content-editor"
 import { ProjectDialog } from "@/components/project-dialog"
-import { RichTextEditor } from "@/components/rich-text-editor"
 import { isRichTextEmpty, SafeRichHTML } from "@/components/safe-rich-html"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -434,11 +434,13 @@ export function TicketDetailDialog({
                 处理进展
               </div>
               <div className="mt-3 space-y-2">
-                <RichTextEditor
-                  content={progressContent}
-                  onChange={setProgressContent}
+                <ContentEditor
+                  value={{ mode: "html", raw: progressContent }}
+                  onChange={(next) => setProgressContent(next.raw)}
                   placeholder="记录本次处理进展"
                   disabled={progressSaving}
+                  allowedModes={["html"]}
+                  height={220}
                 />
                 <div className="flex justify-end">
                   <Button type="button" size="sm" disabled={progressSaving} onClick={() => void handleCreateProgress()}>

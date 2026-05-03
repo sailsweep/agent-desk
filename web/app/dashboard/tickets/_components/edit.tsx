@@ -7,9 +7,9 @@ import type { Resolver } from "react-hook-form"
 import { Controller, useForm } from "react-hook-form"
 import { z } from "zod/v4"
 
+import { ContentEditor } from "@/components/content-editor"
 import { OptionCombobox } from "@/components/option-combobox"
 import { ProjectDialog } from "@/components/project-dialog"
-import { RichTextEditor } from "@/components/rich-text-editor"
 import { isRichTextEmpty } from "@/components/safe-rich-html"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -375,11 +375,13 @@ function TicketEditDialogBody({
                   control={control}
                   name="description"
                   render={({ field }) => (
-                    <RichTextEditor
-                      content={field.value ?? ""}
-                      onChange={field.onChange}
+                    <ContentEditor
+                      value={{ mode: "html", raw: field.value ?? "" }}
+                      onChange={(next) => field.onChange(next.raw)}
                       placeholder="请输入问题描述"
                       disabled={saving || loading}
+                      allowedModes={["html"]}
+                      height={260}
                     />
                   )}
                 />
