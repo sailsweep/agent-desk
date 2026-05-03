@@ -252,7 +252,7 @@ export function TicketDetailDialog({
         }
         description={
           ticket ? (
-            <span className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="flex flex-wrap items-center gap-2 text-sm">
               <span className="font-mono">{ticket.ticketNo}</span>
               <span>{sourceLabel(ticket.source)}</span>
               <span>创建人：{metadataValue(ticket.createdByName || ticket.createdBy)}</span>
@@ -271,10 +271,10 @@ export function TicketDetailDialog({
             加载中...
           </div>
         ) : ticket ? (
-          <div className="grid h-[min(72vh,680px)] min-h-0 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="grid h-[min(72vh,680px)] min-h-0 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_380px] border-t">
             <div className="min-h-0 space-y-5 overflow-y-auto border-b p-6 lg:border-r lg:border-b-0">
               <section className="space-y-2">
-                <div className="text-xs font-medium text-muted-foreground">描述</div>
+                <div className="text-sm font-medium text-muted-foreground">描述</div>
                 <div className="whitespace-pre-wrap rounded-md border bg-muted/30 px-3 py-2 text-sm leading-6">
                   {ticket.description || "暂无描述"}
                 </div>
@@ -282,7 +282,7 @@ export function TicketDetailDialog({
 
               <section className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
                 <div className="space-y-2">
-                  <div className="text-xs font-medium text-muted-foreground">状态</div>
+                  <div className="text-sm font-medium text-muted-foreground">状态</div>
                   <div className="flex flex-wrap gap-2">
                     {statusOptions.map((option) => (
                       <Button
@@ -299,7 +299,7 @@ export function TicketDetailDialog({
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <div className="text-xs font-medium text-muted-foreground">负责人</div>
+                  <div className="text-sm font-medium text-muted-foreground">负责人</div>
                   <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2">
                     <div className="flex min-w-0 items-center gap-2 text-sm">
                       <UserRoundIcon className="size-4 shrink-0 text-muted-foreground" />
@@ -314,7 +314,7 @@ export function TicketDetailDialog({
 
               <section className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="text-xs font-medium text-muted-foreground">标签</div>
+                  <div className="text-sm font-medium text-muted-foreground">标签</div>
                   <Button type="button" size="sm" variant="outline" onClick={() => setEditOpen(true)}>
                     编辑
                   </Button>
@@ -377,7 +377,7 @@ export function TicketDetailDialog({
                           />
                         </div>
                         <div className="min-w-0 flex-1 pb-3">
-                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                             <span>{progress.authorName || `用户#${progress.authorId}`}</span>
                             <span>{progress.createdAt ? formatDateTime(progress.createdAt) : "-"}</span>
                           </div>
@@ -420,7 +420,7 @@ export function TicketDetailDialog({
 function MetadataItem({ label, value }: { label: string; value?: string | number | null }) {
   return (
     <div className="min-w-0">
-      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="text-sm text-muted-foreground">{label}</div>
       <div className="mt-1 truncate">{metadataValue(value)}</div>
     </div>
   )
