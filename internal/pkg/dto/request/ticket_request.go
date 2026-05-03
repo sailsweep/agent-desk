@@ -27,6 +27,11 @@ type UpdateTicketRequest struct {
 	CurrentAssigneeID int64   `json:"currentAssigneeId"`
 }
 
+type LinkTicketCustomerRequest struct {
+	TicketID   int64 `json:"ticketId"`
+	CustomerID int64 `json:"customerId"`
+}
+
 type AssignTicketRequest struct {
 	TicketID int64  `json:"ticketId"`
 	ToUserID int64  `json:"toUserId"`

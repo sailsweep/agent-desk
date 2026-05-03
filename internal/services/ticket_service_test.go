@@ -119,6 +119,44 @@ func TestTicketServiceCreateTicketPublishesTicketCreatedEvent(t *testing.T) {
 	}
 }
 
+func TestTicketServiceLinkCustomerUpdatesTicketCustomerID(t *testing.T) {
+	setupTicketTestDB(t)
+	operator := createTestOperator(t, "link-ticket-customer")
+	customerID := createTestCustomer(t, "link-ticket-customer")
+	ticket, err := services.TicketService.CreateTicket(createTestTicketRequest("link-ticket-customer"), operator)
+	if err != nil {
+		t.Fatalf("CreateTicket() error = %v", err)
+	}
+	if ticket.CustomerID != 0 {
+		t.Fatalf("expected ticket without customer, got %d", ticket.CustomerID)
+	}
+
+	if err := services.TicketService.LinkCustomer(ticket.ID, customerID, operator); err != nil {
+		t.Fatalf("LinkCustomer() error = %v", err)
+	}
+
+	updated := services.TicketService.Get(ticket.ID)
+	if updated == nil {
+		t.Fatalf("expected ticket")
+	}
+	if updated.CustomerID != customerID {
+		t.Fatalf("expected customer id %d, got %d", customerID, updated.CustomerID)
+	}
+}
+
+func TestTicketServiceLinkCustomerRejectsMissingCustomer(t *testing.T) {
+	setupTicketTestDB(t)
+	operator := createTestOperator(t, "link-ticket-missing-customer")
+	ticket, err := services.TicketService.CreateTicket(createTestTicketRequest("link-ticket-missing-customer"), operator)
+	if err != nil {
+		t.Fatalf("CreateTicket() error = %v", err)
+	}
+
+	if err := services.TicketService.LinkCustomer(ticket.ID, 999999, operator); err == nil {
+		t.Fatalf("expected LinkCustomer() to reject missing customer")
+	}
+}
+
 func TestTicketServiceChangeStatusSetsHandledAt(t *testing.T) {
 	setupTicketTestDB(t)
 	operator := createTestOperator(t, "status-operator")

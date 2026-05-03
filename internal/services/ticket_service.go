@@ -230,8 +230,8 @@ func (s *ticketService) CreateTicket(req request.CreateTicketRequest, operator *
 
 func withSQLiteTicketCreateLock(db *gorm.DB, fn func() error) error {
 	if db != nil && db.Dialector.Name() == "sqlite" {
-		ticketNoSQLiteMu.Lock()
-		defer ticketNoSQLiteMu.Unlock()
+		TicketNoSequenceService.ticketNoSQLiteMu.Lock()
+		defer TicketNoSequenceService.ticketNoSQLiteMu.Unlock()
 	}
 	return fn()
 }
@@ -306,6 +306,35 @@ func (s *ticketService) UpdateTicket(req request.UpdateTicketRequest, operator *
 			return err
 		}
 		return TicketTagService.ReplaceTicketTags(ctx.Tx, ticket.ID, tagIDs, operator)
+	})
+}
+
+func (s *ticketService) LinkCustomer(ticketID int64, customerID int64, operator *dto.AuthPrincipal) error {
+	if operator == nil {
+		return errorsx.Unauthorized("未登录或登录已过期")
+	}
+	ticket := s.Get(ticketID)
+	if ticket == nil {
+		return errorsx.InvalidParam("工单不存在")
+	}
+	if customerID <= 0 || CustomerService.Get(customerID) == nil {
+		return errorsx.InvalidParam("客户不存在")
+	}
+	if ticket.ConversationID > 0 {
+		conversation := ConversationService.Get(ticket.ConversationID)
+		if conversation == nil {
+			return errorsx.InvalidParam("会话不存在")
+		}
+		if conversation.CustomerID > 0 && conversation.CustomerID != customerID {
+			return errorsx.InvalidParam("会话与客户不匹配")
+		}
+	}
+	now := time.Now()
+	return repositories.TicketRepository.Updates(sqls.DB(), ticket.ID, map[string]any{
+		"customer_id":      customerID,
+		"updated_at":       now,
+		"update_user_id":   operator.UserID,
+		"update_user_name": operator.Username,
 	})
 }
 

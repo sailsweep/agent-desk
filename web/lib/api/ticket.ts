@@ -175,6 +175,16 @@ export function updateTicket(payload: UpdateTicketPayload) {
   })
 }
 
+export function linkTicketToCustomer(payload: {
+  ticketId: number
+  customerId: number
+}) {
+  return request<void>("/api/dashboard/ticket/link_customer", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+}
+
 export function assignTicket(payload: {
   ticketId: number
   toUserId: number

@@ -6,6 +6,7 @@ import { toast } from "sonner"
 
 import { type CustomerFormSavePayload } from "@/components/customer-form"
 import { CustomerFormDialog } from "@/components/customer-form-dialog"
+import { CustomerLinkOrCreateDialog } from "@/components/customer-link-or-create-dialog"
 import { ProjectDialog } from "@/components/project-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -58,6 +59,10 @@ function metadataValue(value?: string | number | null) {
   return String(value)
 }
 
+function getTicketCustomerId(ticket?: TicketDetail["ticket"] | null) {
+  return Number(ticket?.customer?.id || ticket?.customerId || 0)
+}
+
 export function TicketDetailDialog({
   ticketId,
   open,
@@ -74,6 +79,7 @@ export function TicketDetailDialog({
   const [editSaving, setEditSaving] = useState(false)
   const [customerEditOpen, setCustomerEditOpen] = useState(false)
   const [customerEditSaving, setCustomerEditSaving] = useState(false)
+  const [customerLinkOpen, setCustomerLinkOpen] = useState(false)
   const loadSeqRef = useRef(0)
   const dialogSeqRef = useRef(0)
   const currentTicketIdRef = useRef<number | null>(null)
@@ -124,6 +130,7 @@ export function TicketDetailDialog({
     setAssignOpen(false)
     setEditOpen(false)
     setCustomerEditOpen(false)
+    setCustomerLinkOpen(false)
     setProgressContent("")
   }, [open, ticketId])
 
@@ -245,7 +252,8 @@ export function TicketDetailDialog({
   }
 
   async function handleUpdateCustomer(payload: CustomerFormSavePayload) {
-    if (!ticket?.id || !ticket.customerId) {
+    const activeCustomerId = getTicketCustomerId(ticket)
+    if (!ticket?.id || activeCustomerId <= 0) {
       toast.error("当前工单未关联客户")
       return
     }
@@ -253,7 +261,6 @@ export function TicketDetailDialog({
       return
     }
     const activeTicketId = ticket.id
-    const activeCustomerId = ticket.customerId
     const activeDialogSeq = dialogSeqRef.current
     setCustomerEditSaving(true)
     try {
@@ -280,7 +287,21 @@ export function TicketDetailDialog({
     }
   }
 
+  async function handleCustomerLinked() {
+    const activeTicketId = ticket?.id
+    const activeDialogSeq = dialogSeqRef.current
+    if (!activeTicketId || !isCurrentOperation(activeTicketId, activeDialogSeq)) {
+      return
+    }
+    await loadDetail(activeTicketId, activeDialogSeq)
+    if (!isCurrentOperation(activeTicketId, activeDialogSeq)) {
+      return
+    }
+    onChanged()
+  }
+
   const ticket = detail?.ticket
+  const customerId = getTicketCustomerId(ticket)
 
   return (
     <>
@@ -378,18 +399,22 @@ export function TicketDetailDialog({
               <section className="space-y-3 rounded-md border p-3 text-sm">
                 <div className="flex items-center justify-between gap-2">
                   <div className="font-medium text-muted-foreground">客户信息</div>
-                  {ticket.customerId > 0 ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 shrink-0 gap-1 px-2 text-xs"
-                      onClick={() => setCustomerEditOpen(true)}
-                    >
-                      <PencilIcon className="size-3.5" />
-                      编辑
-                    </Button>
-                  ) : null}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 shrink-0 gap-1 px-2 text-xs"
+                    onClick={() => {
+                      if (customerId > 0) {
+                        setCustomerEditOpen(true)
+                        return
+                      }
+                      setCustomerLinkOpen(true)
+                    }}
+                  >
+                    <PencilIcon className="size-3.5" />
+                    {customerId > 0 ? "编辑" : "关联或创建"}
+                  </Button>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <MetadataItem label="客户" value={ticket.customer?.name || ticket.customerId} />
@@ -477,8 +502,14 @@ export function TicketDetailDialog({
         open={customerEditOpen}
         onOpenChange={setCustomerEditOpen}
         saving={customerEditSaving}
-        itemId={ticket?.customerId ? ticket.customerId : null}
+        itemId={customerId > 0 ? customerId : null}
         onSave={handleUpdateCustomer}
+      />
+      <CustomerLinkOrCreateDialog
+        open={customerLinkOpen}
+        onOpenChange={setCustomerLinkOpen}
+        ticketId={ticket?.id ?? null}
+        onSuccess={handleCustomerLinked}
       />
     </>
   )
