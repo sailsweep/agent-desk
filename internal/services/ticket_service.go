@@ -64,6 +64,32 @@ func normalizeTicketStaleHours(staleHours int) int {
 	}
 }
 
+func buildTicketAssignmentProgressContent(fromUser *models.User, toUser *models.User, reason string) string {
+	fromName := ticketAssignmentUserDisplayName(fromUser)
+	if fromName == "" {
+		fromName = "未分配"
+	}
+	toName := ticketAssignmentUserDisplayName(toUser)
+	if toName == "" && toUser != nil {
+		toName = toUser.Username
+	}
+	content := "指派处理人：" + fromName + " -> " + toName
+	if trimmedReason := strings.TrimSpace(reason); trimmedReason != "" {
+		content += "，原因：" + trimmedReason
+	}
+	return content
+}
+
+func ticketAssignmentUserDisplayName(user *models.User) string {
+	if user == nil {
+		return ""
+	}
+	if strings.TrimSpace(user.Nickname) != "" {
+		return strings.TrimSpace(user.Nickname)
+	}
+	return strings.TrimSpace(user.Username)
+}
+
 func (s *ticketService) Get(id int64) *models.Ticket {
 	return repositories.TicketRepository.Get(sqls.DB(), id)
 }
@@ -475,12 +501,28 @@ func (s *ticketService) assignTicketTx(tx *gorm.DB, req request.AssignTicketRequ
 	if err := s.validateRequiredAssignee(req.ToUserID); err != nil {
 		return nil, err
 	}
+	toUser := repositories.UserRepository.Get(tx, req.ToUserID)
+	if toUser == nil || toUser.Status != enums.StatusOk {
+		return nil, errorsx.InvalidParam("负责人不存在")
+	}
+	var fromUser *models.User
+	if ticket.CurrentAssigneeID > 0 {
+		fromUser = repositories.UserRepository.Get(tx, ticket.CurrentAssigneeID)
+	}
 	now := time.Now()
 	if err := repositories.TicketRepository.Updates(tx, ticket.ID, map[string]any{
 		"current_assignee_id": req.ToUserID,
 		"updated_at":          now,
 		"update_user_id":      operator.UserID,
 		"update_user_name":    operator.Username,
+	}); err != nil {
+		return nil, err
+	}
+	if err := repositories.TicketProgressRepository.Create(tx, &models.TicketProgress{
+		TicketID:  ticket.ID,
+		Content:   buildTicketAssignmentProgressContent(fromUser, toUser, req.Reason),
+		AuthorID:  operator.UserID,
+		CreatedAt: now,
 	}); err != nil {
 		return nil, err
 	}

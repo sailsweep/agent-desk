@@ -265,6 +265,47 @@ func TestTicketServiceAssignTicketRejectsDisabledUser(t *testing.T) {
 	}
 }
 
+func TestTicketServiceAssignTicketCreatesProgressEntry(t *testing.T) {
+	setupTicketTestDB(t)
+	operator := createTestOperator(t, "assign-progress-operator")
+	firstAssignee := createTestOperator(t, "assign-progress-first")
+	nextAssignee := createTestOperator(t, "assign-progress-next")
+	ticket, err := services.TicketService.CreateTicket(request.CreateTicketRequest{
+		Title:             "assign progress ticket",
+		Description:       "assign progress description",
+		CurrentAssigneeID: firstAssignee.UserID,
+	}, operator)
+	if err != nil {
+		t.Fatalf("CreateTicket() error = %v", err)
+	}
+
+	if err := services.TicketService.AssignTicket(request.AssignTicketRequest{
+		TicketID: ticket.ID,
+		ToUserID: nextAssignee.UserID,
+		Reason:   "需要二线继续跟进",
+	}, operator); err != nil {
+		t.Fatalf("AssignTicket() error = %v", err)
+	}
+
+	progresses := services.TicketProgressService.Find(sqls.NewCnd().Eq("ticket_id", ticket.ID).Asc("id"))
+	if len(progresses) != 2 {
+		t.Fatalf("expected create progress and assignment progress, got %d: %+v", len(progresses), progresses)
+	}
+	assignmentProgress := progresses[1]
+	if assignmentProgress.AuthorID != operator.UserID {
+		t.Fatalf("expected assignment progress author %d, got %d", operator.UserID, assignmentProgress.AuthorID)
+	}
+	if !strings.Contains(assignmentProgress.Content, "指派处理人") {
+		t.Fatalf("expected assignment progress content to mention assignment, got %q", assignmentProgress.Content)
+	}
+	if !strings.Contains(assignmentProgress.Content, firstAssignee.Username) || !strings.Contains(assignmentProgress.Content, nextAssignee.Username) {
+		t.Fatalf("expected assignment progress to include assignee names, got %q", assignmentProgress.Content)
+	}
+	if !strings.Contains(assignmentProgress.Content, "需要二线继续跟进") {
+		t.Fatalf("expected assignment reason in progress content, got %q", assignmentProgress.Content)
+	}
+}
+
 func TestTicketServiceCreateTicketRejectsMismatchedCustomerConversation(t *testing.T) {
 	setupTicketTestDB(t)
 	operator := createTestOperator(t, "mismatch-operator")
