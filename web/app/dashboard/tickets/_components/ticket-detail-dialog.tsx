@@ -1,14 +1,17 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { MessageSquareTextIcon, RefreshCcwIcon, SendIcon, UserRoundIcon } from "lucide-react"
+import { MessageSquareTextIcon, PencilIcon, RefreshCcwIcon, SendIcon, UserRoundIcon } from "lucide-react"
 import { toast } from "sonner"
 
+import { type CustomerFormSavePayload } from "@/components/customer-form"
+import { CustomerFormDialog } from "@/components/customer-form-dialog"
 import { ProjectDialog } from "@/components/project-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
+import { saveCustomerProfile } from "@/lib/api/customer"
 import {
   changeTicketStatus,
   createTicketProgress,
@@ -69,6 +72,8 @@ export function TicketDetailDialog({
   const [assignOpen, setAssignOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [editSaving, setEditSaving] = useState(false)
+  const [customerEditOpen, setCustomerEditOpen] = useState(false)
+  const [customerEditSaving, setCustomerEditSaving] = useState(false)
   const loadSeqRef = useRef(0)
   const dialogSeqRef = useRef(0)
   const currentTicketIdRef = useRef<number | null>(null)
@@ -115,8 +120,10 @@ export function TicketDetailDialog({
     setStatusSaving(null)
     setProgressSaving(false)
     setEditSaving(false)
+    setCustomerEditSaving(false)
     setAssignOpen(false)
     setEditOpen(false)
+    setCustomerEditOpen(false)
     setProgressContent("")
   }, [open, ticketId])
 
@@ -237,6 +244,42 @@ export function TicketDetailDialog({
     }
   }
 
+  async function handleUpdateCustomer(payload: CustomerFormSavePayload) {
+    if (!ticket?.id || !ticket.customerId) {
+      toast.error("当前工单未关联客户")
+      return
+    }
+    if (customerEditSaving) {
+      return
+    }
+    const activeTicketId = ticket.id
+    const activeCustomerId = ticket.customerId
+    const activeDialogSeq = dialogSeqRef.current
+    setCustomerEditSaving(true)
+    try {
+      await saveCustomerProfile({ ...payload, id: activeCustomerId })
+      if (!isCurrentOperation(activeTicketId, activeDialogSeq)) {
+        return
+      }
+      toast.success("已保存")
+      setCustomerEditOpen(false)
+      await loadDetail(activeTicketId, activeDialogSeq)
+      if (!isCurrentOperation(activeTicketId, activeDialogSeq)) {
+        return
+      }
+      onChanged()
+    } catch (error) {
+      if (!isCurrentOperation(activeTicketId, activeDialogSeq)) {
+        return
+      }
+      toast.error(error instanceof Error ? error.message : "保存失败")
+    } finally {
+      if (isCurrentOperation(activeTicketId, activeDialogSeq)) {
+        setCustomerEditSaving(false)
+      }
+    }
+  }
+
   const ticket = detail?.ticket
 
   return (
@@ -332,13 +375,30 @@ export function TicketDetailDialog({
                 )}
               </section>
 
-              <section className="grid gap-3 rounded-md border p-3 text-sm sm:grid-cols-2">
-                <MetadataItem label="客户" value={ticket.customer?.name || ticket.customerId} />
-                <MetadataItem label="联系方式" value={ticket.customer?.primaryMobile || ticket.customer?.primaryEmail} />
-                <MetadataItem label="来源" value={sourceLabel(ticket.source)} />
-                <MetadataItem label="渠道" value={ticket.channel} />
-                <MetadataItem label="会话 ID" value={ticket.conversationId || undefined} />
-                <MetadataItem label="最后更新" value={ticket.updatedAt ? formatDateTime(ticket.updatedAt) : undefined} />
+              <section className="space-y-3 rounded-md border p-3 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-medium text-muted-foreground">客户信息</div>
+                  {ticket.customerId > 0 ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 shrink-0 gap-1 px-2 text-xs"
+                      onClick={() => setCustomerEditOpen(true)}
+                    >
+                      <PencilIcon className="size-3.5" />
+                      编辑
+                    </Button>
+                  ) : null}
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <MetadataItem label="客户" value={ticket.customer?.name || ticket.customerId} />
+                  <MetadataItem label="联系方式" value={ticket.customer?.primaryMobile || ticket.customer?.primaryEmail} />
+                  <MetadataItem label="来源" value={sourceLabel(ticket.source)} />
+                  <MetadataItem label="渠道" value={ticket.channel} />
+                  <MetadataItem label="会话 ID" value={ticket.conversationId || undefined} />
+                  <MetadataItem label="最后更新" value={ticket.updatedAt ? formatDateTime(ticket.updatedAt) : undefined} />
+                </div>
               </section>
             </div>
 
@@ -412,6 +472,13 @@ export function TicketDetailDialog({
         itemId={ticket?.id ?? null}
         onOpenChange={setEditOpen}
         onSubmit={handleUpdateTicket}
+      />
+      <CustomerFormDialog
+        open={customerEditOpen}
+        onOpenChange={setCustomerEditOpen}
+        saving={customerEditSaving}
+        itemId={ticket?.customerId ? ticket.customerId : null}
+        onSave={handleUpdateCustomer}
       />
     </>
   )

@@ -199,7 +199,7 @@ func (s *ticketService) CreateTicket(req request.CreateTicketRequest, operator *
 
 	if err := withSQLiteTicketCreateLock(sqls.DB(), func() error {
 		return sqls.WithTransaction(func(ctx *sqls.TxContext) error {
-			ticketNo, err := TicketNoService.nextWithRetry(ctx.Tx, now)
+			ticketNo, err := TicketNoSequenceService.nextWithRetry(ctx.Tx, now)
 			if err != nil {
 				return err
 			}

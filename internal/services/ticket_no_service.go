@@ -11,29 +11,29 @@ import (
 	"gorm.io/gorm"
 )
 
-var TicketNoService = newTicketNoService()
+var TicketNoSequenceService = newTicketNoSequenceService()
 
-var ticketNoSQLiteMu sync.Mutex
-
-func newTicketNoService() *ticketNoService {
-	return &ticketNoService{}
+func newTicketNoSequenceService() *ticketNoSequenceService {
+	return &ticketNoSequenceService{}
 }
 
-type ticketNoService struct{}
+type ticketNoSequenceService struct {
+	ticketNoSQLiteMu sync.Mutex
+}
 
-func (s *ticketNoService) Next(tx *gorm.DB, now time.Time) (string, error) {
+func (s *ticketNoSequenceService) Next(tx *gorm.DB, now time.Time) (string, error) {
 	if tx == nil {
 		return "", fmt.Errorf("ticket number transaction is required")
 	}
 	if tx.Dialector.Name() == "sqlite" {
-		ticketNoSQLiteMu.Lock()
-		defer ticketNoSQLiteMu.Unlock()
+		s.ticketNoSQLiteMu.Lock()
+		defer s.ticketNoSQLiteMu.Unlock()
 		return s.nextWithRetry(tx, now)
 	}
 	return s.nextWithRetry(tx, now)
 }
 
-func (s *ticketNoService) nextWithRetry(tx *gorm.DB, now time.Time) (string, error) {
+func (s *ticketNoSequenceService) nextWithRetry(tx *gorm.DB, now time.Time) (string, error) {
 	dateKey := now.Format("20060102")
 	for attempt := 0; attempt < 100; attempt++ {
 		current, err := repositories.TicketNoSequenceRepository.GetByDateKeyForUpdate(tx, dateKey)

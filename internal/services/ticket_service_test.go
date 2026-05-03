@@ -391,7 +391,7 @@ func TestTicketServiceTicketNoNextConcurrent(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			err := sqls.WithTransaction(func(ctx *sqls.TxContext) error {
-				ticketNo, err := services.TicketNoService.Next(ctx.Tx, time.Now())
+				ticketNo, err := services.TicketNoSequenceService.Next(ctx.Tx, time.Now())
 				if err != nil {
 					return err
 				}
