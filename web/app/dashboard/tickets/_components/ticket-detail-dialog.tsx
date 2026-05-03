@@ -252,11 +252,11 @@ export function TicketDetailDialog({
         }
         description={
           ticket ? (
-            <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="flex flex-wrap items-center gap-2 text-xs">
               <span className="font-mono">{ticket.ticketNo}</span>
               <span>{sourceLabel(ticket.source)}</span>
               <span>创建人：{metadataValue(ticket.createdByName || ticket.createdBy)}</span>
-            </div>
+            </span>
           ) : undefined
         }
         size="xl"
