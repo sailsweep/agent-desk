@@ -8,10 +8,11 @@ import { type CustomerFormSavePayload } from "@/components/customer-form"
 import { CustomerFormDialog } from "@/components/customer-form-dialog"
 import { CustomerLinkOrCreateDialog } from "@/components/customer-link-or-create-dialog"
 import { ProjectDialog } from "@/components/project-dialog"
+import { RichTextEditor } from "@/components/rich-text-editor"
+import { isRichTextEmpty, SafeRichHTML } from "@/components/safe-rich-html"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Textarea } from "@/components/ui/textarea"
 import { saveCustomerProfile } from "@/lib/api/customer"
 import {
   changeTicketStatus,
@@ -175,7 +176,7 @@ export function TicketDetailDialog({
     const activeTicketId = detail.ticket.id
     const activeDialogSeq = dialogSeqRef.current
     const content = progressContent.trim()
-    if (!content) {
+    if (isRichTextEmpty(content)) {
       toast.error("请填写处理进展")
       return
     }
@@ -339,8 +340,8 @@ export function TicketDetailDialog({
             <div className="min-h-0 space-y-5 overflow-y-auto border-b p-6 lg:border-r lg:border-b-0">
               <section className="space-y-2">
                 <div className="text-sm font-medium text-muted-foreground">描述</div>
-                <div className="whitespace-pre-wrap rounded-md border bg-muted/30 px-3 py-2 text-sm leading-6">
-                  {ticket.description || "暂无描述"}
+                <div className="rounded-md border bg-muted/30 px-3 py-2">
+                  <SafeRichHTML html={ticket.description} fallback="暂无描述" />
                 </div>
               </section>
 
@@ -433,11 +434,11 @@ export function TicketDetailDialog({
                 处理进展
               </div>
               <div className="mt-3 space-y-2">
-                <Textarea
-                  rows={3}
+                <RichTextEditor
+                  content={progressContent}
+                  onChange={setProgressContent}
                   placeholder="记录本次处理进展"
-                  value={progressContent}
-                  onChange={(event) => setProgressContent(event.target.value)}
+                  disabled={progressSaving}
                 />
                 <div className="flex justify-end">
                   <Button type="button" size="sm" disabled={progressSaving} onClick={() => void handleCreateProgress()}>
@@ -466,7 +467,7 @@ export function TicketDetailDialog({
                             <span>{progress.authorName || `用户#${progress.authorId}`}</span>
                             <span>{progress.createdAt ? formatDateTime(progress.createdAt) : "-"}</span>
                           </div>
-                          <div className="mt-1 whitespace-pre-wrap text-sm leading-6">{progress.content}</div>
+                          <SafeRichHTML html={progress.content} className="mt-1" />
                         </div>
                       </div>
                     ))}
