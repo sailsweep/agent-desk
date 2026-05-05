@@ -324,14 +324,13 @@ export function TicketDetailDialog({
             </span>
           ) : undefined
         }
-        size="xl"
+        size="xxl"
         allowFullscreen
         bodyScrollable={false}
-        contentClassName="sm:max-w-5xl"
         bodyClassName="overflow-hidden"
       >
         {loading && !ticket ? (
-          <div className="flex h-[520px] items-center justify-center gap-2 text-sm text-muted-foreground">
+          <div className="flex h-130 items-center justify-center gap-2 text-sm text-muted-foreground">
             <RefreshCcwIcon className="size-4 animate-spin" />
             加载中...
           </div>

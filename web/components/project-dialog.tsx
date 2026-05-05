@@ -21,6 +21,7 @@ const dialogSizeClassName = {
   md: "max-w-xl sm:max-w-xl",
   lg: "max-w-2xl sm:max-w-2xl",
   xl: "max-w-4xl sm:max-w-4xl",
+  xxl: "max-w-5xl sm:max-w-5xl",
 } as const;
 
 type ProjectDialogSize = keyof typeof dialogSizeClassName;
