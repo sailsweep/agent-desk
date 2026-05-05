@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { MessageSquareTextIcon, PencilIcon, RefreshCcwIcon, SendIcon, UserRoundIcon } from "lucide-react"
+import { MessageSquareTextIcon, PencilIcon, PlusIcon, RefreshCcwIcon, SendIcon, UserRoundIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import { type CustomerFormSavePayload } from "@/components/customer-form"
@@ -12,6 +12,13 @@ import { ProjectDialog } from "@/components/project-dialog"
 import { isRichTextEmpty, SafeRichHTML } from "@/components/safe-rich-html"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
 import { saveCustomerProfile } from "@/lib/api/customer"
 import {
@@ -74,6 +81,7 @@ export function TicketDetailDialog({
   const [loading, setLoading] = useState(false)
   const [statusSaving, setStatusSaving] = useState<TicketStatus | null>(null)
   const [progressSaving, setProgressSaving] = useState(false)
+  const [progressOpen, setProgressOpen] = useState(false)
   const [progressContent, setProgressContent] = useState("")
   const [assignOpen, setAssignOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -126,6 +134,7 @@ export function TicketDetailDialog({
     setLoading(false)
     setStatusSaving(null)
     setProgressSaving(false)
+    setProgressOpen(false)
     setEditSaving(false)
     setCustomerEditSaving(false)
     setAssignOpen(false)
@@ -191,6 +200,7 @@ export function TicketDetailDialog({
       }
       toast.success("处理进展已记录")
       setProgressContent("")
+      setProgressOpen(false)
       await loadDetail(activeTicketId, activeDialogSeq)
       if (!isCurrentOperation(activeTicketId, activeDialogSeq)) {
         return
@@ -433,29 +443,19 @@ export function TicketDetailDialog({
               </section>
             </div>
 
-            <aside className="flex min-h-0 flex-col p-6">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <MessageSquareTextIcon className="size-4 text-muted-foreground" />
-                处理进展
-              </div>
-              <div className="mt-3 space-y-2">
-                <ContentEditor
-                  value={{ mode: "html", raw: progressContent }}
-                  onChange={(next) => setProgressContent(next.raw)}
-                  placeholder="记录本次处理进展"
-                  disabled={progressSaving}
-                  allowedModes={["html"]}
-                  height={220}
-                />
-                <div className="flex justify-end">
-                  <Button type="button" size="sm" disabled={progressSaving} onClick={() => void handleCreateProgress()}>
-                    <SendIcon className="size-3.5" />
-                    {progressSaving ? "提交中..." : "添加进展"}
-                  </Button>
+            <aside className="flex min-h-0 flex-col">
+              <div className="flex items-center justify-between gap-2 px-4 py-2">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <MessageSquareTextIcon className="size-4 text-muted-foreground" />
+                  处理进展
                 </div>
+                <Button type="button" size="sm" onClick={() => setProgressOpen(true)}>
+                  <PlusIcon className="size-3.5" />
+                  添加进展
+                </Button>
               </div>
-              <Separator className="my-4" />
-              <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+              <Separator />
+              <div className="min-h-0 flex-1 overflow-y-auto p-4">
                 {detail.progresses && detail.progresses.length > 0 ? (
                   <div className="space-y-3">
                     {detail.progresses.map((progress, index) => (
@@ -519,6 +519,51 @@ export function TicketDetailDialog({
         ticketId={ticket?.id ?? null}
         onSuccess={handleCustomerLinked}
       />
+      <Dialog
+        open={progressOpen}
+        onOpenChange={(nextOpen) => {
+          if (progressSaving) {
+            return
+          }
+          setProgressOpen(nextOpen)
+          if (!nextOpen) {
+            setProgressContent("")
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl gap-0 p-0 sm:max-w-3xl">
+          <DialogHeader className="px-6 pt-6">
+            <DialogTitle>添加处理进展</DialogTitle>
+          </DialogHeader>
+          <div className="px-6 py-4">
+            <ContentEditor
+              value={{ mode: "html", raw: progressContent }}
+              onChange={(next) => setProgressContent(next.raw)}
+              placeholder="记录本次处理进展"
+              disabled={progressSaving}
+              allowedModes={["html"]}
+              height={260}
+            />
+          </div>
+          <DialogFooter className="mx-0 mb-0 px-6 py-4">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={progressSaving}
+              onClick={() => {
+                setProgressOpen(false)
+                setProgressContent("")
+              }}
+            >
+              取消
+            </Button>
+            <Button type="button" disabled={progressSaving} onClick={() => void handleCreateProgress()}>
+              <SendIcon className="size-3.5" />
+              {progressSaving ? "提交中..." : "提交"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
