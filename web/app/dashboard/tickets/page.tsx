@@ -1,6 +1,6 @@
 "use client"
 
-import { PlusIcon, RefreshCcwIcon, SearchXIcon } from "lucide-react"
+import { PlusIcon, RefreshCcwIcon, SearchIcon, SearchXIcon } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
@@ -246,9 +246,32 @@ export default function TicketsPage() {
   return (
     <div className="flex flex-col gap-4 p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-normal">工单</h1>
-          <p className="text-sm text-muted-foreground">按状态、负责人和标签快速处理轻量工单</p>
+        <div className="rounded-lg border bg-background/80 p-2">
+          <div className="flex flex-wrap gap-2">
+            {quickViews.map((view) => (
+              <button
+                key={view.key}
+                type="button"
+                className={cn(
+                  "inline-flex min-w-0 items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition",
+                  quickView === view.key
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background hover:bg-muted",
+                )}
+                onClick={() => setQuickView(view.key)}
+              >
+                <span className="truncate font-medium">{view.label}</span>
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums",
+                    quickView === view.key ? "bg-primary-foreground/20" : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {view.count}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button type="button" variant="outline" onClick={() => void loadData()} disabled={loading}>
@@ -259,34 +282,6 @@ export default function TicketsPage() {
             <PlusIcon className="size-4" />
             新建工单
           </Button>
-        </div>
-      </div>
-
-      <div className="rounded-lg border bg-background/80 p-2">
-        <div className="flex flex-wrap gap-2">
-          {quickViews.map((view) => (
-            <button
-              key={view.key}
-              type="button"
-              className={cn(
-                "inline-flex min-w-0 items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition",
-                quickView === view.key
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background hover:bg-muted",
-              )}
-              onClick={() => setQuickView(view.key)}
-            >
-              <span className="truncate font-medium">{view.label}</span>
-              <span
-                className={cn(
-                  "rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums",
-                  quickView === view.key ? "bg-primary-foreground/20" : "bg-muted text-muted-foreground",
-                )}
-              >
-                {view.count}
-              </span>
-            </button>
-          ))}
         </div>
       </div>
 
@@ -329,6 +324,14 @@ export default function TicketsPage() {
         <Button type="button" variant="outline" onClick={resetFilters}>
           <SearchXIcon className="size-4" />
           重置
+        </Button>
+        <Button type="button" variant="outline" onClick={() => void loadData()} disabled={loading}>
+          <RefreshCcwIcon className={cn("size-4", loading ? "animate-spin" : "")} />
+          刷新
+        </Button>
+        <Button type="button" onClick={() => void loadData()} disabled={loading}>
+          <SearchIcon className="size-4" />
+          查询
         </Button>
       </div>
 
