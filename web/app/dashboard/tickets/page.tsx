@@ -246,7 +246,7 @@ export default function TicketsPage() {
   return (
     <div className="flex flex-col gap-4 p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="rounded-lg border bg-background/80 p-2">
+        <div className="">
           <div className="flex flex-wrap gap-2">
             {quickViews.map((view) => (
               <button
@@ -285,7 +285,7 @@ export default function TicketsPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-background/80 p-3">
+      <div className="flex flex-wrap items-center gap-2">
         <Input
           className="w-full sm:w-72"
           placeholder="搜索编号、标题或描述"
