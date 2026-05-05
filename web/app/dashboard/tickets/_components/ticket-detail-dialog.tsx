@@ -420,6 +420,12 @@ export function TicketDetailDialog({
                 <div className="grid gap-3 sm:grid-cols-2">
                   <MetadataItem label="客户" value={ticket.customer?.name || ticket.customerId} />
                   <MetadataItem label="联系方式" value={ticket.customer?.primaryMobile || ticket.customer?.primaryEmail} />
+                </div>
+              </section>
+
+              <section className="space-y-3 rounded-md border p-3 text-sm">
+                <div className="font-medium text-muted-foreground">工单信息</div>
+                <div className="grid gap-3 sm:grid-cols-2">
                   <MetadataItem label="来源" value={sourceLabel(ticket.source)} />
                   <MetadataItem label="渠道" value={ticket.channel} />
                   <MetadataItem label="会话 ID" value={ticket.conversationId || undefined} />
