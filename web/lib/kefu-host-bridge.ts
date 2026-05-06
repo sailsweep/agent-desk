@@ -1,6 +1,6 @@
 import {
   setKefuWidgetConfig,
-  type KefuWidgetHostConfig,
+  type KefuWidgetRuntimeConfig,
 } from "@/lib/kefu-widget-config"
 
 type HostBridgeOptions = {
@@ -32,7 +32,7 @@ export function bindKefuHostBridge(options: HostBridgeOptions = {}) {
     const data = event.data as
       | {
           type?: string
-          payload?: KefuWidgetHostConfig | { isMaximized?: boolean }
+          payload?: KefuWidgetRuntimeConfig | { isMaximized?: boolean }
         }
       | undefined
     if (!data?.type) {
@@ -40,7 +40,7 @@ export function bindKefuHostBridge(options: HostBridgeOptions = {}) {
     }
 
     if (data.type === INIT_MESSAGE_TYPE && data.payload) {
-      setKefuWidgetConfig(data.payload as KefuWidgetHostConfig)
+      setKefuWidgetConfig(data.payload as KefuWidgetRuntimeConfig)
       options.onInit?.()
       return
     }

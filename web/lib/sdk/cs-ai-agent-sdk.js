@@ -19,6 +19,7 @@
       frameHideTimer: null,
       frameDestroyTimer: null,
       config: null,
+      frameConfig: null,
       frameUrl: null,
       animationDuration: 260,
     };
@@ -49,8 +50,8 @@
     if (merged.externalId) {
       merged.externalId = String(merged.externalId);
     }
-    if (merged.userToken) {
-      merged.userToken = String(merged.userToken);
+    if (typeof merged.getUserToken !== "function") {
+      delete merged.getUserToken;
     }
     return merged;
   }
@@ -63,7 +64,7 @@
     return String(config.widgetBaseUrl || config.baseUrl || window.location.origin).replace(/\/$/, "");
   }
 
-  function createFrameUrl(config) {
+  function createFrameUrl(config, userToken) {
     var widgetBaseUrl = resolveWidgetBaseUrl(config);
     var frameUrl = new URL(widgetBaseUrl + "/kefu/chat/");
     frameUrl.searchParams.set("channelId", config.channelId);
@@ -71,8 +72,47 @@
     if (config.apiBaseUrl) frameUrl.searchParams.set("apiBaseUrl", config.apiBaseUrl);
     if (config.externalId) frameUrl.searchParams.set("externalId", config.externalId);
     if (config.externalName) frameUrl.searchParams.set("externalName", config.externalName);
-    if (config.userToken) frameUrl.searchParams.set("userToken", config.userToken);
+    if (userToken) frameUrl.searchParams.set("userToken", userToken);
     return frameUrl;
+  }
+
+  function createFrameConfig(config, userToken) {
+    var payload = {};
+    var key;
+    for (key in config) {
+      if (
+        Object.prototype.hasOwnProperty.call(config, key) &&
+        key !== "getUserToken"
+      ) {
+        payload[key] = config[key];
+      }
+    }
+    if (userToken) {
+      payload.userToken = userToken;
+    }
+    return payload;
+  }
+
+  function resolveUserToken() {
+    var config = state.config || {};
+    if (typeof config.getUserToken !== "function") {
+      return Promise.resolve("");
+    }
+    try {
+      return Promise.resolve(config.getUserToken()).then(function (token) {
+        return String(token || "").trim();
+      });
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  }
+
+  function prepareFrameUrl() {
+    return resolveUserToken().then(function (userToken) {
+      state.frameUrl = createFrameUrl(state.config, userToken);
+      state.frameConfig = createFrameConfig(state.config, userToken);
+      return state.frameUrl;
+    });
   }
 
   function mergeWidgetConfig(config, remoteConfig) {
@@ -199,7 +239,7 @@
       state.initSent = true;
       postToFrame({
         type: "cs-agent:init",
-        payload: state.config,
+        payload: state.frameConfig || createFrameConfig(state.config, ""),
       });
     }
 
@@ -388,11 +428,13 @@
     button.appendChild(text);
 
     button.addEventListener("click", function () {
-      if (!state.frame) {
-        createFrame();
+      if (state.isOpen) {
+        state.isOpen = false;
+        syncFrameVisibility();
+        return;
       }
-      state.isOpen = !state.isOpen;
-      syncFrameVisibility();
+
+      openWidget();
     });
 
     document.body.appendChild(button);
@@ -416,7 +458,6 @@
     fetchWidgetConfig(state.config).then(function (nextConfig) {
       state.configLoading = false;
       state.config = normalizeConfig(nextConfig);
-      state.frameUrl = createFrameUrl(state.config);
       if (state.button && state.button.parentNode) {
         state.button.parentNode.removeChild(state.button);
         state.button = null;
@@ -441,24 +482,47 @@
     state.isOpen = false;
     state.isMaximized = false;
     state.configLoading = false;
+    state.frameConfig = null;
+    state.frameUrl = null;
+  }
+
+  function openWidget() {
+    return prepareFrameUrl()
+      .then(function () {
+        if (!state.frame) {
+          createFrame();
+        }
+        if (!state.frame) {
+          return;
+        }
+        state.isOpen = true;
+        syncFrameVisibility();
+      })
+      .catch(function (error) {
+        console.error("[cs-agent-widget] open failed", error);
+      });
   }
 
   window.CSAgentWidget = {
     mount: mount,
     destroy: destroy,
     open: function () {
-      if (!state.frame) {
-        createFrame();
-      }
-      if (!state.frame) {
-        return;
-      }
-      state.isOpen = true;
-      syncFrameVisibility();
+      return openWidget();
     },
     close: function () {
       state.isOpen = false;
       syncFrameVisibility();
+    },
+    getChatUrl: function () {
+      if (!state.config) {
+        mount(window.CSAgentConfig || {});
+      }
+      if (!state.config || !state.config.channelId) {
+        return Promise.reject(new Error("channelId is required"));
+      }
+      return prepareFrameUrl().then(function (frameUrl) {
+        return frameUrl.toString();
+      });
     },
   };
 

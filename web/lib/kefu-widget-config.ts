@@ -6,8 +6,8 @@ export type KefuWidgetHostConfig = {
   externalId?: string
   /** 访客展示名，仅用于首次换取客服会话 token */
   externalName?: string
-  /** 业务系统签发的前台用户 JWT，仅用于首次换取客服会话 token */
-  userToken?: string
+  /** 打开客服前按需获取业务系统签发的前台用户 JWT */
+  getUserToken?: () => string | Promise<string>
   title?: string
   subtitle?: string
   position?: "left" | "right"
@@ -15,15 +15,20 @@ export type KefuWidgetHostConfig = {
   width?: string
 }
 
+export type KefuWidgetRuntimeConfig = Omit<KefuWidgetHostConfig, "getUserToken"> & {
+  /** 仅用于 /kefu/chat 运行时换取客服会话 token，不属于 CSAgentConfig 接入参数 */
+  userToken?: string
+}
+
 declare global {
   interface Window {
     CSAgentConfig?: KefuWidgetHostConfig
-    __CS_AGENT_WIDGET_CONFIG__?: KefuWidgetHostConfig
+    __CS_AGENT_WIDGET_CONFIG__?: KefuWidgetRuntimeConfig
     __CS_AGENT_WIDGET_STATE__?: unknown
   }
 }
 
-export function readKefuWidgetConfig(): KefuWidgetHostConfig {
+export function readKefuWidgetConfig(): KefuWidgetRuntimeConfig {
   if (typeof window === "undefined") {
     return {
       channelId: "",
@@ -33,7 +38,7 @@ export function readKefuWidgetConfig(): KefuWidgetHostConfig {
   }
 
   const query = new URLSearchParams(window.location.search)
-  const fallback: KefuWidgetHostConfig = {
+  const fallback: KefuWidgetRuntimeConfig = {
     channelId:
       query.get("channelId") ??
       process.env.NEXT_PUBLIC_OPEN_IM_CHANNEL_ID?.trim() ??
@@ -56,10 +61,20 @@ export function readKefuWidgetConfig(): KefuWidgetHostConfig {
     width: query.get("width") ?? undefined,
   }
 
-  return window.__CS_AGENT_WIDGET_CONFIG__ ?? window.CSAgentConfig ?? fallback
+  if (window.__CS_AGENT_WIDGET_CONFIG__) {
+    return window.__CS_AGENT_WIDGET_CONFIG__
+  }
+  if (window.CSAgentConfig) {
+    const { getUserToken: _getUserToken, ...hostConfig } = window.CSAgentConfig
+    return {
+      ...fallback,
+      ...hostConfig,
+    }
+  }
+  return fallback
 }
 
-export function setKefuWidgetConfig(config: KefuWidgetHostConfig) {
+export function setKefuWidgetConfig(config: KefuWidgetRuntimeConfig) {
   if (typeof window === "undefined") {
     return
   }

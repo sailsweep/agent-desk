@@ -1,0 +1,134 @@
+import assert from "node:assert/strict"
+import { readFile } from "node:fs/promises"
+import test from "node:test"
+import vm from "node:vm"
+
+function createElement(tagName) {
+  return {
+    tagName,
+    children: [],
+    dataset: {},
+    style: {},
+    attributes: {},
+    listeners: {},
+    parentNode: null,
+    contentWindow: {},
+    setAttribute(name, value) {
+      this.attributes[name] = String(value)
+    },
+    appendChild(child) {
+      child.parentNode = this
+      this.children.push(child)
+      return child
+    },
+    removeChild(child) {
+      this.children = this.children.filter((item) => item !== child)
+      child.parentNode = null
+      return child
+    },
+    addEventListener(type, handler) {
+      this.listeners[type] = handler
+    },
+    click() {
+      this.listeners.click?.()
+    },
+  }
+}
+
+async function loadSdk(config) {
+  const source = await readFile(new URL("./cs-ai-agent-sdk.js", import.meta.url), "utf8")
+  const body = createElement("body")
+  const sandbox = {
+    URL,
+    console,
+    fetch: async () => ({
+      json: async () => ({
+        success: true,
+        data: {
+          title: "在线客服",
+          themeColor: "#2563eb",
+        },
+      }),
+    }),
+    document: {
+      body,
+      currentScript: {
+        src: "https://chat.example/sdk/cs-ai-agent-sdk.min.js",
+      },
+      createElement,
+      createElementNS: (_namespace, tagName) => createElement(tagName),
+    },
+    window: {
+      CSAgentConfig: config,
+      location: {
+        origin: "https://host.example",
+      },
+      addEventListener() {},
+      clearTimeout() {},
+      setTimeout(handler) {
+        handler()
+        return 1
+      },
+    },
+  }
+  sandbox.window.window = sandbox.window
+  sandbox.window.document = sandbox.document
+  sandbox.window.fetch = sandbox.fetch
+  sandbox.window.console = console
+  sandbox.window.URL = URL
+  sandbox.window.setTimeout = sandbox.window.setTimeout
+  sandbox.window.clearTimeout = sandbox.window.clearTimeout
+
+  vm.runInNewContext(source, sandbox)
+  await Promise.resolve()
+  await Promise.resolve()
+  return sandbox
+}
+
+async function flushPromises(count = 5) {
+  for (let i = 0; i < count; i += 1) {
+    await Promise.resolve()
+  }
+}
+
+test("getChatUrl resolves a fresh userToken for each call", async () => {
+  let calls = 0
+  const sandbox = await loadSdk({
+    channelId: "ch_1",
+    baseUrl: "https://api.example",
+    getUserToken: async () => `token_${++calls}`,
+  })
+
+  assert.equal(typeof sandbox.window.CSAgentWidget.getChatUrl, "function")
+
+  const first = await sandbox.window.CSAgentWidget.getChatUrl()
+  const second = await sandbox.window.CSAgentWidget.getChatUrl()
+
+  assert.equal(new URL(first).searchParams.get("userToken"), "token_1")
+  assert.equal(new URL(second).searchParams.get("userToken"), "token_2")
+  assert.equal(calls, 2)
+})
+
+test("launcher click creates chat iframe with a freshly resolved userToken", async () => {
+  const sandbox = await loadSdk({
+    channelId: "ch_1",
+    baseUrl: "https://api.example",
+    getUserToken: async () => "click_token",
+  })
+  await flushPromises()
+  const launcher = sandbox.document.body.children.find(
+    (child) => child.dataset.csAgentWidget === "launcher"
+  )
+
+  assert.ok(launcher)
+
+  launcher.click()
+  await flushPromises()
+
+  const frame = sandbox.document.body.children.find(
+    (child) => child.dataset.csAgentWidget === "frame"
+  )
+
+  assert.ok(frame)
+  assert.equal(new URL(frame.src).searchParams.get("userToken"), "click_token")
+})

@@ -29,7 +29,9 @@ declare global {
     CSAgentWidget?: {
       mount: (config: KefuWidgetHostConfig) => void
       destroy: () => void
+      open: () => Promise<void>
       close: () => void
+      getChatUrl: () => Promise<string>
     }
   }
 }
@@ -86,14 +88,16 @@ function injectWidget(config: KefuWidgetHostConfig) {
   document.body.appendChild(script)
 }
 
-function buildWidgetConfig(config: WidgetDemoConfig, userToken: string): WidgetDemoConfig {
-  return {
-    ...config,
+function buildWidgetConfig(config: WidgetDemoConfig): KefuWidgetHostConfig {
+  const nextConfig: KefuWidgetHostConfig = {
     channelId: config.channelId.trim(),
     baseUrl: "",
     apiBaseUrl: "",
-    userToken,
   }
+  if (config.authMode === "jwt") {
+    nextConfig.getUserToken = () => signUserToken(config)
+  }
+  return nextConfig
 }
 
 async function signUserToken(config: WidgetDemoConfig) {
@@ -134,19 +138,23 @@ export function KefuWidgetDemo() {
   const [status, setStatus] = useState("请填写 channelId")
   const [origin, setOrigin] = useState("")
   const [generatedToken, setGeneratedToken] = useState("")
+  const [latestDirectChatUrl, setLatestDirectChatUrl] = useState("")
   const [copied, setCopied] = useState(false)
   const [snippetCopied, setSnippetCopied] = useState(false)
 
   async function mountWidget(configToMount: WidgetDemoConfig) {
-    let userToken = ""
-    if (configToMount.authMode === "jwt") {
-      userToken = await signUserToken(configToMount)
+    const cleanConfig = {
+      ...configToMount,
+      channelId: configToMount.channelId.trim(),
+      baseUrl: "",
+      apiBaseUrl: "",
+      getUserToken: undefined,
     }
-
-    const nextConfig = buildWidgetConfig(configToMount, userToken)
-    setConfig(nextConfig)
-    setGeneratedToken(userToken)
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextConfig))
+    const nextConfig = buildWidgetConfig(cleanConfig)
+    setConfig(cleanConfig)
+    setGeneratedToken("")
+    setLatestDirectChatUrl("")
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanConfig))
 
     if (!nextConfig.channelId) {
       removeMountedWidget()
@@ -156,7 +164,7 @@ export function KefuWidgetDemo() {
 
     injectWidget(nextConfig)
     setStatus(
-      nextConfig.authMode === "jwt"
+      cleanConfig.authMode === "jwt"
         ? "Widget 已挂载：JWT 用户模式"
         : "Widget 已挂载：访客模式"
     )
@@ -173,7 +181,7 @@ export function KefuWidgetDemo() {
         void mountWidget(initialConfig).catch((error) => {
           removeMountedWidget()
           setGeneratedToken("")
-          setStatus(error instanceof Error ? error.message : "生成 userToken 失败")
+          setStatus(error instanceof Error ? error.message : "挂载 Widget 失败")
         })
       }
     }, 0)
@@ -191,7 +199,11 @@ export function KefuWidgetDemo() {
 
     const configLines = [`    channelId: "${config.channelId || ""}"`]
     if (config.authMode === "jwt") {
-      configLines.push(`    userToken: "${generatedToken || "业务系统后端签发的 JWT"}"`)
+      configLines.push(`    async getUserToken() {
+      const res = await fetch("/api/kefu/user-token", { credentials: "include" });
+      const data = await res.json();
+      return data.userToken;
+    }`)
     }
 
     return `<script>
@@ -200,22 +212,7 @@ ${configLines.join(",\n")}
   };
 </script>
 <script async src="${scriptSrc}"></script>`
-  }, [config, generatedToken, origin])
-
-  const directChatUrl = useMemo(() => {
-    const base = origin || ""
-    const channelId = (config.channelId || "").trim()
-    if (!base || !channelId) {
-      return ""
-    }
-
-    const url = new URL("/kefu/chat/", base)
-    url.searchParams.set("channelId", channelId)
-    if (config.authMode === "jwt" && generatedToken) {
-      url.searchParams.set("userToken", generatedToken)
-    }
-    return url.toString()
-  }, [config.authMode, config.channelId, generatedToken, origin])
+  }, [config.authMode, config.channelId, origin])
 
   function updateField<K extends keyof WidgetDemoConfig>(
     key: K,
@@ -230,17 +227,42 @@ ${configLines.join(",\n")}
     } catch (error) {
       removeMountedWidget()
       setGeneratedToken("")
-      setStatus(error instanceof Error ? error.message : "生成 userToken 失败")
+      setStatus(error instanceof Error ? error.message : "挂载 Widget 失败")
     }
   }
 
   async function handleCopyDirectUrl() {
-    if (!directChatUrl || typeof navigator === "undefined") {
+    if (!window.CSAgentWidget || typeof navigator === "undefined") {
       return
     }
-    await navigator.clipboard.writeText(directChatUrl)
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 1600)
+    try {
+      const url = await window.CSAgentWidget.getChatUrl()
+      setLatestDirectChatUrl(url)
+      if (config.authMode === "jwt") {
+        setGeneratedToken(new URL(url).searchParams.get("userToken") || "")
+      }
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1600)
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "生成客服链接失败")
+    }
+  }
+
+  async function handleOpenDirectChat() {
+    if (!window.CSAgentWidget) {
+      return
+    }
+    try {
+      const url = await window.CSAgentWidget.getChatUrl()
+      setLatestDirectChatUrl(url)
+      if (config.authMode === "jwt") {
+        setGeneratedToken(new URL(url).searchParams.get("userToken") || "")
+      }
+      window.open(url, "_blank", "noopener,noreferrer")
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "生成客服链接失败")
+    }
   }
 
   async function handleCopySnippet() {
@@ -353,13 +375,13 @@ ${configLines.join(",\n")}
             <div className="mt-2 flex flex-col gap-2 sm:flex-row">
               <input
                 readOnly
-                value={directChatUrl || "请先填写 channelId 并挂载"}
+                value={latestDirectChatUrl || "点击复制或新窗口打开时生成最新链接"}
                 className="h-9 min-w-0 flex-1 rounded-md border border-slate-200 px-3 font-mono text-xs outline-none"
               />
               <div className="flex gap-2">
                 <button
                   type="button"
-                  disabled={!directChatUrl}
+                  disabled={!config.channelId}
                   onClick={() => void handleCopyDirectUrl()}
                   className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -367,12 +389,8 @@ ${configLines.join(",\n")}
                 </button>
                 <button
                   type="button"
-                  disabled={!directChatUrl}
-                  onClick={() => {
-                    if (directChatUrl) {
-                      window.open(directChatUrl, "_blank", "noopener,noreferrer")
-                    }
-                  }}
+                  disabled={!config.channelId}
+                  onClick={() => void handleOpenDirectChat()}
                   className="rounded-md bg-slate-950 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   新窗口打开
