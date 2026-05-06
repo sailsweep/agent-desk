@@ -265,7 +265,7 @@ export function KefuChatShell() {
         style={{ "--primary": themeColor } as CSSProperties}
       >
         <section className="flex h-full w-full flex-col overflow-hidden border border-border bg-card text-card-foreground">
-          <header className="shrink-0 border-b border-border bg-card/95 px-4 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)] dark:shadow-none">
+          {/* <header className="shrink-0 border-b border-border bg-card/95 px-4 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)] dark:shadow-none">
             <div className="min-w-0">
               <div className="truncate text-base font-semibold text-foreground">
                 {title}
@@ -276,7 +276,7 @@ export function KefuChatShell() {
                 </div>
               ) : null}
             </div>
-          </header>
+          </header> */}
 
           <div className="flex min-h-0 flex-1 items-center justify-center bg-muted/70 px-6">
             <div className="grid max-w-sm justify-items-center gap-4 text-center">
@@ -286,12 +286,12 @@ export function KefuChatShell() {
               <div className="grid gap-2">
                 <div className="text-lg font-semibold text-foreground">会话已结束</div>
                 <p className="text-sm leading-6 text-muted-foreground">
-                  当前客服会话已关闭，如需继续咨询可以重新发起对话。
+                  当前客服会话已关闭，感谢您的使用。
                 </p>
               </div>
-              <Button type="button" onClick={handleRestartConversation}>
+              {/* <Button type="button" onClick={handleRestartConversation}>
                 重新发起对话
-              </Button>
+              </Button> */}
             </div>
           </div>
         </section>
