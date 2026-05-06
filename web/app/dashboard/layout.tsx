@@ -61,12 +61,10 @@ export default function DashboardLayout({
     >
       <NotificationProvider>
         <AppSidebar variant="inset" />
-        <SidebarInset className="min-h-0 overflow-hidden">
+        <SidebarInset>
           <SiteHeader />
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div className="@container/main flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-              {children}
-            </div>
+          <div className="@container/main flex min-h-0 flex-1 flex-col gap-2 overflow-auto">
+            {children}
           </div>
         </SidebarInset>
       </NotificationProvider>
