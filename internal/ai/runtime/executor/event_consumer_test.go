@@ -39,3 +39,34 @@ func TestConsumeAgentEventsUsesGraphToolTextAsReplyFallback(t *testing.T) {
 		t.Fatalf("unexpected summary status: %q", summary.Status)
 	}
 }
+
+func TestConsumeAgentEventsCompletesGraphToolWithNoVisibleReply(t *testing.T) {
+	summary := &RunResult{
+		Status:           "started",
+		InvokedToolCodes: make([]string, 0),
+	}
+	events, gen := adk.NewAsyncIteratorPair[*adk.AgentEvent]()
+	gen.Send(&adk.AgentEvent{
+		Output: &adk.AgentOutput{
+			MessageOutput: &adk.MessageVariant{
+				Role:     schema.Tool,
+				ToolName: toolx.GraphHandoffConversation.Name,
+				Message: &schema.Message{
+					Content: "",
+				},
+			},
+		},
+	})
+	gen.Close()
+
+	consumeAgentEvents(events, summary, nil, map[string]string{
+		toolx.GraphHandoffConversation.Name: toolx.GraphHandoffConversation.Code,
+	})
+
+	if summary.ReplyText != "" {
+		t.Fatalf("expected no reply text, got %q", summary.ReplyText)
+	}
+	if summary.Status != "completed" {
+		t.Fatalf("unexpected summary status: %q", summary.Status)
+	}
+}

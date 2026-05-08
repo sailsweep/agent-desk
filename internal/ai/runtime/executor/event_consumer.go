@@ -74,11 +74,22 @@ func consumeAgentEvents(events *adk.AsyncIterator[*adk.AgentEvent], summary *Run
 			summary.Status = "interrupted"
 		case strings.TrimSpace(summary.ReplyText) != "":
 			summary.Status = "completed"
+		case hasInvokedGraphTool(summary.InvokedToolCodes):
+			summary.Status = "completed"
 		default:
 			summary.Status = "fallback"
 		}
 	}
 	summary.ToolCallCount = len(summary.InvokedToolCodes)
+}
+
+func hasInvokedGraphTool(toolCodes []string) bool {
+	for _, toolCode := range toolCodes {
+		if toolx.ResolveToolSourceType(toolCode) == enums.ToolSourceTypeGraph {
+			return true
+		}
+	}
+	return false
 }
 
 func buildInterruptSummaries(event *adk.AgentEvent) []InterruptContextSummary {
