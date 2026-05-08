@@ -78,7 +78,7 @@ func (s *dashboardService) GetOverview(rangeValue string) response.DashboardOver
 	enabledAIAgents := repositories.DashboardRepository.ListAIAgents(db, func(tx *gorm.DB) *gorm.DB {
 		return tx.Where("status = ?", enums.StatusOk)
 	})
-	alerts := s.buildAlerts(now, db, activeConversations, enabledAIAgents, agentTeams, activeSchedules)
+	alerts := s.buildAlerts(now, db, enabledAIAgents, agentTeams, activeSchedules)
 
 	return response.DashboardOverviewResponse{
 		Range:       normalizedRange,
@@ -215,7 +215,7 @@ func (s *dashboardService) buildAgentStats(now time.Time, teams []models.AgentTe
 	return onlineAgents, busyAgents, offlineAgents, teamLoads
 }
 
-func (s *dashboardService) buildAlerts(now time.Time, db *gorm.DB, activeConversations []models.Conversation, aiAgents []models.AIAgent, teams []models.AgentTeam, schedules []models.AgentTeamSchedule) []response.DashboardAlertResponse {
+func (s *dashboardService) buildAlerts(now time.Time, db *gorm.DB, aiAgents []models.AIAgent, teams []models.AgentTeam, schedules []models.AgentTeamSchedule) []response.DashboardAlertResponse {
 	alerts := make([]response.DashboardAlertResponse, 0, 4)
 	pendingTimeout := now.Add(-10 * time.Minute)
 	activeTimeout := now.Add(-30 * time.Minute)
@@ -230,7 +230,7 @@ func (s *dashboardService) buildAlerts(now time.Time, db *gorm.DB, activeConvers
 			Title:       "待接入会话堆积",
 			Description: "存在超过 10 分钟仍未接入的会话，建议优先处理分配。",
 			Count:       pendingLongWaitCount,
-			Link:        "/conversations",
+			Link:        "/dashboard/conversations",
 		})
 	}
 
@@ -247,7 +247,7 @@ func (s *dashboardService) buildAlerts(now time.Time, db *gorm.DB, activeConvers
 			Title:       "处理中会话长时间无响应",
 			Description: "部分处理中会话已超过 30 分钟没有最新消息，需要确认跟进状态。",
 			Count:       staleProcessingCount,
-			Link:        "/conversations",
+			Link:        "/dashboard/conversations",
 		})
 	}
 
@@ -366,11 +366,11 @@ func flattenTrendMap(series map[string]*response.DashboardTrendItem) []response.
 
 func buildDashboardQuickLinks() []response.DashboardQuickLinkResponse {
 	return []response.DashboardQuickLinkResponse{
-		{Title: "会话管理", Description: "查看待接入与处理中会话", Link: "/conversations"},
-		{Title: "客服档案", Description: "查看客服状态与分组配置", Link: "/agents"},
-		{Title: "知识库", Description: "维护文档与查看检索日志", Link: "/knowledge"},
-		{Title: "AI Agent", Description: "配置 AI 接待策略与知识绑定", Link: "/ai-agents"},
-		{Title: "接入渠道", Description: "管理接入渠道与默认 Agent", Link: "/channels"},
+		{Title: "会话管理", Description: "查看待接入与处理中会话", Link: "/dashboard/conversations"},
+		{Title: "客服档案", Description: "查看客服状态与分组配置", Link: "/dashboard/agents"},
+		{Title: "知识库", Description: "维护文档与查看检索日志", Link: "/dashboard/knowledge"},
+		{Title: "AI Agent", Description: "配置 AI 接待策略与知识绑定", Link: "/dashboard/ai-agents"},
+		{Title: "接入渠道", Description: "管理接入渠道与默认 Agent", Link: "/dashboard/channels"},
 	}
 }
 
