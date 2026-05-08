@@ -68,8 +68,7 @@ func (s *conversationEventLogService) Delete(id int64) {
 	repositories.ConversationEventLogRepository.Delete(sqls.DB(), id)
 }
 
-func (s *conversationEventLogService) CreateEvent(ctx *sqls.TxContext, conversationID int64, eventType enums.IMEventType,
-	operatorType enums.IMSenderType, operatorID int64, content, payload string) error {
+func (s *conversationEventLogService) CreateEvent(ctx *sqls.TxContext, conversationID int64, eventType enums.IMEventType, operatorType enums.IMSenderType, operatorID int64, content, payload string) error {
 	return repositories.ConversationEventLogRepository.Create(ctx.Tx, &models.ConversationEventLog{
 		ConversationID: conversationID,
 		EventType:      eventType,

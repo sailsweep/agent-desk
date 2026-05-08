@@ -251,7 +251,7 @@ func (s *messageService) SendAIServiceNotice(conversationID int64, aiAgentID int
 	if conversation.Status == enums.IMConversationStatusClosed {
 		return nil, errorsx.InvalidParam("会话已关闭")
 	}
-	return s.sendValidatedMessage(conversation, enums.IMSenderTypeAI, aiAgentID, "", enums.IMMessageTypeText, content, "", &dto.AuthPrincipal{
+	return s.sendValidatedMessage(conversation, enums.IMSenderTypeAI, aiAgentID, strs.UUID(), enums.IMMessageTypeText, content, "", &dto.AuthPrincipal{
 		UserID:   0,
 		Username: "system",
 		Nickname: "system",
@@ -278,6 +278,7 @@ func (s *messageService) CreateAIWelcomeMessageTx(ctx *sqls.TxContext, conversat
 	}
 	message := &models.Message{
 		ConversationID: conversation.ID,
+		ClientMsgID:    strs.UUID(),
 		SenderType:     enums.IMSenderTypeAI,
 		SenderID:       aiAgent.ID,
 		MessageType:    enums.IMMessageTypeText,
@@ -377,10 +378,10 @@ func (s *messageService) sendMessage(conversationID int64, senderType enums.IMSe
 
 func (s *messageService) sendValidatedMessage(conversation *models.Conversation, senderType enums.IMSenderType, reqSenderID int64, clientMsgID string,
 	messageType enums.IMMessageType, content, payload string, operator *dto.AuthPrincipal, external *openidentity.ExternalUser) (*models.Message, error) {
-	conversationID := conversation.ID
+
 	var err error
 	var summary string
-	content, payload, summary, err = s.normalizeMessageContent(conversationID, messageType, content, payload)
+	content, payload, summary, err = s.normalizeMessageContent(conversation.ID, messageType, content, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -390,7 +391,7 @@ func (s *messageService) sendValidatedMessage(conversation *models.Conversation,
 
 	// 防抖，消息存在就不再发送了
 	if strs.IsNotBlank(clientMsgID) {
-		if existing := repositories.MessageRepository.GetByClientMsgID(sqls.DB(), conversationID, clientMsgID); existing != nil {
+		if existing := repositories.MessageRepository.GetByClientMsgID(sqls.DB(), conversation.ID, clientMsgID); existing != nil {
 			return existing, nil
 		}
 	}
@@ -399,7 +400,7 @@ func (s *messageService) sendValidatedMessage(conversation *models.Conversation,
 		now           = time.Now()
 		auditUserID   = int64(0)
 		auditUserName = ""
-		nextSeq       = repositories.MessageRepository.NextSeqNo(sqls.DB(), conversationID)
+		nextSeq       = repositories.MessageRepository.NextSeqNo(sqls.DB(), conversation.ID)
 	)
 	if operator != nil {
 		auditUserID = operator.UserID
@@ -410,7 +411,7 @@ func (s *messageService) sendValidatedMessage(conversation *models.Conversation,
 		auditUserName = displayExternalName(external)
 	}
 	message := &models.Message{
-		ConversationID: conversationID,
+		ConversationID: conversation.ID,
 		ClientMsgID:    clientMsgID,
 		SenderType:     senderType,
 		SenderID:       reqSenderID,
@@ -462,12 +463,12 @@ func (s *messageService) sendValidatedMessage(conversation *models.Conversation,
 				return err
 			}
 		}
-		agentReadState, customerReadState := ConversationReadStateService.getConversationReadStates(ctx.Tx, conversationID)
-		agentUnreadCount, err := ConversationReadStateService.CountUnreadMessages(ctx, conversationID, s.readSeqNo(agentReadState), enums.IMSenderTypeCustomer)
+		agentReadState, customerReadState := ConversationReadStateService.getConversationReadStates(ctx.Tx, conversation.ID)
+		agentUnreadCount, err := ConversationReadStateService.CountUnreadMessages(ctx, conversation.ID, s.readSeqNo(agentReadState), enums.IMSenderTypeCustomer)
 		if err != nil {
 			return err
 		}
-		customerUnreadCount, err := ConversationReadStateService.CountUnreadMessages(ctx, conversationID, s.readSeqNo(customerReadState), enums.IMSenderTypeAgent, enums.IMSenderTypeAI)
+		customerUnreadCount, err := ConversationReadStateService.CountUnreadMessages(ctx, conversation.ID, s.readSeqNo(customerReadState), enums.IMSenderTypeAgent, enums.IMSenderTypeAI)
 		if err != nil {
 			return err
 		}
@@ -482,7 +483,7 @@ func (s *messageService) sendValidatedMessage(conversation *models.Conversation,
 			updateUserID = 0
 			updateUserName = displayExternalName(external)
 		}
-		if err := repositories.ConversationRepository.Updates(ctx.Tx, conversationID, map[string]any{
+		if err := repositories.ConversationRepository.Updates(ctx.Tx, conversation.ID, map[string]any{
 			"last_message_id":       message.ID,
 			"last_message_at":       now,
 			"last_active_at":        now,
@@ -496,7 +497,7 @@ func (s *messageService) sendValidatedMessage(conversation *models.Conversation,
 			return err
 		}
 		if err := ConversationEventLogService.CreateEvent(ctx,
-			conversationID,
+			conversation.ID,
 			enums.IMEventTypeMessageSend,
 			senderType,
 			func() int64 {
