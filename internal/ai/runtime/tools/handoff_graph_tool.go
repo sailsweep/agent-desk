@@ -52,7 +52,7 @@ func (t *HandoffGraphTool) Build(ctx registry.Context) (einotool.BaseTool, error
 func (t *HandoffGraphTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
 	return &schema.ToolInfo{
 		Name: toolx.GraphHandoffConversation.Name,
-		Desc: "Graph Tool。用于封装转人工原因整理、用户确认、真正转人工和结果返回的确定性流程。仅在用户明确要求人工客服，或你已确认必须转人工处理时调用。",
+		Desc: "Graph Tool。用于封装转人工原因整理、用户确认、真正转人工和结果返回的确定性流程。仅在用户明确要求人工客服，或你已确认必须转人工处理时调用；若结果标记 terminal=true 且 shouldRetry=false，不要重复调用。",
 		ParamsOneOf: schema.NewParamsOneOfByJSONSchema(&einojsonschema.Schema{
 			Version: einojsonschema.Version,
 			Type:    "object",

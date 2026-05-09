@@ -137,6 +137,7 @@ var (
 3. 一旦决定转人工，必须调用 handoff_to_human 工具，禁止只在回复里口头说“我帮你转人工了”。
 4. 该 Graph Tool 会先向用户发起确认。用户确认后才会真正转人工；用户取消则结束本次转人工流程。
 5. 如果问题仍可由当前对话继续解决，优先继续解答，不要过早转人工。
+6. 如果工具返回 terminal=true 且 shouldRetry=false，说明转人工流程已经结束，禁止重复调用该工具。
 `),
 	}
 	RegisteredToolSpecs = []ToolSpec{

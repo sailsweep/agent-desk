@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"cs-agent/internal/ai/runtime/tooling"
 	"cs-agent/internal/models"
 	"cs-agent/internal/services"
 
@@ -53,7 +54,14 @@ func (g *HandoffGraph) Run(ctx context.Context, argumentsInJSON string) (string,
 		handled, err := services.ConversationService.TryOffHoursHandoffByAI(g.conversation.ID, g.aiAgent, reason)
 		if err != nil || handled {
 			if handled && err == nil {
-				return services.HandoffOffHoursMessage, nil
+				return tooling.MarshalToolResult(tooling.ToolResult{
+					Handled:     true,
+					Terminal:    true,
+					Action:      "off_hours_handoff",
+					ReplyText:   services.HandoffOffHoursMessage,
+					ReplySent:   true,
+					ShouldRetry: false,
+				}), nil
 			}
 			return "", err
 		}
@@ -87,9 +95,21 @@ func (g *HandoffGraph) Run(ctx context.Context, argumentsInJSON string) (string,
 			return "", err
 		}
 		// ConversationService sends the customer-visible handoff notice according to the dispatch decision.
-		return "", nil
+		return tooling.MarshalToolResult(tooling.ToolResult{
+			Handled:     true,
+			Terminal:    true,
+			Action:      "handoff_confirmed",
+			ReplySent:   true,
+			ShouldRetry: false,
+		}), nil
 	case ConfirmationDecisionCancel:
-		return CancelHandoffReply, nil
+		return tooling.MarshalToolResult(tooling.ToolResult{
+			Handled:     true,
+			Terminal:    true,
+			Action:      "handoff_cancelled",
+			ReplyText:   CancelHandoffReply,
+			ShouldRetry: false,
+		}), nil
 	default:
 		info := HandoffGraphInterruptInfo{
 			Type:    InterruptTypeHandoffConfirmation,

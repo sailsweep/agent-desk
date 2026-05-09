@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"cs-agent/internal/ai/runtime/tooling"
 	"cs-agent/internal/models"
 	"cs-agent/internal/pkg/dto"
 	"cs-agent/internal/pkg/dto/request"
@@ -84,9 +85,21 @@ func (g *CreateTicketGraph) Run(ctx context.Context, argumentsInJSON string) (st
 		if err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("工单已创建，工单号：%s，标题：%s。", strings.TrimSpace(item.TicketNo), strings.TrimSpace(item.Title)), nil
+		return tooling.MarshalToolResult(tooling.ToolResult{
+			Handled:     true,
+			Terminal:    true,
+			Action:      "ticket_created",
+			ReplyText:   fmt.Sprintf("工单已创建，工单号：%s，标题：%s。", strings.TrimSpace(item.TicketNo), strings.TrimSpace(item.Title)),
+			ShouldRetry: false,
+		}), nil
 	case ConfirmationDecisionCancel:
-		return CancelCreateTicketReply, nil
+		return tooling.MarshalToolResult(tooling.ToolResult{
+			Handled:     true,
+			Terminal:    true,
+			Action:      "ticket_cancelled",
+			ReplyText:   CancelCreateTicketReply,
+			ShouldRetry: false,
+		}), nil
 	default:
 		info := CreateTicketGraphInterruptInfo{
 			Type:    InterruptTypeTicketCreationConfirmation,

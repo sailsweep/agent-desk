@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"cs-agent/internal/ai/runtime/internal/impl/callbacks"
+	"cs-agent/internal/ai/runtime/tooling"
 	"cs-agent/internal/pkg/enums"
 	"cs-agent/internal/pkg/toolx"
 
@@ -64,10 +65,13 @@ func consumeAgentEvents(events *adk.AsyncIterator[*adk.AgentEvent], summary *Run
 			summary.InvokedToolCodes = appendIfMissing(summary.InvokedToolCodes, toolCode)
 			if strings.TrimSpace(summary.ReplyText) == "" && toolx.ResolveToolSourceType(toolCode) == enums.ToolSourceTypeGraph {
 				toolReplyText := strings.TrimSpace(messageOutput.Message.Content)
-				if toolReplyText != "" {
-					summary.ReplyText = toolReplyText
-				} else if toolCode == toolx.GraphHandoffConversation.Code {
-					suppressAssistantReply = true
+				if result, ok := tooling.ParseToolResult(toolReplyText); ok {
+					if result.ReplyText != "" && !result.ReplySent {
+						summary.ReplyText = result.ReplyText
+					}
+					if result.Terminal && !result.ShouldRetry {
+						suppressAssistantReply = true
+					}
 				}
 			}
 		}

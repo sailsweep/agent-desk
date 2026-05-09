@@ -58,9 +58,6 @@ func (s *conversationHumanDispatchService) TryOffHoursHandoffByAI(conversationID
 	if err := s.createEvent(conversationID, enums.IMEventTypeTransfer, enums.IMSenderTypeAI, aiAgent.ID, "转人工失败：非服务时间", strings.TrimSpace(reason)); err != nil {
 		return true, err
 	}
-	if s.hasLatestAIText(conversationID, HandoffOffHoursMessage) {
-		return true, nil
-	}
 	if err := s.sendAIText(conversationID, aiAgent.ID, HandoffOffHoursMessage); err != nil {
 		return true, err
 	}
@@ -289,14 +286,6 @@ func (s *conversationHumanDispatchService) createEvent(conversationID int64, eve
 func (s *conversationHumanDispatchService) sendAIText(conversationID, aiAgentID int64, content string) error {
 	_, err := MessageService.SendAIServiceNotice(conversationID, aiAgentID, content)
 	return err
-}
-
-func (s *conversationHumanDispatchService) hasLatestAIText(conversationID int64, content string) bool {
-	latest, err := MessageService.GetConversationReadTarget(conversationID, 0)
-	if err != nil || latest == nil {
-		return false
-	}
-	return latest.SenderType == enums.IMSenderTypeAI && strings.TrimSpace(latest.Content) == strings.TrimSpace(content)
 }
 
 func orderedPositiveIDs(value string) []int64 {

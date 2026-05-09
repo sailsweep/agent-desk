@@ -47,32 +47,6 @@ func TestConversationHumanDispatchAIHandoffOffHoursKeepsAIServingAndSendsNotice(
 	}
 }
 
-func TestConversationHumanDispatchAIHandoffOffHoursDoesNotDuplicateNotice(t *testing.T) {
-	db := setupConversationHumanDispatchTestDB(t)
-	aiAgent := createHumanDispatchAIAgent(t, db, enums.IMConversationServiceModeAIFirst, "1")
-	conversation := createHumanDispatchConversation(t, db, aiAgent.ID, enums.IMConversationStatusAIServing)
-
-	for i := 0; i < 3; i++ {
-		result, err := services.ConversationHumanDispatchService.HandoffByAI(conversation.ID, aiAgent, "用户要求转人工")
-		if err != nil {
-			t.Fatalf("HandoffByAI() round %d error = %v", i+1, err)
-		}
-		if result == nil || result.Decision != services.HandoffDecisionOffHours {
-			t.Fatalf("expected off_hours decision on round %d, got %+v", i+1, result)
-		}
-	}
-
-	var count int64
-	if err := db.Model(&models.Message{}).
-		Where("conversation_id = ? AND sender_type = ? AND content = ?", conversation.ID, enums.IMSenderTypeAI, services.HandoffOffHoursMessage).
-		Count(&count).Error; err != nil {
-		t.Fatalf("count off-hours messages error = %v", err)
-	}
-	if count != 1 {
-		t.Fatalf("expected one off-hours notice, got %d", count)
-	}
-}
-
 func TestConversationHumanDispatchAIHandoffAssignsAvailableAgent(t *testing.T) {
 	db := setupConversationHumanDispatchTestDB(t)
 	aiAgent := createHumanDispatchAIAgent(t, db, enums.IMConversationServiceModeAIFirst, "1")

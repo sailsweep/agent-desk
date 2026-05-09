@@ -2,10 +2,12 @@ package graphs
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
 
+	"cs-agent/internal/ai/runtime/tooling"
 	"cs-agent/internal/models"
 	"cs-agent/internal/pkg/enums"
 	"cs-agent/internal/services"
@@ -25,8 +27,18 @@ func TestHandoffGraphOffHoursSendsNoticeWithoutConfirmation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
-	if reply != services.HandoffOffHoursMessage {
-		t.Fatalf("expected off-hours graph reply, got %q", reply)
+	var result tooling.ToolResult
+	if err := json.Unmarshal([]byte(reply), &result); err != nil {
+		t.Fatalf("expected graph tool result JSON, got %q: %v", reply, err)
+	}
+	if !result.Handled || !result.Terminal || result.ShouldRetry {
+		t.Fatalf("unexpected graph result flags: %+v", result)
+	}
+	if !result.ReplySent {
+		t.Fatalf("expected graph result to mark replySent, got %+v", result)
+	}
+	if result.Action != "off_hours_handoff" || result.ReplyText != services.HandoffOffHoursMessage {
+		t.Fatalf("unexpected off-hours graph result: %+v", result)
 	}
 
 	message := services.MessageService.FindOne(sqls.NewCnd().Eq("conversation_id", conversation.ID).Desc("id"))
