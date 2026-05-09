@@ -40,6 +40,19 @@ func buildKnowledgeGuardDecision(aiAgent models.AIAgent, retrieveResult *retriev
 	}
 }
 
+func buildKnowledgeNoContextDecision(aiAgent models.AIAgent, knowledgeBaseIDs []int64) knowledgeGuardDecision {
+	if len(knowledgeBaseIDs) == 0 {
+		return knowledgeGuardDecision{}
+	}
+	instruction := buildKnowledgeNoContextInstruction(resolveKnowledgeFallbackReply(aiAgent))
+	if instruction == "" {
+		return knowledgeGuardDecision{}
+	}
+	return knowledgeGuardDecision{
+		Instructions: []*schema.Message{schema.SystemMessage(instruction)},
+	}
+}
+
 func resolveKnowledgeFallbackReply(aiAgent models.AIAgent) string {
 	if reply := strings.TrimSpace(aiAgent.FallbackMessage); reply != "" {
 		return reply
@@ -66,7 +79,20 @@ func buildKnowledgeRuntimeInstruction(answerMode enums.KnowledgeAnswerMode, fall
 		fallbackReply = "当前知识库暂无明确信息。"
 	}
 	if answerMode == enums.KnowledgeAnswerModeAssist {
-		return "知识库回答约束：优先依据后续提供的知识片段回答，可以做轻度归纳，但不要编造片段中未提供的事实。回答中的具体事实、步骤、承诺必须能被知识片段直接支持；若知识片段不足以直接支持答案，必须明确回复：" + fallbackReply
+		return "知识库回答约束：优先依据后续提供的知识片段回答，可以做轻度归纳，但不要编造片段中未提供的事实。回答中的具体事实、步骤、承诺、价格、时效、政策必须能被知识片段直接支持；若知识片段不足以直接支持答案，必须明确回复：" + fallbackReply
 	}
-	return "知识库回答约束：本轮只能依据后续提供的知识片段回答，不得使用模型常识补充未提供的事实，不得输出知识片段外的具体事实、步骤、承诺或建议。若知识片段不足以支持回答，必须明确回复：" + fallbackReply
+	return "知识库回答约束：本轮只能依据后续提供的知识片段回答，不得使用模型常识补充未提供的事实，不得输出知识片段外的具体事实、步骤、承诺、建议、价格、时效或政策。若知识片段不足以支持回答，必须明确回复：" + fallbackReply
+}
+
+func buildKnowledgeNoContextInstruction(fallbackReply string) string {
+	fallbackReply = strings.TrimSpace(fallbackReply)
+	if fallbackReply == "" {
+		fallbackReply = "当前知识库暂无明确信息。"
+	}
+	return "知识库检索状态：当前没有从知识库检索到可用资料。\n" +
+		"回复策略：\n" +
+		"1. 如果用户只是寒暄、问候、感谢、确认或结束语，可以自然、简短地回复。\n" +
+		"2. 如果用户表达不清楚或缺少上下文，应追问具体场景、对象、报错信息或操作步骤。\n" +
+		"3. 如果用户询问业务事实、规则、价格、流程、配置、时效、承诺、售后、退款、权限或政策，不得编造答案，必须明确回复：" + fallbackReply + "\n" +
+		"4. 不得输出知识库未提供的具体事实、流程、承诺、价格、时效或政策。"
 }
