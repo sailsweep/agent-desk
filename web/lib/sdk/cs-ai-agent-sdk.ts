@@ -222,25 +222,29 @@ type FrameMessage =
       config.position === "left" ? "left bottom" : "right bottom"
 
     if (state.isMaximized) {
-      frame.style.top = "20px"
-      frame.style.right = "20px"
-      frame.style.bottom = "20px"
-      frame.style.left = "20px"
-      frame.style.width = "calc(100vw - 40px)"
+      frame.style.top = "max(12px, env(safe-area-inset-top))"
+      frame.style.right = "max(12px, env(safe-area-inset-right))"
+      frame.style.bottom = "max(12px, env(safe-area-inset-bottom))"
+      frame.style.left = "max(12px, env(safe-area-inset-left))"
+      frame.style.width =
+        "calc(100vw - max(12px, env(safe-area-inset-left)) - max(12px, env(safe-area-inset-right)))"
       frame.style.maxWidth = "none"
-      frame.style.height = "calc(100vh - 40px)"
-      frame.style.borderRadius = "24px"
+      frame.style.height =
+        "calc(100dvh - max(12px, env(safe-area-inset-top)) - max(12px, env(safe-area-inset-bottom)))"
+      frame.style.borderRadius = "20px"
       return
     }
 
     frame.style.top = ""
-    frame.style.bottom = "112px"
-    frame.style.right = config.position === "left" ? "" : "24px"
-    frame.style.left = config.position === "left" ? "24px" : ""
+    frame.style.bottom = "max(88px, calc(72px + env(safe-area-inset-bottom)))"
+    frame.style.right = config.position === "left" ? "" : "max(12px, env(safe-area-inset-right))"
+    frame.style.left = config.position === "left" ? "max(12px, env(safe-area-inset-left))" : ""
     frame.style.width = config.width || "380px"
-    frame.style.maxWidth = "calc(100vw - 24px)"
-    frame.style.height = "min(760px, calc(100vh - 136px))"
-    frame.style.borderRadius = "28px"
+    frame.style.maxWidth =
+      "calc(100vw - max(12px, env(safe-area-inset-left)) - max(12px, env(safe-area-inset-right)))"
+    frame.style.height =
+      "min(760px, calc(100dvh - max(104px, calc(88px + env(safe-area-inset-bottom))) - max(12px, env(safe-area-inset-top))))"
+    frame.style.borderRadius = "24px"
   }
 
   function postToFrame(message: FrameMessage) {

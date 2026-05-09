@@ -255,19 +255,19 @@ export function KefuChatShell() {
 
   return (
     <main
-      className="relative flex h-screen overflow-hidden bg-muted text-foreground"
+      className="relative flex h-[100dvh] min-h-[100dvh] overflow-hidden bg-muted text-foreground supports-not-[height:100dvh]:h-screen supports-not-[height:100dvh]:min-h-screen"
       style={{ "--primary": themeColor } as CSSProperties}
     >
       <section className="flex h-full w-full flex-col overflow-hidden bg-card text-card-foreground">
-        <header className="shrink-0 border-b border-border bg-card/95 px-4 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)] dark:shadow-none">
-          <div className="flex items-center justify-between gap-3">
+        <header className="shrink-0 border-b border-border bg-card/95 px-3 py-2.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] dark:shadow-none sm:px-4 sm:py-3">
+          <div className="flex min-w-0 items-center justify-between gap-2 sm:gap-3">
             <div className="min-w-0">
               <div className="truncate text-base font-semibold text-foreground">
                 {title}
               </div>
-              <div className="mt-1 truncate text-xs text-muted-foreground">{subtitle}</div>
+              <div className="mt-0.5 truncate text-xs text-muted-foreground sm:mt-1">{subtitle}</div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-1 sm:gap-2">
               {status !== "connected" ? (
                 <KefuConnectionStatus status={status} />
               ) : null}
@@ -338,12 +338,14 @@ export function KefuChatShell() {
             loadingOlder={messagesLoadingMore}
             onLoadOlder={loadOlderMessages}
           />
-          <CustomerMessageEditor
-            disabled={!conversation}
-            onSend={handleSend}
-            onUploadImage={uploadMessageImage}
-            onSendAttachment={sendAttachment}
-          />
+          <div className="shrink-0 pb-[env(safe-area-inset-bottom)]">
+            <CustomerMessageEditor
+              disabled={!conversation}
+              onSend={handleSend}
+              onUploadImage={uploadMessageImage}
+              onSendAttachment={sendAttachment}
+            />
+          </div>
         </div>
 
         {error ? (

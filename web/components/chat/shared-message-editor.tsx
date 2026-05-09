@@ -389,7 +389,7 @@ export function SharedMessageEditor({
           ) : null}
         </div>
         <div className="flex items-center gap-2">
-          <p className={isCustomer ? "text-[10px] text-muted-foreground" : "text-xs text-muted-foreground"}>
+          <p className={isCustomer ? "hidden text-[10px] text-muted-foreground sm:block" : "text-xs text-muted-foreground"}>
             Enter 发送
           </p>
           {isCustomer ? (
@@ -422,7 +422,7 @@ export function SharedMessageEditor({
 
   if (isCustomer) {
     return (
-      <div className="p-3">
+      <div className="px-3 pt-2 pb-3">
         <div className="rounded-xl border border-border bg-background p-2 shadow-[0_8px_24px_rgba(15,23,42,0.05)] dark:shadow-none">
           {editorContent}
         </div>

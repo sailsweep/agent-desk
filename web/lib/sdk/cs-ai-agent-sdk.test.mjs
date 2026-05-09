@@ -142,3 +142,25 @@ test("launcher click creates chat iframe with a freshly resolved userToken", asy
   assert.ok(frame)
   assert.equal(new URL(frame.src).searchParams.get("userToken"), "click_token")
 })
+
+test("chat iframe layout uses dynamic viewport height for iOS browser chrome", async () => {
+  const sandbox = await loadSdk({
+    channelId: "ch_1",
+    baseUrl: "https://api.example",
+  })
+  await flushPromises()
+  const launcher = sandbox.document.body.children.find(
+    (child) => child.dataset.csAgentWidget === "launcher"
+  )
+
+  launcher.click()
+  await flushPromises()
+
+  const frame = sandbox.document.body.children.find(
+    (child) => child.dataset.csAgentWidget === "frame"
+  )
+
+  assert.ok(frame)
+  assert.match(frame.style.height, /100dvh/)
+  assert.match(frame.style.maxWidth, /100vw/)
+})
