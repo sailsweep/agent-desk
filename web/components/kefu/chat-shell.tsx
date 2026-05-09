@@ -258,7 +258,7 @@ export function KefuChatShell() {
       className="relative flex h-screen overflow-hidden bg-muted text-foreground"
       style={{ "--primary": themeColor } as CSSProperties}
     >
-      <section className="flex h-full w-full flex-col overflow-hidden border border-border bg-card text-card-foreground">
+      <section className="flex h-full w-full flex-col overflow-hidden bg-card text-card-foreground">
         <header className="shrink-0 border-b border-border bg-card/95 px-4 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)] dark:shadow-none">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
