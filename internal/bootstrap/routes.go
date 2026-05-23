@@ -1,9 +1,9 @@
 package bootstrap
 
 import (
-	"cs-agent/internal/controllers/api"
-	"cs-agent/internal/controllers/dashboard"
-	"cs-agent/internal/controllers/third"
+	"cs-agent/internal/handlers/api"
+	"cs-agent/internal/handlers/dashboard"
+	"cs-agent/internal/handlers/third"
 
 	"github.com/gin-gonic/gin"
 )
