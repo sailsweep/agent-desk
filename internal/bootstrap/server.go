@@ -10,12 +10,8 @@ import (
 
 	"cs-agent/internal/ai/mcps"
 	_ "cs-agent/internal/ai/runtime"
-	"cs-agent/internal/controllers/api"
-	"cs-agent/internal/controllers/dashboard"
-	"cs-agent/internal/controllers/third"
 	"cs-agent/internal/middleware"
 	"cs-agent/internal/pkg/config"
-	"cs-agent/internal/pkg/ginx"
 	"cs-agent/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -94,11 +90,11 @@ func addRouter(app *gin.Engine) {
 	app.Any("/api/mcp", gin.WrapH(mcps.NewHTTPHandler()))
 
 	apiGroup := app.Group("/api")
-	ginx.HandleController(apiGroup, "/auth", new(api.AuthController))
-	ginx.HandleController(apiGroup, "/channel", new(api.ChannelController))
-	ginx.HandleController(apiGroup, "/customer", new(api.CustomerController))
-	ginx.HandleController(apiGroup, "/conversation", new(api.ConversationController), middleware.ExternalUserMiddleware)
-	ginx.HandleController(apiGroup, "/message", new(api.MessageController), middleware.ExternalUserMiddleware)
+	registerApiAuthRoutes(apiGroup.Group("/auth"))
+	registerApiChannelRoutes(apiGroup.Group("/channel"))
+	registerApiCustomerRoutes(apiGroup.Group("/customer"))
+	registerApiConversationRoutes(apiGroup.Group("/conversation", middleware.ExternalUserMiddleware))
+	registerApiMessageRoutes(apiGroup.Group("/message", middleware.ExternalUserMiddleware))
 
 	wsGroup := app.Group("/api/ws")
 	wsGroup.GET("/dashboard", middleware.AuthMiddleware, services.WsService.HandleDashboardWS)
@@ -106,37 +102,37 @@ func addRouter(app *gin.Engine) {
 	wsGroup.GET("/open", services.WsService.HandleOpenWS)
 
 	dashboardGroup := app.Group("/api/dashboard", middleware.AuthMiddleware)
-	ginx.HandleController(dashboardGroup, "/dashboard", new(dashboard.DashboardController))
-	ginx.HandleController(dashboardGroup, "/user", new(dashboard.UserController))
-	ginx.HandleController(dashboardGroup, "/company", new(dashboard.CompanyController))
-	ginx.HandleController(dashboardGroup, "/customer", new(dashboard.CustomerController))
-	ginx.HandleController(dashboardGroup, "/customer-contact", new(dashboard.CustomerContactController))
-	ginx.HandleController(dashboardGroup, "/role", new(dashboard.RoleController))
-	ginx.HandleController(dashboardGroup, "/permission", new(dashboard.PermissionController))
-	ginx.HandleController(dashboardGroup, "/session", new(dashboard.SessionController))
-	ginx.HandleController(dashboardGroup, "/tag", new(dashboard.TagController))
-	ginx.HandleController(dashboardGroup, "/conversation", new(dashboard.ConversationController))
-	ginx.HandleController(dashboardGroup, "/ticket", new(dashboard.TicketController))
-	ginx.HandleController(dashboardGroup, "/notification", new(dashboard.NotificationController))
-	ginx.HandleController(dashboardGroup, "/quick-reply", new(dashboard.QuickReplyController))
-	ginx.HandleController(dashboardGroup, "/channel", new(dashboard.ChannelController))
-	ginx.HandleController(dashboardGroup, "/agent", new(dashboard.AgentController))
-	ginx.HandleController(dashboardGroup, "/agent-team", new(dashboard.AgentTeamController))
-	ginx.HandleController(dashboardGroup, "/agent-team-schedule", new(dashboard.AgentTeamScheduleController))
-	ginx.HandleController(dashboardGroup, "/ai-agent", new(dashboard.AIAgentController))
-	ginx.HandleController(dashboardGroup, "/ai-config", new(dashboard.AIConfigController))
-	ginx.HandleController(dashboardGroup, "/asset", new(dashboard.AssetController))
-	ginx.HandleController(dashboardGroup, "/knowledge-base", new(dashboard.KnowledgeBaseController))
-	ginx.HandleController(dashboardGroup, "/knowledge-document", new(dashboard.KnowledgeDocumentController))
-	ginx.HandleController(dashboardGroup, "/knowledge-faq", new(dashboard.KnowledgeFAQController))
-	ginx.HandleController(dashboardGroup, "/knowledge-retrieve", new(dashboard.KnowledgeRetrieveController))
-	ginx.HandleController(dashboardGroup, "/knowledge-retrieve-log", new(dashboard.KnowledgeRetrieveLogController))
-	ginx.HandleController(dashboardGroup, "/agent-run-log", new(dashboard.AgentRunLogController))
-	ginx.HandleController(dashboardGroup, "/skill-definition", new(dashboard.SkillDefinitionController))
-	ginx.HandleController(dashboardGroup, "/mcp", new(dashboard.MCPController))
+	registerDashboardDashboardRoutes(dashboardGroup.Group("/dashboard"))
+	registerDashboardUserRoutes(dashboardGroup.Group("/user"))
+	registerDashboardCompanyRoutes(dashboardGroup.Group("/company"))
+	registerDashboardCustomerRoutes(dashboardGroup.Group("/customer"))
+	registerDashboardCustomerContactRoutes(dashboardGroup.Group("/customer-contact"))
+	registerDashboardRoleRoutes(dashboardGroup.Group("/role"))
+	registerDashboardPermissionRoutes(dashboardGroup.Group("/permission"))
+	registerDashboardSessionRoutes(dashboardGroup.Group("/session"))
+	registerDashboardTagRoutes(dashboardGroup.Group("/tag"))
+	registerDashboardConversationRoutes(dashboardGroup.Group("/conversation"))
+	registerDashboardTicketRoutes(dashboardGroup.Group("/ticket"))
+	registerDashboardNotificationRoutes(dashboardGroup.Group("/notification"))
+	registerDashboardQuickReplyRoutes(dashboardGroup.Group("/quick-reply"))
+	registerDashboardChannelRoutes(dashboardGroup.Group("/channel"))
+	registerDashboardAgentRoutes(dashboardGroup.Group("/agent"))
+	registerDashboardAgentTeamRoutes(dashboardGroup.Group("/agent-team"))
+	registerDashboardAgentTeamScheduleRoutes(dashboardGroup.Group("/agent-team-schedule"))
+	registerDashboardAIAgentRoutes(dashboardGroup.Group("/ai-agent"))
+	registerDashboardAIConfigRoutes(dashboardGroup.Group("/ai-config"))
+	registerDashboardAssetRoutes(dashboardGroup.Group("/asset"))
+	registerDashboardKnowledgeBaseRoutes(dashboardGroup.Group("/knowledge-base"))
+	registerDashboardKnowledgeDocumentRoutes(dashboardGroup.Group("/knowledge-document"))
+	registerDashboardKnowledgeFAQRoutes(dashboardGroup.Group("/knowledge-faq"))
+	registerDashboardKnowledgeRetrieveRoutes(dashboardGroup.Group("/knowledge-retrieve"))
+	registerDashboardKnowledgeRetrieveLogRoutes(dashboardGroup.Group("/knowledge-retrieve-log"))
+	registerDashboardAgentRunLogRoutes(dashboardGroup.Group("/agent-run-log"))
+	registerDashboardSkillDefinitionRoutes(dashboardGroup.Group("/skill-definition"))
+	registerDashboardMCPRoutes(dashboardGroup.Group("/mcp"))
 
 	thirdGroup := app.Group("/api/third")
-	ginx.HandleController(thirdGroup, "/wechat", new(third.WechatController))
+	registerThirdWechatRoutes(thirdGroup.Group("/wechat"))
 }
 
 func registerDashboardStatic(app *gin.Engine, root string) {
