@@ -4,73 +4,86 @@ import (
 	"cs-agent/internal/builders"
 	"cs-agent/internal/pkg/constants"
 	"cs-agent/internal/pkg/dto/request"
+	"cs-agent/internal/pkg/httpx"
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/web"
 )
 
-type CustomerContactController struct {
-	Ctx *gin.Context
-}
-
 // AnyList GET/POST /customer-contact/list?customerId=
-func (c *CustomerContactController) AnyList() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionCustomerView); err != nil {
-		return web.JsonError(err)
+func CustomerContactAnyList(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionCustomerView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	customerID, _ := params.GetInt64(c.Ctx, "customerId")
+	customerID, _ := params.GetInt64(ctx, "customerId")
 	if customerID <= 0 {
-		return web.JsonErrorMsg("customerId 必填")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("customerId 必填"))
+		return
 	}
 	list := services.CustomerContactService.FindActiveByCustomerID(customerID)
-	return web.JsonData(builders.BuildCustomerContactList(list))
+	httpx.WriteJSON(ctx, builders.BuildCustomerContactList(list))
+	return
 }
 
-func (c *CustomerContactController) PostCreate() *web.JsonResult {
-	user, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionCustomerUpdate)
+func CustomerContactPostCreate(ctx *gin.Context) {
+	user, err := services.AuthService.RequirePermission(ctx, constants.PermissionCustomerUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.CreateCustomerContactRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	item, err := services.CustomerContactService.CreateCustomerContact(req, user)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	ret := builders.BuildCustomerContactResponse(item)
-	return web.JsonData(&ret)
+	httpx.WriteJSON(ctx, &ret)
+	return
 }
 
-func (c *CustomerContactController) PostUpdate() *web.JsonResult {
-	user, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionCustomerUpdate)
+func CustomerContactPostUpdate(ctx *gin.Context) {
+	user, err := services.AuthService.RequirePermission(ctx, constants.PermissionCustomerUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.UpdateCustomerContactRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.CustomerContactService.UpdateCustomerContact(req, user); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *CustomerContactController) PostDelete() *web.JsonResult {
-	user, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionCustomerUpdate)
+func CustomerContactPostDelete(ctx *gin.Context) {
+	user, err := services.AuthService.RequirePermission(ctx, constants.PermissionCustomerUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.DeleteCustomerContactRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.CustomerContactService.DeleteCustomerContact(req.ID, user); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }

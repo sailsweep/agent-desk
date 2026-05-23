@@ -4,23 +4,22 @@ import (
 	"cs-agent/internal/builders"
 	"cs-agent/internal/pkg/constants"
 	"cs-agent/internal/pkg/dto/response"
+	"cs-agent/internal/pkg/httpx"
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/web"
 )
 
-type AgentRunLogController struct {
-	Ctx *gin.Context
-}
-
-func (c *AgentRunLogController) AnyList() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionConversationView); err != nil {
-		return web.JsonError(err)
+func AgentRunLogAnyList(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionConversationView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
-	cnd := params.NewPagedSqlCnd(c.Ctx,
+	cnd := params.NewPagedSqlCnd(ctx,
 		params.QueryFilter{ParamName: "conversationId"},
 		params.QueryFilter{ParamName: "messageId"},
 		params.QueryFilter{ParamName: "aiAgentId"},
@@ -34,27 +33,31 @@ func (c *AgentRunLogController) AnyList() *web.JsonResult {
 		params.QueryFilter{ParamName: "finalAction"},
 		params.QueryFilter{ParamName: "userMessage", Op: params.Like},
 	).Desc("id")
-	if hitlStatus, _ := params.Get(c.Ctx, "hitlStatus"); hitlStatus != "" && hitlStatus != "all" {
+	if hitlStatus, _ := params.Get(ctx, "hitlStatus"); hitlStatus != "" && hitlStatus != "all" {
 		cnd = services.AgentRunLogService.ApplyHITLStatusFilter(cnd, hitlStatus)
 	}
-	queryParams := params.NewQueryParams(c.Ctx)
+	queryParams := params.NewQueryParams(ctx)
 	queryParams.Cnd = *cnd
 	list, paging := services.AgentRunLogService.FindPageByParams(queryParams)
 	results := make([]response.AgentRunLogResponse, 0, len(list))
 	for _, item := range list {
 		results = append(results, builders.BuildAgentRunLog(&item))
 	}
-	return web.JsonData(&web.PageResult{Results: results, Page: paging})
+	httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
+	return
 }
 
-func (c *AgentRunLogController) GetBy(id int64) *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionConversationView); err != nil {
-		return web.JsonError(err)
+func AgentRunLogGetBy(ctx *gin.Context, id int64) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionConversationView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	item := services.AgentRunLogService.Get(id)
 	if item == nil {
-		return web.JsonErrorMsg("Agent 运行日志不存在")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("Agent 运行日志不存在"))
+		return
 	}
-	return web.JsonData(builders.BuildAgentRunLog(item))
+	httpx.WriteJSON(ctx, builders.BuildAgentRunLog(item))
+	return
 }

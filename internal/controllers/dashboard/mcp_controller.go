@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"context"
+	"cs-agent/internal/pkg/httpx"
 
 	"cs-agent/internal/pkg/constants"
 	"cs-agent/internal/pkg/dto/request"
@@ -9,28 +10,28 @@ import (
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
-	"github.com/mlogclub/simple/web"
 )
 
-type MCPController struct {
-	Ctx *gin.Context
-}
-
-func (c *MCPController) AnyList_servers() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionMCPView); err != nil {
-		return web.JsonError(err)
+func MCPAnyList_servers(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionMCPView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(response.BuildMCPServerInfoResponses(services.MCPDebugService.ListServers()))
+	httpx.WriteJSON(ctx, response.BuildMCPServerInfoResponses(services.MCPDebugService.ListServers()))
+	return
 }
 
-func (c *MCPController) AnyCatalog() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionMCPView); err != nil {
-		return web.JsonError(err)
+func MCPAnyCatalog(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionMCPView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	items, err := services.ToolCatalogService.ListMCPTools(context.Background())
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	ret := make([]response.MCPToolCatalogResponse, 0, len(items))
 	for _, item := range items {
@@ -46,50 +47,63 @@ func (c *MCPController) AnyCatalog() *web.JsonResult {
 			OutputSchema: item.OutputSchema,
 		})
 	}
-	return web.JsonData(ret)
+	httpx.WriteJSON(ctx, ret)
+	return
 }
 
-func (c *MCPController) PostTest_connection() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionMCPView); err != nil {
-		return web.JsonError(err)
+func MCPPostTest_connection(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionMCPView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.MCPServerDebugRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	result, err := services.MCPDebugService.TestConnection(context.Background(), req.ServerCode)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(response.BuildMCPConnectionResponse(result))
+	httpx.WriteJSON(ctx, response.BuildMCPConnectionResponse(result))
+	return
 }
 
-func (c *MCPController) PostList_tools() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionMCPView); err != nil {
-		return web.JsonError(err)
+func MCPPostList_tools(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionMCPView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.MCPServerDebugRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	result, err := services.MCPDebugService.ListTools(context.Background(), req.ServerCode)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(response.BuildMCPToolInfoResponses(result))
+	httpx.WriteJSON(ctx, response.BuildMCPToolInfoResponses(result))
+	return
 }
 
-func (c *MCPController) PostCall_tool() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionMCPCall); err != nil {
-		return web.JsonError(err)
+func MCPPostCall_tool(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionMCPCall); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.MCPCallToolRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	result, err := services.MCPDebugService.CallTool(context.Background(), req.ServerCode, req.ToolName, req.Arguments)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(response.BuildMCPCallToolResponse(result))
+	httpx.WriteJSON(ctx, response.BuildMCPCallToolResponse(result))
+	return
 }

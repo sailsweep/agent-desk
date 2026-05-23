@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"cs-agent/internal/pkg/httpx"
 	"encoding/json"
 	"strings"
 
@@ -14,20 +15,18 @@ import (
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/sqls"
 	"github.com/mlogclub/simple/web"
 )
 
-type AIAgentController struct {
-	Ctx *gin.Context
-}
-
-func (c *AIAgentController) AnyList() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAIAgentView); err != nil {
-		return web.JsonError(err)
+func AIAgentAnyList(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionAIAgentView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	cnd := params.NewPagedSqlCnd(c.Ctx,
+	cnd := params.NewPagedSqlCnd(ctx,
 		params.QueryFilter{ParamName: "status"},
 		params.QueryFilter{ParamName: "name", Op: params.Like},
 		params.QueryFilter{ParamName: "code", Op: params.Like},
@@ -37,105 +36,131 @@ func (c *AIAgentController) AnyList() *web.JsonResult {
 	for _, item := range list {
 		results = append(results, buildAIAgentResponse(&item))
 	}
-	return web.JsonData(&web.PageResult{Results: results, Page: paging})
+	httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
+	return
 }
 
-func (c *AIAgentController) GetList_all() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAIAgentView); err != nil {
-		return web.JsonError(err)
+func AIAgentGetList_all(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionAIAgentView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	list := services.AIAgentService.Find(sqls.NewCnd().Where("status = ?", enums.StatusOk).Desc("sort_no").Desc("id"))
 	results := make([]response.AIAgentResponse, 0, len(list))
 	for _, item := range list {
 		results = append(results, buildAIAgentResponse(&item))
 	}
-	return web.JsonData(results)
+	httpx.WriteJSON(ctx, results)
+	return
 }
 
-func (c *AIAgentController) GetBy(id int64) *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAIAgentView); err != nil {
-		return web.JsonError(err)
+func AIAgentGetBy(ctx *gin.Context, id int64) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionAIAgentView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	item := services.AIAgentService.Get(id)
 	if item == nil {
-		return web.JsonErrorMsg("AI Agent 不存在")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("AI Agent 不存在"))
+		return
 	}
-	return web.JsonData(buildAIAgentResponse(item))
+	httpx.WriteJSON(ctx, buildAIAgentResponse(item))
+	return
 }
 
-func (c *AIAgentController) PostCreate() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAIAgentCreate)
+func AIAgentPostCreate(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionAIAgentCreate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.CreateAIAgentRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	item, err := services.AIAgentService.CreateAIAgent(req, operator)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(buildAIAgentResponse(item))
+	httpx.WriteJSON(ctx, buildAIAgentResponse(item))
+	return
 }
 
-func (c *AIAgentController) PostUpdate() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAIAgentUpdate)
+func AIAgentPostUpdate(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionAIAgentUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.UpdateAIAgentRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.AIAgentService.UpdateAIAgent(req, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *AIAgentController) PostDelete() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAIAgentDelete)
+func AIAgentPostDelete(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionAIAgentDelete)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.DeleteAIAgentRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.AIAgentService.DeleteAIAgent(req.ID, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *AIAgentController) PostUpdate_sort() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAIAgentUpdate); err != nil {
-		return web.JsonError(err)
+func AIAgentPostUpdate_sort(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionAIAgentUpdate); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	var ids []int64
-	if err := params.ReadJSON(c.Ctx, &ids); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &ids); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.AIAgentService.UpdateSort(ids); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *AIAgentController) PostUpdate_status() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAIAgentUpdate)
+func AIAgentPostUpdate_status(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionAIAgentUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.UpdateAIAgentStatusRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.AIAgentService.UpdateStatus(req.ID, req.Status, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
 func buildAIAgentResponse(item *models.AIAgent) response.AIAgentResponse {

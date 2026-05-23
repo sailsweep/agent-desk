@@ -4,24 +4,23 @@ import (
 	"cs-agent/internal/pkg/dto/response"
 	"cs-agent/internal/pkg/enums"
 	"cs-agent/internal/pkg/errorsx"
+	"cs-agent/internal/pkg/httpx"
 	"cs-agent/internal/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/web"
 )
 
-type ChannelController struct {
-	Ctx *gin.Context
-}
-
-func (c *ChannelController) AnyConfig() *web.JsonResult {
-	channel := services.ChannelService.GetEnabledChannel(c.Ctx)
+func ChannelAnyConfig(ctx *gin.Context) {
+	channel := services.ChannelService.GetEnabledChannel(ctx)
 	if channel == nil {
-		return web.JsonErrorMsg("接入渠道未初始化")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("接入渠道未初始化"))
+		return
 	}
 	cfg, err := resolveWidgetConfig(channel.ChannelType, channel.ConfigJSON)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	ret := response.WidgetConfigResponse{
@@ -33,7 +32,8 @@ func (c *ChannelController) AnyConfig() *web.JsonResult {
 		Position:    cfg.Position,
 		Width:       cfg.Width,
 	}
-	return web.JsonData(ret)
+	httpx.WriteJSON(ctx, ret)
+	return
 }
 
 type webLikeWidgetConfig struct {

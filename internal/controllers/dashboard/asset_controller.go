@@ -6,30 +6,29 @@ import (
 	"cs-agent/internal/pkg/dto/request"
 	"cs-agent/internal/pkg/dto/response"
 	"cs-agent/internal/pkg/enums"
+	"cs-agent/internal/pkg/httpx"
 	"cs-agent/internal/services"
 	"strings"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/web"
 )
 
-type AssetController struct {
-	Ctx *gin.Context
-}
-
-func (c *AssetController) AnyList() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAssetView); err != nil {
-		return web.JsonError(err)
+func AssetAnyList(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionAssetView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
-	cnd := params.NewPagedSqlCnd(c.Ctx,
+	cnd := params.NewPagedSqlCnd(ctx,
 		params.QueryFilter{ParamName: "provider"},
 		params.QueryFilter{ParamName: "status"},
 		params.QueryFilter{ParamName: "createUserId"},
 		params.QueryFilter{ParamName: "filename", Op: params.Like},
 	).Desc("id")
-	if strings.TrimSpace(c.Ctx.Query("status")) == "" {
+	if strings.TrimSpace(ctx.Query("status")) == "" {
 		cnd = cnd.Eq("status", enums.AssetStatusSuccess)
 	}
 
@@ -38,53 +37,66 @@ func (c *AssetController) AnyList() *web.JsonResult {
 	for _, item := range list {
 		results = append(results, builders.BuildAsset(&item))
 	}
-	return web.JsonData(&web.PageResult{Results: results, Page: paging})
+	httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
+	return
 }
 
-func (c *AssetController) GetBy(id int64) *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAssetView); err != nil {
-		return web.JsonError(err)
+func AssetGetBy(ctx *gin.Context, id int64) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionAssetView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	item := services.AssetService.Get(id)
 	if item == nil {
-		return web.JsonErrorMsg("文件不存在")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("文件不存在"))
+		return
 	}
-	return web.JsonData(builders.BuildAsset(item))
+	httpx.WriteJSON(ctx, builders.BuildAsset(item))
+	return
 }
 
-func (c *AssetController) PostCreate() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAssetCreate)
+func AssetPostCreate(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionAssetCreate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.CreateAssetRequest{}
-	if err := params.ReadForm(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadForm(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	header, err := c.Ctx.FormFile("file")
+	header, err := ctx.FormFile("file")
 	if err != nil {
-		return web.JsonErrorMsg("请选择上传文件")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("请选择上传文件"))
+		return
 	}
 	item, err := services.AssetService.UploadFile(header, req.Prefix, operator)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(builders.BuildAsset(item))
+	httpx.WriteJSON(ctx, builders.BuildAsset(item))
+	return
 }
 
-func (c *AssetController) PostDelete() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAssetDelete)
+func AssetPostDelete(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionAssetDelete)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.DeleteAssetRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.AssetService.DeleteAsset(req.ID, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }

@@ -4,22 +4,21 @@ import (
 	"cs-agent/internal/builders"
 	"cs-agent/internal/pkg/constants"
 	"cs-agent/internal/pkg/dto/request"
+	"cs-agent/internal/pkg/httpx"
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/web"
 )
 
-type AgentController struct {
-	Ctx *gin.Context
-}
-
-func (c *AgentController) AnyList() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAgentView); err != nil {
-		return web.JsonError(err)
+func AgentAnyList(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionAgentView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	list, paging := services.AgentProfileService.FindPageByCnd(params.NewPagedSqlCnd(c.Ctx,
+	list, paging := services.AgentProfileService.FindPageByCnd(params.NewPagedSqlCnd(ctx,
 		params.QueryFilter{ParamName: "userId"},
 		params.QueryFilter{ParamName: "teamId"},
 		params.QueryFilter{ParamName: "serviceStatus"},
@@ -27,75 +26,93 @@ func (c *AgentController) AnyList() *web.JsonResult {
 		params.QueryFilter{ParamName: "displayName", Op: params.Like},
 	).Desc("id"))
 	results := builders.BuildAgentProfileList(list)
-	return web.JsonData(&web.PageResult{Results: results, Page: paging})
+	httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
+	return
 }
 
-func (c *AgentController) GetList_all() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAgentView); err != nil {
-		return web.JsonError(err)
+func AgentGetList_all(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionAgentView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	list := services.AgentProfileService.Find(params.NewPagedSqlCnd(c.Ctx,
+	list := services.AgentProfileService.Find(params.NewPagedSqlCnd(ctx,
 		params.QueryFilter{ParamName: "userId"},
 		params.QueryFilter{ParamName: "teamId"},
 		params.QueryFilter{ParamName: "serviceStatus"},
 		params.QueryFilter{ParamName: "agentCode", Op: params.Like},
 	).Desc("id"))
 
-	return web.JsonData(builders.BuildAgentProfileList(list))
+	httpx.WriteJSON(ctx, builders.BuildAgentProfileList(list))
+	return
 }
 
-func (c *AgentController) GetBy(id int64) *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAgentView); err != nil {
-		return web.JsonError(err)
+func AgentGetBy(ctx *gin.Context, id int64) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionAgentView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	item := services.AgentProfileService.Get(id)
 	if item == nil {
-		return web.JsonErrorMsg("客服档案不存在")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("客服档案不存在"))
+		return
 	}
-	return web.JsonData(builders.BuildAgentProfileResponse(item))
+	httpx.WriteJSON(ctx, builders.BuildAgentProfileResponse(item))
+	return
 }
 
-func (c *AgentController) PostCreate() *web.JsonResult {
-	user, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAgentCreate)
+func AgentPostCreate(ctx *gin.Context) {
+	user, err := services.AuthService.RequirePermission(ctx, constants.PermissionAgentCreate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.CreateAgentProfileRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	item, err := services.AgentProfileService.CreateAgentProfile(req, user)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(builders.BuildAgentProfileResponse(item))
+	httpx.WriteJSON(ctx, builders.BuildAgentProfileResponse(item))
+	return
 }
 
-func (c *AgentController) PostUpdate() *web.JsonResult {
-	user, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAgentUpdate)
+func AgentPostUpdate(ctx *gin.Context) {
+	user, err := services.AuthService.RequirePermission(ctx, constants.PermissionAgentUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.UpdateAgentProfileRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.AgentProfileService.UpdateAgentProfile(req, user); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *AgentController) PostDelete() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAgentDelete); err != nil {
-		return web.JsonError(err)
+func AgentPostDelete(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionAgentDelete); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.DeleteAgentProfileRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.AgentProfileService.DeleteAgentProfile(req.ID); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }

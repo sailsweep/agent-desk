@@ -8,70 +8,81 @@ import (
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/web"
 )
 
-type ConversationController struct {
-	Ctx *gin.Context
-}
-
-func (c *ConversationController) GetBy(id int64) *web.JsonResult {
-	if services.ChannelService.GetEnabledChannel(c.Ctx) == nil {
-		return web.JsonErrorMsg("接入渠道未初始化")
+func ConversationGetBy(ctx *gin.Context, id int64) {
+	if services.ChannelService.GetEnabledChannel(ctx) == nil {
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("接入渠道未初始化"))
+		return
 	}
-	external := httpx.GetExternalUser(c.Ctx)
+	external := httpx.GetExternalUser(ctx)
 	if external == nil {
-		return web.JsonErrorMsg("外部身份未初始化")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("外部身份未初始化"))
+		return
 	}
 
 	item := services.ConversationService.Get(id)
 	if item == nil {
-		return web.JsonErrorMsg("会话不存在")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("会话不存在"))
+		return
 	}
 	if !services.ConversationService.IsCustomerConversationOwner(item, *external) {
-		return web.JsonErrorMsg("无权访问该会话")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("无权访问该会话"))
+		return
 	}
 
 	detail := response.ConversationDetailResponse{
 		ConversationResponse: builders.BuildConversation(item),
 		Participants:         builders.BuildParticipantResponses(id),
 	}
-	return web.JsonData(detail)
+	httpx.WriteJSON(ctx, detail)
+	return
 }
 
-func (c *ConversationController) PostCreate_or_match() *web.JsonResult {
-	channel := services.ChannelService.GetEnabledChannel(c.Ctx)
+func ConversationPostCreate_or_match(ctx *gin.Context) {
+	channel := services.ChannelService.GetEnabledChannel(ctx)
 	if channel == nil {
-		return web.JsonErrorMsg("接入渠道未初始化")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("接入渠道未初始化"))
+		return
 	}
-	external := httpx.GetExternalUser(c.Ctx)
+	external := httpx.GetExternalUser(ctx)
 	if external == nil {
-		return web.JsonErrorMsg("外部身份未初始化")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("外部身份未初始化"))
+		return
 	}
 
 	item, err := services.ConversationService.Create(*external, channel.ID, channel.AIAgentID)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(builders.BuildConversation(item))
+	httpx.WriteJSON(ctx, builders.BuildConversation(item))
+	return
 }
 
-func (c *ConversationController) PostClose() *web.JsonResult {
-	if services.ChannelService.GetEnabledChannel(c.Ctx) == nil {
-		return web.JsonErrorMsg("接入渠道未初始化")
+func ConversationPostClose(ctx *gin.Context) {
+	if services.ChannelService.GetEnabledChannel(ctx) == nil {
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("接入渠道未初始化"))
+		return
 	}
-	external := httpx.GetExternalUser(c.Ctx)
+	external := httpx.GetExternalUser(ctx)
 	if external == nil {
-		return web.JsonErrorMsg("外部身份未初始化")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("外部身份未初始化"))
+		return
 	}
 
 	req := request.CloseConversationRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.ConversationService.CloseCustomerConversation(req.ConversationID, *external); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }

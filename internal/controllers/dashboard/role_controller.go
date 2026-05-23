@@ -4,23 +4,22 @@ import (
 	"cs-agent/internal/pkg/constants"
 	"cs-agent/internal/pkg/dto/request"
 	"cs-agent/internal/pkg/dto/response"
+	"cs-agent/internal/pkg/httpx"
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/sqls"
 	"github.com/mlogclub/simple/web"
 )
 
-type RoleController struct {
-	Ctx *gin.Context
-}
-
-func (c *RoleController) AnyList() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionRoleView); err != nil {
-		return web.JsonError(err)
+func RoleAnyList(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionRoleView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	cnd := params.NewPagedSqlCnd(c.Ctx,
+	cnd := params.NewPagedSqlCnd(ctx,
 		params.QueryFilter{ParamName: "status"},
 		params.QueryFilter{ParamName: "code", Op: params.Like},
 	).Asc("sort_no").Desc("id")
@@ -36,12 +35,14 @@ func (c *RoleController) AnyList() *web.JsonResult {
 			SortNo:   item.SortNo,
 		})
 	}
-	return web.JsonData(&web.PageResult{Results: results, Page: paging})
+	httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
+	return
 }
 
-func (c *RoleController) GetList_all() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionRoleView); err != nil {
-		return web.JsonError(err)
+func RoleGetList_all(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionRoleView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	list := services.RoleService.Find(sqls.NewCnd().Asc("sort_no").Desc("id"))
@@ -56,17 +57,20 @@ func (c *RoleController) GetList_all() *web.JsonResult {
 			SortNo:   item.SortNo,
 		})
 	}
-	return web.JsonData(results)
+	httpx.WriteJSON(ctx, results)
+	return
 }
 
-func (c *RoleController) GetBy(id int64) *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionRoleView); err != nil {
-		return web.JsonError(err)
+func RoleGetBy(ctx *gin.Context, id int64) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionRoleView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	item := services.RoleService.Get(id)
 	if item == nil {
-		return web.JsonErrorMsg("角色不存在")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("角色不存在"))
+		return
 	}
 
 	permissionCodes := make([]string, 0)
@@ -77,7 +81,7 @@ func (c *RoleController) GetBy(id int64) *web.JsonResult {
 			permissionCodes = append(permissionCodes, permission.Code)
 		}
 	}
-	return web.JsonData(&response.RoleResponse{
+	httpx.WriteJSON(ctx, &response.RoleResponse{
 		ID:          item.ID,
 		Name:        item.Name,
 		Code:        item.Code,
@@ -86,23 +90,27 @@ func (c *RoleController) GetBy(id int64) *web.JsonResult {
 		SortNo:      item.SortNo,
 		Permissions: permissionCodes,
 	})
+	return
 }
 
-func (c *RoleController) PostCreate() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionRoleCreate)
+func RolePostCreate(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionRoleCreate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.CreateRoleRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	role, err := services.RoleService.CreateRole(req, operator)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(&response.RoleResponse{
+	httpx.WriteJSON(ctx, &response.RoleResponse{
 		ID:       role.ID,
 		Name:     role.Name,
 		Code:     role.Code,
@@ -110,78 +118,98 @@ func (c *RoleController) PostCreate() *web.JsonResult {
 		IsSystem: role.IsSystem,
 		SortNo:   role.SortNo,
 	})
+	return
 }
 
-func (c *RoleController) PostUpdate() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionRoleUpdate)
+func RolePostUpdate(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionRoleUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.UpdateRoleRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.RoleService.UpdateRole(req, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *RoleController) PostDelete() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionRoleDelete); err != nil {
-		return web.JsonError(err)
+func RolePostDelete(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionRoleDelete); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.DeleteRoleRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.RoleService.DeleteRole(req.ID); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *RoleController) PostUpdate_status() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionRoleUpdate)
+func RolePostUpdate_status(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionRoleUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.UpdateRoleStatusRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.RoleService.UpdateStatus(req.ID, req.Status, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *RoleController) PostAssign_permission() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionRoleAssignPermission)
+func RolePostAssign_permission(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionRoleAssignPermission)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.AssignPermissionRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.RoleService.AssignPermissions(req.RoleID, req.PermissionIDs, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *RoleController) PostUpdate_sort() *web.JsonResult {
+func RolePostUpdate_sort(ctx *gin.Context) {
 	var ids []int64
-	if err := params.ReadJSON(c.Ctx, &ids); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &ids); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.RoleService.UpdateSort(ids); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }

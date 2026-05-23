@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"cs-agent/internal/pkg/httpx"
 	"strings"
 
 	"cs-agent/internal/builders"
@@ -9,21 +10,19 @@ import (
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/sqls"
 	"github.com/mlogclub/simple/web"
 )
 
-type TicketController struct {
-	Ctx *gin.Context
-}
-
-func (c *TicketController) AnyList() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionTicketView)
+func TicketAnyList(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionTicketView)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	cnd := params.NewPagedSqlCnd(c.Ctx,
+	cnd := params.NewPagedSqlCnd(ctx,
 		params.QueryFilter{ParamName: "status"},
 		params.QueryFilter{ParamName: "currentAssigneeId"},
 		params.QueryFilter{ParamName: "customerId"},
@@ -31,28 +30,29 @@ func (c *TicketController) AnyList() *web.JsonResult {
 		params.QueryFilter{ParamName: "source"},
 		params.QueryFilter{ParamName: "channel"},
 	).Desc("updated_at").Desc("id")
-	if keyword, _ := params.Get(c.Ctx, "keyword"); strings.TrimSpace(keyword) != "" {
+	if keyword, _ := params.Get(ctx, "keyword"); strings.TrimSpace(keyword) != "" {
 		keyword = "%" + strings.TrimSpace(keyword) + "%"
 		cnd.Where("ticket_no LIKE ? OR title LIKE ? OR description LIKE ?", keyword, keyword, keyword)
 	}
-	if tagID, _ := params.GetInt64(c.Ctx, "tagId"); tagID > 0 {
+	if tagID, _ := params.GetInt64(ctx, "tagId"); tagID > 0 {
 		cnd.Where("id IN (SELECT ticket_id FROM t_ticket_tag WHERE tag_id = ?)", tagID)
 	}
-	if mine, _ := params.Get(c.Ctx, "mine"); mine == "1" || strings.EqualFold(mine, "true") {
+	if mine, _ := params.Get(ctx, "mine"); mine == "1" || strings.EqualFold(mine, "true") {
 		cnd.Eq("current_assignee_id", operator.UserID)
 	}
-	if unassigned, _ := params.Get(c.Ctx, "unassigned"); unassigned == "1" || strings.EqualFold(unassigned, "true") {
+	if unassigned, _ := params.Get(ctx, "unassigned"); unassigned == "1" || strings.EqualFold(unassigned, "true") {
 		cnd.Eq("current_assignee_id", 0)
 	}
-	if staleHoursValue, _ := params.Get(c.Ctx, "staleHours"); strings.TrimSpace(staleHoursValue) != "" {
-		staleHours, _ := params.GetInt(c.Ctx, "staleHours")
+	if staleHoursValue, _ := params.Get(ctx, "staleHours"); strings.TrimSpace(staleHoursValue) != "" {
+		staleHours, _ := params.GetInt(ctx, "staleHours")
 		services.TicketService.ApplyStaleFilter(cnd, staleHours)
 	}
 	aggregate, err := services.TicketService.FindPageAggregateByCnd(cnd, operator.UserID)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(&web.PageResult{
+	httpx.WriteJSON(ctx, &web.PageResult{
 		Results: builders.BuildTicketListWithContext(aggregate.List, &builders.TicketBuildContext{
 			TagsByTicketID: aggregate.TagsByTicketID,
 			Users:          aggregate.Users,
@@ -60,190 +60,239 @@ func (c *TicketController) AnyList() *web.JsonResult {
 		}),
 		Page: aggregate.Paging,
 	})
+	return
 }
 
-func (c *TicketController) AnySummary() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionTicketView)
+func TicketAnySummary(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionTicketView)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	staleHours, _ := params.GetInt(c.Ctx, "staleHours")
-	return web.JsonData(builders.BuildTicketSummary(services.TicketService.GetSummary(operator, staleHours)))
+	staleHours, _ := params.GetInt(ctx, "staleHours")
+	httpx.WriteJSON(ctx, builders.BuildTicketSummary(services.TicketService.GetSummary(operator, staleHours)))
+	return
 }
 
-func (c *TicketController) AnyView_list() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionTicketView)
+func TicketAnyView_list(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionTicketView)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(builders.BuildTicketViewList(services.TicketViewService.ListByUser(operator.UserID)))
+	httpx.WriteJSON(ctx, builders.BuildTicketViewList(services.TicketViewService.ListByUser(operator.UserID)))
+	return
 }
 
-func (c *TicketController) PostSave_view() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionTicketView)
+func TicketPostSave_view(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionTicketView)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.SaveTicketViewRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	item, err := services.TicketViewService.Save(req, operator)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(builders.BuildTicketView(item))
+	httpx.WriteJSON(ctx, builders.BuildTicketView(item))
+	return
 }
 
-func (c *TicketController) PostDelete_view() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionTicketView)
+func TicketPostDelete_view(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionTicketView)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.DeleteTicketViewRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.TicketViewService.Delete(req.ID, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *TicketController) GetBy(id int64) *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionTicketView); err != nil {
-		return web.JsonError(err)
+func TicketGetBy(ctx *gin.Context, id int64) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionTicketView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	detail, err := services.TicketService.GetDetail(id)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(builders.BuildTicketDetail(detail))
+	httpx.WriteJSON(ctx, builders.BuildTicketDetail(detail))
+	return
 }
 
-func (c *TicketController) PostCreate() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionTicketCreate)
+func TicketPostCreate(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionTicketCreate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.CreateTicketRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	item, err := services.TicketService.CreateTicket(req, operator)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(builders.BuildTicket(item))
+	httpx.WriteJSON(ctx, builders.BuildTicket(item))
+	return
 }
 
-func (c *TicketController) PostCreate_from_conversation() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionTicketCreate)
+func TicketPostCreate_from_conversation(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionTicketCreate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.CreateTicketFromConversationRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	item, err := services.TicketService.CreateFromConversation(req, operator)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(builders.BuildTicket(item))
+	httpx.WriteJSON(ctx, builders.BuildTicket(item))
+	return
 }
 
-func (c *TicketController) PostUpdate() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionTicketUpdate)
+func TicketPostUpdate(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionTicketUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.UpdateTicketRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.TicketService.UpdateTicket(req, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *TicketController) PostLink_customer() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionTicketUpdate)
+func TicketPostLink_customer(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionTicketUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.LinkTicketCustomerRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.TicketService.LinkCustomer(req.TicketID, req.CustomerID, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *TicketController) PostAssign() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionTicketAssign)
+func TicketPostAssign(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionTicketAssign)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.AssignTicketRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.TicketService.AssignTicket(req, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *TicketController) PostChange_status() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionTicketChangeStatus)
+func TicketPostChange_status(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionTicketChangeStatus)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.ChangeTicketStatusRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.TicketService.ChangeStatus(req, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *TicketController) AnyProgressList() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionTicketView); err != nil {
-		return web.JsonError(err)
+func TicketAnyProgressList(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionTicketView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	ticketID, _ := params.GetInt64(c.Ctx, "ticketId")
+	ticketID, _ := params.GetInt64(ctx, "ticketId")
 	if ticketID <= 0 {
-		return web.JsonErrorMsg("工单不存在")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("工单不存在"))
+		return
 	}
 	if services.TicketService.Get(ticketID) == nil {
-		return web.JsonErrorMsg("工单不存在")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("工单不存在"))
+		return
 	}
 	progresses := services.TicketProgressService.Find(sqls.NewCnd().Eq("ticket_id", ticketID).Asc("id"))
-	return web.JsonData(builders.BuildTicketProgressList(progresses))
+	httpx.WriteJSON(ctx, builders.BuildTicketProgressList(progresses))
+	return
 }
 
-func (c *TicketController) PostProgressCreate() *web.JsonResult {
-	return c.createProgress()
+func TicketPostProgressCreate(ctx *gin.Context) {
+	ticketCreateProgress(ctx)
+	return
 }
 
-func (c *TicketController) createProgress() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionTicketProgress)
+func ticketCreateProgress(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionTicketProgress)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.CreateTicketProgressRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	item, err := services.TicketService.AddProgress(req, operator)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(builders.BuildTicketProgress(item))
+	httpx.WriteJSON(ctx, builders.BuildTicketProgress(item))
+	return
 }

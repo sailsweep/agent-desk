@@ -3,30 +3,29 @@ package dashboard
 import (
 	"cs-agent/internal/pkg/constants"
 	"cs-agent/internal/pkg/dto/response"
+	"cs-agent/internal/pkg/httpx"
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/common/strs"
 	"github.com/mlogclub/simple/web"
 )
 
-type PermissionController struct {
-	Ctx *gin.Context
-}
-
-func (c *PermissionController) AnyList() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionPermissionView); err != nil {
-		return web.JsonError(err)
+func PermissionAnyList(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionPermissionView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
-	cnd := params.NewPagedSqlCnd(c.Ctx,
+	cnd := params.NewPagedSqlCnd(ctx,
 		params.QueryFilter{ParamName: "groupName"},
 		params.QueryFilter{ParamName: "type"},
 		params.QueryFilter{ParamName: "status"},
 	).Desc("id")
 
-	if keyword, _ := params.Get(c.Ctx, "keyword"); strs.IsNotBlank(keyword) {
+	if keyword, _ := params.Get(ctx, "keyword"); strs.IsNotBlank(keyword) {
 		cnd.Where("(name LIKE ? OR code LIKE ?)", "%"+keyword+"%", "%"+keyword+"%")
 	}
 
@@ -45,19 +44,22 @@ func (c *PermissionController) AnyList() *web.JsonResult {
 			SortNo:    item.SortNo,
 		})
 	}
-	return web.JsonData(&web.PageResult{Results: results, Page: paging})
+	httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
+	return
 }
 
-func (c *PermissionController) GetBy(id int64) *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionPermissionView); err != nil {
-		return web.JsonError(err)
+func PermissionGetBy(ctx *gin.Context, id int64) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionPermissionView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	item := services.PermissionService.Get(id)
 	if item == nil {
-		return web.JsonErrorMsg("权限不存在")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("权限不存在"))
+		return
 	}
-	return web.JsonData(&response.PermissionResponse{
+	httpx.WriteJSON(ctx, &response.PermissionResponse{
 		ID:        item.ID,
 		Name:      item.Name,
 		Code:      item.Code,
@@ -68,4 +70,5 @@ func (c *PermissionController) GetBy(id int64) *web.JsonResult {
 		Status:    item.Status,
 		SortNo:    item.SortNo,
 	})
+	return
 }

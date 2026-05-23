@@ -13,10 +13,6 @@ import (
 	"github.com/mlogclub/simple/web"
 )
 
-func writeJSON(ctx *gin.Context, result *web.JsonResult) {
-	httpx.WriteJSON(ctx, result)
-}
-
 func pathInt64(ctx *gin.Context, name string) (int64, bool) {
 	value, err := strconv.ParseInt(ctx.Param(name), 10, 64)
 	if err != nil {
@@ -37,944 +33,421 @@ func registerApiAuthRoutes(group *gin.RouterGroup) {
 }
 
 func registerApiChannelRoutes(group *gin.RouterGroup) {
-	group.Any("/config", func(ctx *gin.Context) {
-		controller := &api.ChannelController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyConfig())
-	})
+	group.Any("/config", api.ChannelAnyConfig)
+}
+
+func registerApiCustomerRoutes(group *gin.RouterGroup) {
+	group.POST("/session_exchange", api.CustomerPostSession_exchange)
 }
 
 func registerApiConversationRoutes(group *gin.RouterGroup) {
 	group.GET("/:id", func(ctx *gin.Context) {
-		controller := &api.ConversationController{Ctx: ctx}
 		id, ok := pathInt64(ctx, "id")
 		if !ok {
 			return
 		}
-		writeJSON(ctx, controller.GetBy(id))
+		api.ConversationGetBy(ctx, id)
 	})
-	group.POST("/close", func(ctx *gin.Context) {
-		controller := &api.ConversationController{Ctx: ctx}
-		writeJSON(ctx, controller.PostClose())
-	})
-	group.POST("/create_or_match", func(ctx *gin.Context) {
-		controller := &api.ConversationController{Ctx: ctx}
-		writeJSON(ctx, controller.PostCreate_or_match())
-	})
-}
-
-func registerApiCustomerRoutes(group *gin.RouterGroup) {
-	group.POST("/session_exchange", func(ctx *gin.Context) {
-		controller := &api.CustomerController{Ctx: ctx}
-		writeJSON(ctx, controller.PostSession_exchange())
-	})
+	group.POST("/close", api.ConversationPostClose)
+	group.POST("/create_or_match", api.ConversationPostCreate_or_match)
 }
 
 func registerApiMessageRoutes(group *gin.RouterGroup) {
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &api.MessageController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-	group.POST("/read", func(ctx *gin.Context) {
-		controller := &api.MessageController{Ctx: ctx}
-		writeJSON(ctx, controller.PostRead())
-	})
-	group.POST("/send", func(ctx *gin.Context) {
-		controller := &api.MessageController{Ctx: ctx}
-		writeJSON(ctx, controller.PostSend())
-	})
-	group.POST("/upload_attachment", func(ctx *gin.Context) {
-		controller := &api.MessageController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpload_attachment())
-	})
-	group.POST("/upload_image", func(ctx *gin.Context) {
-		controller := &api.MessageController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpload_image())
-	})
-}
-
-func registerDashboardAIAgentRoutes(group *gin.RouterGroup) {
-	group.GET("/:id", func(ctx *gin.Context) {
-		controller := &dashboard.AIAgentController{Ctx: ctx}
-		id, ok := pathInt64(ctx, "id")
-		if !ok {
-			return
-		}
-		writeJSON(ctx, controller.GetBy(id))
-	})
-	group.POST("/create", func(ctx *gin.Context) {
-		controller := &dashboard.AIAgentController{Ctx: ctx}
-		writeJSON(ctx, controller.PostCreate())
-	})
-	group.POST("/delete", func(ctx *gin.Context) {
-		controller := &dashboard.AIAgentController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDelete())
-	})
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.AIAgentController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-	group.GET("/list_all", func(ctx *gin.Context) {
-		controller := &dashboard.AIAgentController{Ctx: ctx}
-		writeJSON(ctx, controller.GetList_all())
-	})
-	group.POST("/update", func(ctx *gin.Context) {
-		controller := &dashboard.AIAgentController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate())
-	})
-	group.POST("/update_sort", func(ctx *gin.Context) {
-		controller := &dashboard.AIAgentController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate_sort())
-	})
-	group.POST("/update_status", func(ctx *gin.Context) {
-		controller := &dashboard.AIAgentController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate_status())
-	})
-}
-
-func registerDashboardAIConfigRoutes(group *gin.RouterGroup) {
-	group.GET("/:id", func(ctx *gin.Context) {
-		controller := &dashboard.AIConfigController{Ctx: ctx}
-		id, ok := pathInt64(ctx, "id")
-		if !ok {
-			return
-		}
-		writeJSON(ctx, controller.GetBy(id))
-	})
-	group.POST("/create", func(ctx *gin.Context) {
-		controller := &dashboard.AIConfigController{Ctx: ctx}
-		writeJSON(ctx, controller.PostCreate())
-	})
-	group.POST("/delete", func(ctx *gin.Context) {
-		controller := &dashboard.AIConfigController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDelete())
-	})
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.AIConfigController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-	group.Any("/list_all", func(ctx *gin.Context) {
-		controller := &dashboard.AIConfigController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList_all())
-	})
-	group.POST("/update", func(ctx *gin.Context) {
-		controller := &dashboard.AIConfigController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate())
-	})
-	group.POST("/update_sort", func(ctx *gin.Context) {
-		controller := &dashboard.AIConfigController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate_sort())
-	})
-	group.POST("/update_status", func(ctx *gin.Context) {
-		controller := &dashboard.AIConfigController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate_status())
-	})
-}
-
-func registerDashboardAgentRoutes(group *gin.RouterGroup) {
-	group.GET("/:id", func(ctx *gin.Context) {
-		controller := &dashboard.AgentController{Ctx: ctx}
-		id, ok := pathInt64(ctx, "id")
-		if !ok {
-			return
-		}
-		writeJSON(ctx, controller.GetBy(id))
-	})
-	group.POST("/create", func(ctx *gin.Context) {
-		controller := &dashboard.AgentController{Ctx: ctx}
-		writeJSON(ctx, controller.PostCreate())
-	})
-	group.POST("/delete", func(ctx *gin.Context) {
-		controller := &dashboard.AgentController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDelete())
-	})
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.AgentController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-	group.GET("/list_all", func(ctx *gin.Context) {
-		controller := &dashboard.AgentController{Ctx: ctx}
-		writeJSON(ctx, controller.GetList_all())
-	})
-	group.POST("/update", func(ctx *gin.Context) {
-		controller := &dashboard.AgentController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate())
-	})
-}
-
-func registerDashboardAgentRunLogRoutes(group *gin.RouterGroup) {
-	group.GET("/:id", func(ctx *gin.Context) {
-		controller := &dashboard.AgentRunLogController{Ctx: ctx}
-		id, ok := pathInt64(ctx, "id")
-		if !ok {
-			return
-		}
-		writeJSON(ctx, controller.GetBy(id))
-	})
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.AgentRunLogController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-}
-
-func registerDashboardAgentTeamRoutes(group *gin.RouterGroup) {
-	group.GET("/:id", func(ctx *gin.Context) {
-		controller := &dashboard.AgentTeamController{Ctx: ctx}
-		id, ok := pathInt64(ctx, "id")
-		if !ok {
-			return
-		}
-		writeJSON(ctx, controller.GetBy(id))
-	})
-	group.POST("/create", func(ctx *gin.Context) {
-		controller := &dashboard.AgentTeamController{Ctx: ctx}
-		writeJSON(ctx, controller.PostCreate())
-	})
-	group.POST("/delete", func(ctx *gin.Context) {
-		controller := &dashboard.AgentTeamController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDelete())
-	})
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.AgentTeamController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-	group.GET("/list_all", func(ctx *gin.Context) {
-		controller := &dashboard.AgentTeamController{Ctx: ctx}
-		writeJSON(ctx, controller.GetList_all())
-	})
-	group.POST("/update", func(ctx *gin.Context) {
-		controller := &dashboard.AgentTeamController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate())
-	})
-}
-
-func registerDashboardAgentTeamScheduleRoutes(group *gin.RouterGroup) {
-	group.GET("/:id", func(ctx *gin.Context) {
-		controller := &dashboard.AgentTeamScheduleController{Ctx: ctx}
-		id, ok := pathInt64(ctx, "id")
-		if !ok {
-			return
-		}
-		writeJSON(ctx, controller.GetBy(id))
-	})
-	group.POST("/batch_generate", func(ctx *gin.Context) {
-		controller := &dashboard.AgentTeamScheduleController{Ctx: ctx}
-		writeJSON(ctx, controller.PostBatch_generate())
-	})
-	group.POST("/batch_preview", func(ctx *gin.Context) {
-		controller := &dashboard.AgentTeamScheduleController{Ctx: ctx}
-		writeJSON(ctx, controller.PostBatch_preview())
-	})
-	group.Any("/calendar", func(ctx *gin.Context) {
-		controller := &dashboard.AgentTeamScheduleController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyCalendar())
-	})
-	group.POST("/create", func(ctx *gin.Context) {
-		controller := &dashboard.AgentTeamScheduleController{Ctx: ctx}
-		writeJSON(ctx, controller.PostCreate())
-	})
-	group.POST("/delete", func(ctx *gin.Context) {
-		controller := &dashboard.AgentTeamScheduleController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDelete())
-	})
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.AgentTeamScheduleController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-	group.POST("/update", func(ctx *gin.Context) {
-		controller := &dashboard.AgentTeamScheduleController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate())
-	})
-}
-
-func registerDashboardAssetRoutes(group *gin.RouterGroup) {
-	group.GET("/:id", func(ctx *gin.Context) {
-		controller := &dashboard.AssetController{Ctx: ctx}
-		id, ok := pathInt64(ctx, "id")
-		if !ok {
-			return
-		}
-		writeJSON(ctx, controller.GetBy(id))
-	})
-	group.POST("/create", func(ctx *gin.Context) {
-		controller := &dashboard.AssetController{Ctx: ctx}
-		writeJSON(ctx, controller.PostCreate())
-	})
-	group.POST("/delete", func(ctx *gin.Context) {
-		controller := &dashboard.AssetController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDelete())
-	})
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.AssetController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-}
-
-func registerDashboardChannelRoutes(group *gin.RouterGroup) {
-	group.GET("/:id", func(ctx *gin.Context) {
-		controller := &dashboard.ChannelController{Ctx: ctx}
-		id, ok := pathInt64(ctx, "id")
-		if !ok {
-			return
-		}
-		writeJSON(ctx, controller.GetBy(id))
-	})
-	group.POST("/create", func(ctx *gin.Context) {
-		controller := &dashboard.ChannelController{Ctx: ctx}
-		writeJSON(ctx, controller.PostCreate())
-	})
-	group.POST("/delete", func(ctx *gin.Context) {
-		controller := &dashboard.ChannelController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDelete())
-	})
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.ChannelController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-	group.POST("/reset_user_token_secret", func(ctx *gin.Context) {
-		controller := &dashboard.ChannelController{Ctx: ctx}
-		writeJSON(ctx, controller.PostReset_user_token_secret())
-	})
-	group.POST("/update", func(ctx *gin.Context) {
-		controller := &dashboard.ChannelController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate())
-	})
-	group.POST("/update_status", func(ctx *gin.Context) {
-		controller := &dashboard.ChannelController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate_status())
-	})
-	group.Any("/wxwork/kf/accounts", func(ctx *gin.Context) {
-		controller := &dashboard.ChannelController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyWxworkKfAccounts())
-	})
-}
-
-func registerDashboardCompanyRoutes(group *gin.RouterGroup) {
-	group.GET("/:id", func(ctx *gin.Context) {
-		controller := &dashboard.CompanyController{Ctx: ctx}
-		id, ok := pathInt64(ctx, "id")
-		if !ok {
-			return
-		}
-		writeJSON(ctx, controller.GetBy(id))
-	})
-	group.POST("/create", func(ctx *gin.Context) {
-		controller := &dashboard.CompanyController{Ctx: ctx}
-		writeJSON(ctx, controller.PostCreate())
-	})
-	group.POST("/delete", func(ctx *gin.Context) {
-		controller := &dashboard.CompanyController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDelete())
-	})
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.CompanyController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-	group.POST("/update", func(ctx *gin.Context) {
-		controller := &dashboard.CompanyController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate())
-	})
-	group.POST("/update_status", func(ctx *gin.Context) {
-		controller := &dashboard.CompanyController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate_status())
-	})
-}
-
-func registerDashboardConversationRoutes(group *gin.RouterGroup) {
-	group.GET("/:id", func(ctx *gin.Context) {
-		controller := &dashboard.ConversationController{Ctx: ctx}
-		id, ok := pathInt64(ctx, "id")
-		if !ok {
-			return
-		}
-		writeJSON(ctx, controller.GetBy(id))
-	})
-	group.POST("/add_tag", func(ctx *gin.Context) {
-		controller := &dashboard.ConversationController{Ctx: ctx}
-		writeJSON(ctx, controller.PostAdd_tag())
-	})
-	group.POST("/assign", func(ctx *gin.Context) {
-		controller := &dashboard.ConversationController{Ctx: ctx}
-		writeJSON(ctx, controller.PostAssign())
-	})
-	group.POST("/close", func(ctx *gin.Context) {
-		controller := &dashboard.ConversationController{Ctx: ctx}
-		writeJSON(ctx, controller.PostClose())
-	})
-	group.Any("/conversations", func(ctx *gin.Context) {
-		controller := &dashboard.ConversationController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyConversations())
-	})
-	group.POST("/dispatch", func(ctx *gin.Context) {
-		controller := &dashboard.ConversationController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDispatch())
-	})
-	group.POST("/link_customer", func(ctx *gin.Context) {
-		controller := &dashboard.ConversationController{Ctx: ctx}
-		writeJSON(ctx, controller.PostLink_customer())
-	})
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.ConversationController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-	group.Any("/message_list", func(ctx *gin.Context) {
-		controller := &dashboard.ConversationController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyMessage_list())
-	})
-	group.POST("/read", func(ctx *gin.Context) {
-		controller := &dashboard.ConversationController{Ctx: ctx}
-		writeJSON(ctx, controller.PostRead())
-	})
-	group.POST("/recall_message", func(ctx *gin.Context) {
-		controller := &dashboard.ConversationController{Ctx: ctx}
-		writeJSON(ctx, controller.PostRecall_message())
-	})
-	group.POST("/remove_tag", func(ctx *gin.Context) {
-		controller := &dashboard.ConversationController{Ctx: ctx}
-		writeJSON(ctx, controller.PostRemove_tag())
-	})
-	group.POST("/send_message", func(ctx *gin.Context) {
-		controller := &dashboard.ConversationController{Ctx: ctx}
-		writeJSON(ctx, controller.PostSend_message())
-	})
-	group.POST("/transfer", func(ctx *gin.Context) {
-		controller := &dashboard.ConversationController{Ctx: ctx}
-		writeJSON(ctx, controller.PostTransfer())
-	})
-	group.POST("/upload_attachment", func(ctx *gin.Context) {
-		controller := &dashboard.ConversationController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpload_attachment())
-	})
-	group.POST("/upload_image", func(ctx *gin.Context) {
-		controller := &dashboard.ConversationController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpload_image())
-	})
-}
-
-func registerDashboardCustomerContactRoutes(group *gin.RouterGroup) {
-	group.POST("/create", func(ctx *gin.Context) {
-		controller := &dashboard.CustomerContactController{Ctx: ctx}
-		writeJSON(ctx, controller.PostCreate())
-	})
-	group.POST("/delete", func(ctx *gin.Context) {
-		controller := &dashboard.CustomerContactController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDelete())
-	})
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.CustomerContactController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-	group.POST("/update", func(ctx *gin.Context) {
-		controller := &dashboard.CustomerContactController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate())
-	})
-}
-
-func registerDashboardCustomerRoutes(group *gin.RouterGroup) {
-	group.GET("/:id", func(ctx *gin.Context) {
-		controller := &dashboard.CustomerController{Ctx: ctx}
-		id, ok := pathInt64(ctx, "id")
-		if !ok {
-			return
-		}
-		writeJSON(ctx, controller.GetBy(id))
-	})
-	group.POST("/create", func(ctx *gin.Context) {
-		controller := &dashboard.CustomerController{Ctx: ctx}
-		writeJSON(ctx, controller.PostCreate())
-	})
-	group.POST("/delete", func(ctx *gin.Context) {
-		controller := &dashboard.CustomerController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDelete())
-	})
-	group.POST("/list", func(ctx *gin.Context) {
-		controller := &dashboard.CustomerController{Ctx: ctx}
-		writeJSON(ctx, controller.PostList())
-	})
-	group.POST("/save_profile", func(ctx *gin.Context) {
-		controller := &dashboard.CustomerController{Ctx: ctx}
-		writeJSON(ctx, controller.PostSave_profile())
-	})
-	group.POST("/update", func(ctx *gin.Context) {
-		controller := &dashboard.CustomerController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate())
-	})
-	group.POST("/update_status", func(ctx *gin.Context) {
-		controller := &dashboard.CustomerController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate_status())
-	})
+	group.Any("/list", api.MessageAnyList)
+	group.POST("/read", api.MessagePostRead)
+	group.POST("/send", api.MessagePostSend)
+	group.POST("/upload_attachment", api.MessagePostUpload_attachment)
+	group.POST("/upload_image", api.MessagePostUpload_image)
 }
 
 func registerDashboardDashboardRoutes(group *gin.RouterGroup) {
-	group.GET("/overview", func(ctx *gin.Context) {
-		controller := &dashboard.DashboardController{Ctx: ctx}
-		writeJSON(ctx, controller.GetOverview())
-	})
-}
-
-func registerDashboardKnowledgeBaseRoutes(group *gin.RouterGroup) {
-	group.GET("/:id", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeBaseController{Ctx: ctx}
-		id, ok := pathInt64(ctx, "id")
-		if !ok {
-			return
-		}
-		writeJSON(ctx, controller.GetBy(id))
-	})
-	group.POST("/create", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeBaseController{Ctx: ctx}
-		writeJSON(ctx, controller.PostCreate())
-	})
-	group.POST("/delete", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeBaseController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDelete())
-	})
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeBaseController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-	group.Any("/list_all", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeBaseController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList_all())
-	})
-	group.POST("/rebuild_index", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeBaseController{Ctx: ctx}
-		writeJSON(ctx, controller.PostRebuild_index())
-	})
-	group.POST("/update", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeBaseController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate())
-	})
-	group.POST("/update_sort", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeBaseController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate_sort())
-	})
-}
-
-func registerDashboardKnowledgeDocumentRoutes(group *gin.RouterGroup) {
-	group.GET("/:id", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeDocumentController{Ctx: ctx}
-		id, ok := pathInt64(ctx, "id")
-		if !ok {
-			return
-		}
-		writeJSON(ctx, controller.GetBy(id))
-	})
-	group.POST("/create", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeDocumentController{Ctx: ctx}
-		writeJSON(ctx, controller.PostCreate())
-	})
-	group.POST("/delete", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeDocumentController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDelete())
-	})
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeDocumentController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-	group.POST("/update", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeDocumentController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate())
-	})
-}
-
-func registerDashboardKnowledgeFAQRoutes(group *gin.RouterGroup) {
-	group.GET("/:id", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeFAQController{Ctx: ctx}
-		id, ok := pathInt64(ctx, "id")
-		if !ok {
-			return
-		}
-		writeJSON(ctx, controller.GetBy(id))
-	})
-	group.POST("/create", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeFAQController{Ctx: ctx}
-		writeJSON(ctx, controller.PostCreate())
-	})
-	group.POST("/delete", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeFAQController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDelete())
-	})
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeFAQController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-	group.POST("/update", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeFAQController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate())
-	})
-}
-
-func registerDashboardKnowledgeRetrieveRoutes(group *gin.RouterGroup) {
-	group.POST("/build", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeRetrieveController{Ctx: ctx}
-		writeJSON(ctx, controller.PostBuild())
-	})
-	group.POST("/debug/answer", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeRetrieveController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDebugAnswer())
-	})
-	group.POST("/debug/search", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeRetrieveController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDebugSearch())
-	})
-}
-
-func registerDashboardKnowledgeRetrieveLogRoutes(group *gin.RouterGroup) {
-	group.GET("/:id", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeRetrieveLogController{Ctx: ctx}
-		id, ok := pathInt64(ctx, "id")
-		if !ok {
-			return
-		}
-		writeJSON(ctx, controller.GetBy(id))
-	})
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.KnowledgeRetrieveLogController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-}
-
-func registerDashboardMCPRoutes(group *gin.RouterGroup) {
-	group.POST("/call_tool", func(ctx *gin.Context) {
-		controller := &dashboard.MCPController{Ctx: ctx}
-		writeJSON(ctx, controller.PostCall_tool())
-	})
-	group.Any("/catalog", func(ctx *gin.Context) {
-		controller := &dashboard.MCPController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyCatalog())
-	})
-	group.Any("/list_servers", func(ctx *gin.Context) {
-		controller := &dashboard.MCPController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList_servers())
-	})
-	group.POST("/list_tools", func(ctx *gin.Context) {
-		controller := &dashboard.MCPController{Ctx: ctx}
-		writeJSON(ctx, controller.PostList_tools())
-	})
-	group.POST("/test_connection", func(ctx *gin.Context) {
-		controller := &dashboard.MCPController{Ctx: ctx}
-		writeJSON(ctx, controller.PostTest_connection())
-	})
-}
-
-func registerDashboardNotificationRoutes(group *gin.RouterGroup) {
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.NotificationController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-	group.POST("/mark_all_read", func(ctx *gin.Context) {
-		controller := &dashboard.NotificationController{Ctx: ctx}
-		writeJSON(ctx, controller.PostMark_all_read())
-	})
-	group.POST("/mark_read", func(ctx *gin.Context) {
-		controller := &dashboard.NotificationController{Ctx: ctx}
-		writeJSON(ctx, controller.PostMark_read())
-	})
-	group.GET("/unread_count", func(ctx *gin.Context) {
-		controller := &dashboard.NotificationController{Ctx: ctx}
-		writeJSON(ctx, controller.GetUnread_count())
-	})
-}
-
-func registerDashboardPermissionRoutes(group *gin.RouterGroup) {
-	group.GET("/:id", func(ctx *gin.Context) {
-		controller := &dashboard.PermissionController{Ctx: ctx}
-		id, ok := pathInt64(ctx, "id")
-		if !ok {
-			return
-		}
-		writeJSON(ctx, controller.GetBy(id))
-	})
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.PermissionController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-}
-
-func registerDashboardQuickReplyRoutes(group *gin.RouterGroup) {
-	group.POST("/create", func(ctx *gin.Context) {
-		controller := &dashboard.QuickReplyController{Ctx: ctx}
-		writeJSON(ctx, controller.PostCreate())
-	})
-	group.POST("/delete", func(ctx *gin.Context) {
-		controller := &dashboard.QuickReplyController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDelete())
-	})
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.QuickReplyController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-	group.GET("/list_all", func(ctx *gin.Context) {
-		controller := &dashboard.QuickReplyController{Ctx: ctx}
-		writeJSON(ctx, controller.GetList_all())
-	})
-	group.POST("/update", func(ctx *gin.Context) {
-		controller := &dashboard.QuickReplyController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate())
-	})
-}
-
-func registerDashboardRoleRoutes(group *gin.RouterGroup) {
-	group.GET("/:id", func(ctx *gin.Context) {
-		controller := &dashboard.RoleController{Ctx: ctx}
-		id, ok := pathInt64(ctx, "id")
-		if !ok {
-			return
-		}
-		writeJSON(ctx, controller.GetBy(id))
-	})
-	group.POST("/assign_permission", func(ctx *gin.Context) {
-		controller := &dashboard.RoleController{Ctx: ctx}
-		writeJSON(ctx, controller.PostAssign_permission())
-	})
-	group.POST("/create", func(ctx *gin.Context) {
-		controller := &dashboard.RoleController{Ctx: ctx}
-		writeJSON(ctx, controller.PostCreate())
-	})
-	group.POST("/delete", func(ctx *gin.Context) {
-		controller := &dashboard.RoleController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDelete())
-	})
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.RoleController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-	group.GET("/list_all", func(ctx *gin.Context) {
-		controller := &dashboard.RoleController{Ctx: ctx}
-		writeJSON(ctx, controller.GetList_all())
-	})
-	group.POST("/update", func(ctx *gin.Context) {
-		controller := &dashboard.RoleController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate())
-	})
-	group.POST("/update_sort", func(ctx *gin.Context) {
-		controller := &dashboard.RoleController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate_sort())
-	})
-	group.POST("/update_status", func(ctx *gin.Context) {
-		controller := &dashboard.RoleController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate_status())
-	})
-}
-
-func registerDashboardSessionRoutes(group *gin.RouterGroup) {
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.SessionController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-	group.POST("/revoke", func(ctx *gin.Context) {
-		controller := &dashboard.SessionController{Ctx: ctx}
-		writeJSON(ctx, controller.PostRevoke())
-	})
-	group.POST("/revoke/by/user", func(ctx *gin.Context) {
-		controller := &dashboard.SessionController{Ctx: ctx}
-		writeJSON(ctx, controller.PostRevokeByUser())
-	})
-}
-
-func registerDashboardSkillDefinitionRoutes(group *gin.RouterGroup) {
-	group.GET("/:id", func(ctx *gin.Context) {
-		controller := &dashboard.SkillDefinitionController{Ctx: ctx}
-		id, ok := pathInt64(ctx, "id")
-		if !ok {
-			return
-		}
-		writeJSON(ctx, controller.GetBy(id))
-	})
-	group.POST("/create", func(ctx *gin.Context) {
-		controller := &dashboard.SkillDefinitionController{Ctx: ctx}
-		writeJSON(ctx, controller.PostCreate())
-	})
-	group.POST("/debug_resume", func(ctx *gin.Context) {
-		controller := &dashboard.SkillDefinitionController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDebug_resume())
-	})
-	group.POST("/debug_run", func(ctx *gin.Context) {
-		controller := &dashboard.SkillDefinitionController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDebug_run())
-	})
-	group.POST("/delete", func(ctx *gin.Context) {
-		controller := &dashboard.SkillDefinitionController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDelete())
-	})
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.SkillDefinitionController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-	group.GET("/list_all", func(ctx *gin.Context) {
-		controller := &dashboard.SkillDefinitionController{Ctx: ctx}
-		writeJSON(ctx, controller.GetList_all())
-	})
-	group.POST("/restore", func(ctx *gin.Context) {
-		controller := &dashboard.SkillDefinitionController{Ctx: ctx}
-		writeJSON(ctx, controller.PostRestore())
-	})
-	group.POST("/update", func(ctx *gin.Context) {
-		controller := &dashboard.SkillDefinitionController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate())
-	})
-	group.POST("/update_status", func(ctx *gin.Context) {
-		controller := &dashboard.SkillDefinitionController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate_status())
-	})
-}
-
-func registerDashboardTagRoutes(group *gin.RouterGroup) {
-	group.GET("/:id", func(ctx *gin.Context) {
-		controller := &dashboard.TagController{Ctx: ctx}
-		id, ok := pathInt64(ctx, "id")
-		if !ok {
-			return
-		}
-		writeJSON(ctx, controller.GetBy(id))
-	})
-	group.POST("/create", func(ctx *gin.Context) {
-		controller := &dashboard.TagController{Ctx: ctx}
-		writeJSON(ctx, controller.PostCreate())
-	})
-	group.POST("/delete", func(ctx *gin.Context) {
-		controller := &dashboard.TagController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDelete())
-	})
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.TagController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-	group.GET("/list_all", func(ctx *gin.Context) {
-		controller := &dashboard.TagController{Ctx: ctx}
-		writeJSON(ctx, controller.GetList_all())
-	})
-	group.POST("/update", func(ctx *gin.Context) {
-		controller := &dashboard.TagController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate())
-	})
-	group.POST("/update_sort", func(ctx *gin.Context) {
-		controller := &dashboard.TagController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate_sort())
-	})
-	group.POST("/update_status", func(ctx *gin.Context) {
-		controller := &dashboard.TagController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate_status())
-	})
-}
-
-func registerDashboardTicketRoutes(group *gin.RouterGroup) {
-	group.GET("/:id", func(ctx *gin.Context) {
-		controller := &dashboard.TicketController{Ctx: ctx}
-		id, ok := pathInt64(ctx, "id")
-		if !ok {
-			return
-		}
-		writeJSON(ctx, controller.GetBy(id))
-	})
-	group.POST("/assign", func(ctx *gin.Context) {
-		controller := &dashboard.TicketController{Ctx: ctx}
-		writeJSON(ctx, controller.PostAssign())
-	})
-	group.POST("/change_status", func(ctx *gin.Context) {
-		controller := &dashboard.TicketController{Ctx: ctx}
-		writeJSON(ctx, controller.PostChange_status())
-	})
-	group.POST("/create", func(ctx *gin.Context) {
-		controller := &dashboard.TicketController{Ctx: ctx}
-		writeJSON(ctx, controller.PostCreate())
-	})
-	group.POST("/create_from_conversation", func(ctx *gin.Context) {
-		controller := &dashboard.TicketController{Ctx: ctx}
-		writeJSON(ctx, controller.PostCreate_from_conversation())
-	})
-	group.POST("/delete_view", func(ctx *gin.Context) {
-		controller := &dashboard.TicketController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDelete_view())
-	})
-	group.POST("/link_customer", func(ctx *gin.Context) {
-		controller := &dashboard.TicketController{Ctx: ctx}
-		writeJSON(ctx, controller.PostLink_customer())
-	})
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.TicketController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
-	})
-	group.POST("/progress/create", func(ctx *gin.Context) {
-		controller := &dashboard.TicketController{Ctx: ctx}
-		writeJSON(ctx, controller.PostProgressCreate())
-	})
-	group.Any("/progress/list", func(ctx *gin.Context) {
-		controller := &dashboard.TicketController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyProgressList())
-	})
-	group.POST("/save_view", func(ctx *gin.Context) {
-		controller := &dashboard.TicketController{Ctx: ctx}
-		writeJSON(ctx, controller.PostSave_view())
-	})
-	group.Any("/summary", func(ctx *gin.Context) {
-		controller := &dashboard.TicketController{Ctx: ctx}
-		writeJSON(ctx, controller.AnySummary())
-	})
-	group.POST("/update", func(ctx *gin.Context) {
-		controller := &dashboard.TicketController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate())
-	})
-	group.Any("/view_list", func(ctx *gin.Context) {
-		controller := &dashboard.TicketController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyView_list())
-	})
+	group.GET("/overview", dashboard.DashboardGetOverview)
 }
 
 func registerDashboardUserRoutes(group *gin.RouterGroup) {
 	group.GET("/:id", func(ctx *gin.Context) {
-		controller := &dashboard.UserController{Ctx: ctx}
 		id, ok := pathInt64(ctx, "id")
 		if !ok {
 			return
 		}
-		writeJSON(ctx, controller.GetBy(id))
+		dashboard.UserGetBy(ctx, id)
 	})
-	group.POST("/assign_role", func(ctx *gin.Context) {
-		controller := &dashboard.UserController{Ctx: ctx}
-		writeJSON(ctx, controller.PostAssign_role())
+	group.POST("/assign_role", dashboard.UserPostAssign_role)
+	group.POST("/change_password", dashboard.UserPostChange_password)
+	group.POST("/create", dashboard.UserPostCreate)
+	group.POST("/delete", dashboard.UserPostDelete)
+	group.Any("/list", dashboard.UserAnyList)
+	group.Any("/list_all", dashboard.UserAnyList_all)
+	group.POST("/reset_password", dashboard.UserPostReset_password)
+	group.POST("/update", dashboard.UserPostUpdate)
+	group.POST("/update_status", dashboard.UserPostUpdate_status)
+}
+
+func registerDashboardCompanyRoutes(group *gin.RouterGroup) {
+	group.GET("/:id", func(ctx *gin.Context) {
+		id, ok := pathInt64(ctx, "id")
+		if !ok {
+			return
+		}
+		dashboard.CompanyGetBy(ctx, id)
 	})
-	group.POST("/change_password", func(ctx *gin.Context) {
-		controller := &dashboard.UserController{Ctx: ctx}
-		writeJSON(ctx, controller.PostChange_password())
+	group.POST("/create", dashboard.CompanyPostCreate)
+	group.POST("/delete", dashboard.CompanyPostDelete)
+	group.Any("/list", dashboard.CompanyAnyList)
+	group.POST("/update", dashboard.CompanyPostUpdate)
+	group.POST("/update_status", dashboard.CompanyPostUpdate_status)
+}
+
+func registerDashboardCustomerRoutes(group *gin.RouterGroup) {
+	group.GET("/:id", func(ctx *gin.Context) {
+		id, ok := pathInt64(ctx, "id")
+		if !ok {
+			return
+		}
+		dashboard.CustomerGetBy(ctx, id)
 	})
-	group.POST("/create", func(ctx *gin.Context) {
-		controller := &dashboard.UserController{Ctx: ctx}
-		writeJSON(ctx, controller.PostCreate())
+	group.POST("/create", dashboard.CustomerPostCreate)
+	group.POST("/delete", dashboard.CustomerPostDelete)
+	group.POST("/list", dashboard.CustomerPostList)
+	group.POST("/save_profile", dashboard.CustomerPostSave_profile)
+	group.POST("/update", dashboard.CustomerPostUpdate)
+	group.POST("/update_status", dashboard.CustomerPostUpdate_status)
+}
+
+func registerDashboardCustomerContactRoutes(group *gin.RouterGroup) {
+	group.POST("/create", dashboard.CustomerContactPostCreate)
+	group.POST("/delete", dashboard.CustomerContactPostDelete)
+	group.Any("/list", dashboard.CustomerContactAnyList)
+	group.POST("/update", dashboard.CustomerContactPostUpdate)
+}
+
+func registerDashboardRoleRoutes(group *gin.RouterGroup) {
+	group.GET("/:id", func(ctx *gin.Context) {
+		id, ok := pathInt64(ctx, "id")
+		if !ok {
+			return
+		}
+		dashboard.RoleGetBy(ctx, id)
 	})
-	group.POST("/delete", func(ctx *gin.Context) {
-		controller := &dashboard.UserController{Ctx: ctx}
-		writeJSON(ctx, controller.PostDelete())
+	group.POST("/assign_permission", dashboard.RolePostAssign_permission)
+	group.POST("/create", dashboard.RolePostCreate)
+	group.POST("/delete", dashboard.RolePostDelete)
+	group.Any("/list", dashboard.RoleAnyList)
+	group.GET("/list_all", dashboard.RoleGetList_all)
+	group.POST("/update", dashboard.RolePostUpdate)
+	group.POST("/update_sort", dashboard.RolePostUpdate_sort)
+	group.POST("/update_status", dashboard.RolePostUpdate_status)
+}
+
+func registerDashboardPermissionRoutes(group *gin.RouterGroup) {
+	group.GET("/:id", func(ctx *gin.Context) {
+		id, ok := pathInt64(ctx, "id")
+		if !ok {
+			return
+		}
+		dashboard.PermissionGetBy(ctx, id)
 	})
-	group.Any("/list", func(ctx *gin.Context) {
-		controller := &dashboard.UserController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList())
+	group.Any("/list", dashboard.PermissionAnyList)
+}
+
+func registerDashboardSessionRoutes(group *gin.RouterGroup) {
+	group.Any("/list", dashboard.SessionAnyList)
+	group.POST("/revoke", dashboard.SessionPostRevoke)
+	group.POST("/revoke/by/user", dashboard.SessionPostRevokeByUser)
+}
+
+func registerDashboardTagRoutes(group *gin.RouterGroup) {
+	group.GET("/:id", func(ctx *gin.Context) {
+		id, ok := pathInt64(ctx, "id")
+		if !ok {
+			return
+		}
+		dashboard.TagGetBy(ctx, id)
 	})
-	group.Any("/list_all", func(ctx *gin.Context) {
-		controller := &dashboard.UserController{Ctx: ctx}
-		writeJSON(ctx, controller.AnyList_all())
+	group.POST("/create", dashboard.TagPostCreate)
+	group.POST("/delete", dashboard.TagPostDelete)
+	group.Any("/list", dashboard.TagAnyList)
+	group.GET("/list_all", dashboard.TagGetList_all)
+	group.POST("/update", dashboard.TagPostUpdate)
+	group.POST("/update_sort", dashboard.TagPostUpdate_sort)
+	group.POST("/update_status", dashboard.TagPostUpdate_status)
+}
+
+func registerDashboardConversationRoutes(group *gin.RouterGroup) {
+	group.GET("/:id", func(ctx *gin.Context) {
+		id, ok := pathInt64(ctx, "id")
+		if !ok {
+			return
+		}
+		dashboard.ConversationGetBy(ctx, id)
 	})
-	group.POST("/reset_password", func(ctx *gin.Context) {
-		controller := &dashboard.UserController{Ctx: ctx}
-		writeJSON(ctx, controller.PostReset_password())
+	group.POST("/add_tag", dashboard.ConversationPostAdd_tag)
+	group.POST("/assign", dashboard.ConversationPostAssign)
+	group.POST("/close", dashboard.ConversationPostClose)
+	group.Any("/conversations", dashboard.ConversationAnyConversations)
+	group.POST("/dispatch", dashboard.ConversationPostDispatch)
+	group.POST("/link_customer", dashboard.ConversationPostLink_customer)
+	group.Any("/list", dashboard.ConversationAnyList)
+	group.Any("/message_list", dashboard.ConversationAnyMessage_list)
+	group.POST("/read", dashboard.ConversationPostRead)
+	group.POST("/recall_message", dashboard.ConversationPostRecall_message)
+	group.POST("/remove_tag", dashboard.ConversationPostRemove_tag)
+	group.POST("/send_message", dashboard.ConversationPostSend_message)
+	group.POST("/transfer", dashboard.ConversationPostTransfer)
+	group.POST("/upload_attachment", dashboard.ConversationPostUpload_attachment)
+	group.POST("/upload_image", dashboard.ConversationPostUpload_image)
+}
+
+func registerDashboardTicketRoutes(group *gin.RouterGroup) {
+	group.GET("/:id", func(ctx *gin.Context) {
+		id, ok := pathInt64(ctx, "id")
+		if !ok {
+			return
+		}
+		dashboard.TicketGetBy(ctx, id)
 	})
-	group.POST("/update", func(ctx *gin.Context) {
-		controller := &dashboard.UserController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate())
+	group.POST("/assign", dashboard.TicketPostAssign)
+	group.POST("/change_status", dashboard.TicketPostChange_status)
+	group.POST("/create", dashboard.TicketPostCreate)
+	group.POST("/create_from_conversation", dashboard.TicketPostCreate_from_conversation)
+	group.POST("/delete_view", dashboard.TicketPostDelete_view)
+	group.POST("/link_customer", dashboard.TicketPostLink_customer)
+	group.Any("/list", dashboard.TicketAnyList)
+	group.POST("/progress/create", dashboard.TicketPostProgressCreate)
+	group.Any("/progress/list", dashboard.TicketAnyProgressList)
+	group.POST("/save_view", dashboard.TicketPostSave_view)
+	group.Any("/summary", dashboard.TicketAnySummary)
+	group.POST("/update", dashboard.TicketPostUpdate)
+	group.Any("/view_list", dashboard.TicketAnyView_list)
+}
+
+func registerDashboardNotificationRoutes(group *gin.RouterGroup) {
+	group.Any("/list", dashboard.NotificationAnyList)
+	group.POST("/mark_all_read", dashboard.NotificationPostMark_all_read)
+	group.POST("/mark_read", dashboard.NotificationPostMark_read)
+	group.GET("/unread_count", dashboard.NotificationGetUnread_count)
+}
+
+func registerDashboardQuickReplyRoutes(group *gin.RouterGroup) {
+	group.POST("/create", dashboard.QuickReplyPostCreate)
+	group.POST("/delete", dashboard.QuickReplyPostDelete)
+	group.Any("/list", dashboard.QuickReplyAnyList)
+	group.GET("/list_all", dashboard.QuickReplyGetList_all)
+	group.POST("/update", dashboard.QuickReplyPostUpdate)
+}
+
+func registerDashboardChannelRoutes(group *gin.RouterGroup) {
+	group.GET("/:id", func(ctx *gin.Context) {
+		id, ok := pathInt64(ctx, "id")
+		if !ok {
+			return
+		}
+		dashboard.ChannelGetBy(ctx, id)
 	})
-	group.POST("/update_status", func(ctx *gin.Context) {
-		controller := &dashboard.UserController{Ctx: ctx}
-		writeJSON(ctx, controller.PostUpdate_status())
+	group.POST("/create", dashboard.ChannelPostCreate)
+	group.POST("/delete", dashboard.ChannelPostDelete)
+	group.Any("/list", dashboard.ChannelAnyList)
+	group.POST("/reset_user_token_secret", dashboard.ChannelPostReset_user_token_secret)
+	group.POST("/update", dashboard.ChannelPostUpdate)
+	group.POST("/update_status", dashboard.ChannelPostUpdate_status)
+	group.Any("/wxwork/kf/accounts", dashboard.ChannelAnyWxworkKfAccounts)
+}
+
+func registerDashboardAgentRoutes(group *gin.RouterGroup) {
+	group.GET("/:id", func(ctx *gin.Context) {
+		id, ok := pathInt64(ctx, "id")
+		if !ok {
+			return
+		}
+		dashboard.AgentGetBy(ctx, id)
 	})
+	group.POST("/create", dashboard.AgentPostCreate)
+	group.POST("/delete", dashboard.AgentPostDelete)
+	group.Any("/list", dashboard.AgentAnyList)
+	group.GET("/list_all", dashboard.AgentGetList_all)
+	group.POST("/update", dashboard.AgentPostUpdate)
+}
+
+func registerDashboardAgentTeamRoutes(group *gin.RouterGroup) {
+	group.GET("/:id", func(ctx *gin.Context) {
+		id, ok := pathInt64(ctx, "id")
+		if !ok {
+			return
+		}
+		dashboard.AgentTeamGetBy(ctx, id)
+	})
+	group.POST("/create", dashboard.AgentTeamPostCreate)
+	group.POST("/delete", dashboard.AgentTeamPostDelete)
+	group.Any("/list", dashboard.AgentTeamAnyList)
+	group.GET("/list_all", dashboard.AgentTeamGetList_all)
+	group.POST("/update", dashboard.AgentTeamPostUpdate)
+}
+
+func registerDashboardAgentTeamScheduleRoutes(group *gin.RouterGroup) {
+	group.GET("/:id", func(ctx *gin.Context) {
+		id, ok := pathInt64(ctx, "id")
+		if !ok {
+			return
+		}
+		dashboard.AgentTeamScheduleGetBy(ctx, id)
+	})
+	group.POST("/batch_generate", dashboard.AgentTeamSchedulePostBatch_generate)
+	group.POST("/batch_preview", dashboard.AgentTeamSchedulePostBatch_preview)
+	group.Any("/calendar", dashboard.AgentTeamScheduleAnyCalendar)
+	group.POST("/create", dashboard.AgentTeamSchedulePostCreate)
+	group.POST("/delete", dashboard.AgentTeamSchedulePostDelete)
+	group.Any("/list", dashboard.AgentTeamScheduleAnyList)
+	group.POST("/update", dashboard.AgentTeamSchedulePostUpdate)
+}
+
+func registerDashboardAIAgentRoutes(group *gin.RouterGroup) {
+	group.GET("/:id", func(ctx *gin.Context) {
+		id, ok := pathInt64(ctx, "id")
+		if !ok {
+			return
+		}
+		dashboard.AIAgentGetBy(ctx, id)
+	})
+	group.POST("/create", dashboard.AIAgentPostCreate)
+	group.POST("/delete", dashboard.AIAgentPostDelete)
+	group.Any("/list", dashboard.AIAgentAnyList)
+	group.GET("/list_all", dashboard.AIAgentGetList_all)
+	group.POST("/update", dashboard.AIAgentPostUpdate)
+	group.POST("/update_sort", dashboard.AIAgentPostUpdate_sort)
+	group.POST("/update_status", dashboard.AIAgentPostUpdate_status)
+}
+
+func registerDashboardAIConfigRoutes(group *gin.RouterGroup) {
+	group.GET("/:id", func(ctx *gin.Context) {
+		id, ok := pathInt64(ctx, "id")
+		if !ok {
+			return
+		}
+		dashboard.AIConfigGetBy(ctx, id)
+	})
+	group.POST("/create", dashboard.AIConfigPostCreate)
+	group.POST("/delete", dashboard.AIConfigPostDelete)
+	group.Any("/list", dashboard.AIConfigAnyList)
+	group.Any("/list_all", dashboard.AIConfigAnyList_all)
+	group.POST("/update", dashboard.AIConfigPostUpdate)
+	group.POST("/update_sort", dashboard.AIConfigPostUpdate_sort)
+	group.POST("/update_status", dashboard.AIConfigPostUpdate_status)
+}
+
+func registerDashboardAssetRoutes(group *gin.RouterGroup) {
+	group.GET("/:id", func(ctx *gin.Context) {
+		id, ok := pathInt64(ctx, "id")
+		if !ok {
+			return
+		}
+		dashboard.AssetGetBy(ctx, id)
+	})
+	group.POST("/create", dashboard.AssetPostCreate)
+	group.POST("/delete", dashboard.AssetPostDelete)
+	group.Any("/list", dashboard.AssetAnyList)
+}
+
+func registerDashboardKnowledgeBaseRoutes(group *gin.RouterGroup) {
+	group.GET("/:id", func(ctx *gin.Context) {
+		id, ok := pathInt64(ctx, "id")
+		if !ok {
+			return
+		}
+		dashboard.KnowledgeBaseGetBy(ctx, id)
+	})
+	group.POST("/create", dashboard.KnowledgeBasePostCreate)
+	group.POST("/delete", dashboard.KnowledgeBasePostDelete)
+	group.Any("/list", dashboard.KnowledgeBaseAnyList)
+	group.Any("/list_all", dashboard.KnowledgeBaseAnyList_all)
+	group.POST("/rebuild_index", dashboard.KnowledgeBasePostRebuild_index)
+	group.POST("/update", dashboard.KnowledgeBasePostUpdate)
+	group.POST("/update_sort", dashboard.KnowledgeBasePostUpdate_sort)
+}
+
+func registerDashboardKnowledgeDocumentRoutes(group *gin.RouterGroup) {
+	group.GET("/:id", func(ctx *gin.Context) {
+		id, ok := pathInt64(ctx, "id")
+		if !ok {
+			return
+		}
+		dashboard.KnowledgeDocumentGetBy(ctx, id)
+	})
+	group.POST("/create", dashboard.KnowledgeDocumentPostCreate)
+	group.POST("/delete", dashboard.KnowledgeDocumentPostDelete)
+	group.Any("/list", dashboard.KnowledgeDocumentAnyList)
+	group.POST("/update", dashboard.KnowledgeDocumentPostUpdate)
+}
+
+func registerDashboardKnowledgeFAQRoutes(group *gin.RouterGroup) {
+	group.GET("/:id", func(ctx *gin.Context) {
+		id, ok := pathInt64(ctx, "id")
+		if !ok {
+			return
+		}
+		dashboard.KnowledgeFAQGetBy(ctx, id)
+	})
+	group.POST("/create", dashboard.KnowledgeFAQPostCreate)
+	group.POST("/delete", dashboard.KnowledgeFAQPostDelete)
+	group.Any("/list", dashboard.KnowledgeFAQAnyList)
+	group.POST("/update", dashboard.KnowledgeFAQPostUpdate)
+}
+
+func registerDashboardKnowledgeRetrieveRoutes(group *gin.RouterGroup) {
+	group.POST("/build", dashboard.KnowledgeRetrievePostBuild)
+	group.POST("/debug/answer", dashboard.KnowledgeRetrievePostDebugAnswer)
+	group.POST("/debug/search", dashboard.KnowledgeRetrievePostDebugSearch)
+}
+
+func registerDashboardKnowledgeRetrieveLogRoutes(group *gin.RouterGroup) {
+	group.GET("/:id", func(ctx *gin.Context) {
+		id, ok := pathInt64(ctx, "id")
+		if !ok {
+			return
+		}
+		dashboard.KnowledgeRetrieveLogGetBy(ctx, id)
+	})
+	group.Any("/list", dashboard.KnowledgeRetrieveLogAnyList)
+}
+
+func registerDashboardAgentRunLogRoutes(group *gin.RouterGroup) {
+	group.GET("/:id", func(ctx *gin.Context) {
+		id, ok := pathInt64(ctx, "id")
+		if !ok {
+			return
+		}
+		dashboard.AgentRunLogGetBy(ctx, id)
+	})
+	group.Any("/list", dashboard.AgentRunLogAnyList)
+}
+
+func registerDashboardSkillDefinitionRoutes(group *gin.RouterGroup) {
+	group.GET("/:id", func(ctx *gin.Context) {
+		id, ok := pathInt64(ctx, "id")
+		if !ok {
+			return
+		}
+		dashboard.SkillDefinitionGetBy(ctx, id)
+	})
+	group.POST("/create", dashboard.SkillDefinitionPostCreate)
+	group.POST("/debug_resume", dashboard.SkillDefinitionPostDebug_resume)
+	group.POST("/debug_run", dashboard.SkillDefinitionPostDebug_run)
+	group.POST("/delete", dashboard.SkillDefinitionPostDelete)
+	group.Any("/list", dashboard.SkillDefinitionAnyList)
+	group.GET("/list_all", dashboard.SkillDefinitionGetList_all)
+	group.POST("/restore", dashboard.SkillDefinitionPostRestore)
+	group.POST("/update", dashboard.SkillDefinitionPostUpdate)
+	group.POST("/update_status", dashboard.SkillDefinitionPostUpdate_status)
+}
+
+func registerDashboardMCPRoutes(group *gin.RouterGroup) {
+	group.POST("/call_tool", dashboard.MCPPostCall_tool)
+	group.Any("/catalog", dashboard.MCPAnyCatalog)
+	group.Any("/list_servers", dashboard.MCPAnyList_servers)
+	group.POST("/list_tools", dashboard.MCPPostList_tools)
+	group.POST("/test_connection", dashboard.MCPPostTest_connection)
 }
 
 func registerThirdWechatRoutes(group *gin.RouterGroup) {
-	group.GET("/callback", func(ctx *gin.Context) {
-		controller := &third.WechatController{Ctx: ctx}
-		controller.GetCallback()
-	})
-	group.POST("/callback", func(ctx *gin.Context) {
-		controller := &third.WechatController{Ctx: ctx}
-		controller.PostCallback()
-	})
+	group.GET("/callback", third.WechatGetCallback)
+	group.POST("/callback", third.WechatPostCallback)
 }

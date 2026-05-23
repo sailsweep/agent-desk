@@ -1,18 +1,16 @@
 package dashboard
 
 import (
+	"cs-agent/internal/pkg/httpx"
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
-	"github.com/mlogclub/simple/web"
 )
 
-type DashboardController struct {
-	Ctx *gin.Context
-}
-
-func (c *DashboardController) GetOverview() *web.JsonResult {
-	rangeValue, _ := params.Get(c.Ctx, "range")
-	return web.JsonData(services.DashboardService.GetOverview(rangeValue))
+func DashboardGetOverview(ctx *gin.Context) {
+	rangeValue, _ := params.Get(ctx, "range")
+	httpx.WriteJSON(ctx, services.DashboardService.GetOverview(rangeValue))
+	return
 }

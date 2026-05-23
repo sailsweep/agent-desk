@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"context"
+	"cs-agent/internal/pkg/httpx"
 	"log/slog"
 
 	"cs-agent/internal/ai/rag"
@@ -13,21 +14,19 @@ import (
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/sqls"
 	"github.com/mlogclub/simple/web"
 )
 
-type KnowledgeBaseController struct {
-	Ctx *gin.Context
-}
-
-func (c *KnowledgeBaseController) AnyList() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeBaseView); err != nil {
-		return web.JsonError(err)
+func KnowledgeBaseAnyList(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeBaseView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
-	cnd := params.NewPagedSqlCnd(c.Ctx,
+	cnd := params.NewPagedSqlCnd(ctx,
 		params.QueryFilter{ParamName: "status"},
 		params.QueryFilter{ParamName: "name", Op: params.Like},
 	).Asc("sort_no").Desc("id")
@@ -41,15 +40,17 @@ func (c *KnowledgeBaseController) AnyList() *web.JsonResult {
 		resp.FAQCount = faqCount
 		results = append(results, resp)
 	}
-	return web.JsonData(&web.PageResult{Results: results, Page: paging})
+	httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
+	return
 }
 
-func (c *KnowledgeBaseController) AnyList_all() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeBaseView); err != nil {
-		return web.JsonError(err)
+func KnowledgeBaseAnyList_all(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeBaseView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
-	list := services.KnowledgeBaseService.Find(params.NewSqlCnd(c.Ctx,
+	list := services.KnowledgeBaseService.Find(params.NewSqlCnd(ctx,
 		params.QueryFilter{ParamName: "status"},
 	).Asc("sort_no").Desc("id"))
 	results := make([]response.KnowledgeBaseResponse, 0, len(list))
@@ -57,100 +58,122 @@ func (c *KnowledgeBaseController) AnyList_all() *web.JsonResult {
 		resp := builders.BuildKnowledgeBase(&item)
 		results = append(results, resp)
 	}
-	return web.JsonData(results)
+	httpx.WriteJSON(ctx, results)
+	return
 }
 
-func (c *KnowledgeBaseController) GetBy(id int64) *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeBaseView); err != nil {
-		return web.JsonError(err)
+func KnowledgeBaseGetBy(ctx *gin.Context, id int64) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeBaseView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	item := services.KnowledgeBaseService.Get(id)
 	if item == nil {
-		return web.JsonErrorMsg("知识库不存在")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("知识库不存在"))
+		return
 	}
 	resp := builders.BuildKnowledgeBase(item)
 	resp.DocumentCount = repositories.KnowledgeDocumentRepository.CountByKnowledgeBaseID(sqls.DB(), item.ID)
 	resp.FAQCount = repositories.KnowledgeFAQRepository.CountByKnowledgeBaseID(sqls.DB(), item.ID)
-	return web.JsonData(resp)
+	httpx.WriteJSON(ctx, resp)
+	return
 }
 
-func (c *KnowledgeBaseController) PostCreate() *web.JsonResult {
-	user, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeBaseCreate)
+func KnowledgeBasePostCreate(ctx *gin.Context) {
+	user, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeBaseCreate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.CreateKnowledgeBaseRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	item, err := services.KnowledgeBaseService.CreateKnowledgeBase(req, user)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(builders.BuildKnowledgeBase(item))
+	httpx.WriteJSON(ctx, builders.BuildKnowledgeBase(item))
+	return
 }
 
-func (c *KnowledgeBaseController) PostUpdate() *web.JsonResult {
-	user, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeBaseUpdate)
+func KnowledgeBasePostUpdate(ctx *gin.Context) {
+	user, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeBaseUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.UpdateKnowledgeBaseRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.KnowledgeBaseService.UpdateKnowledgeBase(req, user); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *KnowledgeBaseController) PostDelete() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeBaseDelete); err != nil {
-		return web.JsonError(err)
+func KnowledgeBasePostDelete(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeBaseDelete); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	var req struct {
 		ID int64 `json:"id"`
 	}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.KnowledgeBaseService.DeleteKnowledgeBase(req.ID); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *KnowledgeBaseController) PostUpdate_sort() *web.JsonResult {
+func KnowledgeBasePostUpdate_sort(ctx *gin.Context) {
 	var ids []int64
-	if err := params.ReadJSON(c.Ctx, &ids); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &ids); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.KnowledgeBaseService.UpdateSort(ids); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *KnowledgeBaseController) PostRebuild_index() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeBaseUpdate); err != nil {
-		return web.JsonError(err)
+func KnowledgeBasePostRebuild_index(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeBaseUpdate); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	var req struct {
 		ID int64 `json:"id"`
 	}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	knowledgeBase := services.KnowledgeBaseService.Get(req.ID)
 	if knowledgeBase == nil {
-		return web.JsonErrorMsg("知识库不存在")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("知识库不存在"))
+		return
 	}
 
 	go func() {
@@ -160,5 +183,6 @@ func (c *KnowledgeBaseController) PostRebuild_index() *web.JsonResult {
 		}
 	}()
 
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }

@@ -6,22 +6,21 @@ import (
 	"cs-agent/internal/pkg/dto/request"
 	"cs-agent/internal/pkg/dto/response"
 	"cs-agent/internal/pkg/enums"
+	"cs-agent/internal/pkg/httpx"
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/web"
 )
 
-type ChannelController struct {
-	Ctx *gin.Context
-}
-
-func (c *ChannelController) AnyList() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionChannelView); err != nil {
-		return web.JsonError(err)
+func ChannelAnyList(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionChannelView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	list, paging := services.ChannelService.FindPageByCnd(params.NewPagedSqlCnd(c.Ctx,
+	list, paging := services.ChannelService.FindPageByCnd(params.NewPagedSqlCnd(ctx,
 		params.QueryFilter{ParamName: "status"},
 		params.QueryFilter{ParamName: "name", Op: params.Like},
 		params.QueryFilter{ParamName: "channelType"},
@@ -31,106 +30,133 @@ func (c *ChannelController) AnyList() *web.JsonResult {
 	for _, item := range list {
 		results = append(results, buildChannelResponse(&item))
 	}
-	return web.JsonData(&web.PageResult{Results: results, Page: paging})
+	httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
+	return
 }
 
-func (c *ChannelController) GetBy(id int64) *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionChannelView); err != nil {
-		return web.JsonError(err)
+func ChannelGetBy(ctx *gin.Context, id int64) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionChannelView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	item := services.ChannelService.Get(id)
 	if item == nil || item.Status == enums.StatusDeleted {
-		return web.JsonErrorMsg("channel not found")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("channel not found"))
+		return
 	}
-	return web.JsonData(buildChannelResponse(item))
+	httpx.WriteJSON(ctx, buildChannelResponse(item))
+	return
 }
 
-func (c *ChannelController) AnyWxworkKfAccounts() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionChannelView); err != nil {
-		return web.JsonError(err)
+func ChannelAnyWxworkKfAccounts(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionChannelView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	list, err := services.ChannelService.ListWxWorkKFAccounts()
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(list)
+	httpx.WriteJSON(ctx, list)
+	return
 }
 
-func (c *ChannelController) PostCreate() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionChannelCreate)
+func ChannelPostCreate(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionChannelCreate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.CreateChannelRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	item, err := services.ChannelService.CreateChannel(req, operator)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(buildChannelResponse(item))
+	httpx.WriteJSON(ctx, buildChannelResponse(item))
+	return
 }
 
-func (c *ChannelController) PostUpdate() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionChannelUpdate)
+func ChannelPostUpdate(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionChannelUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.UpdateChannelRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.ChannelService.UpdateChannel(req, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *ChannelController) PostUpdate_status() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionChannelUpdate)
+func ChannelPostUpdate_status(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionChannelUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.UpdateChannelStatusRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.ChannelService.UpdateStatus(req.ID, req.Status, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *ChannelController) PostReset_user_token_secret() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionChannelUpdate)
+func ChannelPostReset_user_token_secret(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionChannelUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.ResetChannelUserTokenSecretRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	secret, err := services.ChannelService.ResetUserTokenSecret(req.ID, operator)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(map[string]string{"userTokenSecret": secret})
+	httpx.WriteJSON(ctx, map[string]string{"userTokenSecret": secret})
+	return
 }
 
-func (c *ChannelController) PostDelete() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionChannelDelete)
+func ChannelPostDelete(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionChannelDelete)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.DeleteChannelRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.ChannelService.DeleteChannel(req.ID, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
 func buildChannelResponse(item *models.Channel) response.ChannelResponse {

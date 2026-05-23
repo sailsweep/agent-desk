@@ -6,35 +6,35 @@ import (
 	"cs-agent/internal/pkg/dto/request"
 	"cs-agent/internal/pkg/dto/response"
 	"cs-agent/internal/pkg/enums"
+	"cs-agent/internal/pkg/httpx"
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/web"
 )
 
-type KnowledgeDocumentController struct {
-	Ctx *gin.Context
-}
-
-func (c *KnowledgeDocumentController) AnyList() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeDocumentView); err != nil {
-		return web.JsonError(err)
+func KnowledgeDocumentAnyList(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeDocumentView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
-	cnd := params.NewPagedSqlCnd(c.Ctx,
+	cnd := params.NewPagedSqlCnd(ctx,
 		params.QueryFilter{ParamName: "knowledgeBaseId"},
 		params.QueryFilter{ParamName: "title", Op: params.Like},
 	).Desc("id")
 
-	if status, ok := params.GetInt64(c.Ctx, "status"); ok {
+	if status, ok := params.GetInt64(ctx, "status"); ok {
 		cnd.Where("status = ?", status)
 	} else {
 		cnd.Where("status != ?", enums.StatusDeleted)
 	}
-	if indexStatus, ok := params.Get(c.Ctx, "indexStatus"); ok {
+	if indexStatus, ok := params.Get(ctx, "indexStatus"); ok {
 		if !enums.IsValidKnowledgeDocumentIndexStatus(indexStatus) {
-			return web.JsonErrorMsg("indexStatus参数不合法")
+			httpx.WriteJSON(ctx, web.JsonErrorMsg("indexStatus参数不合法"))
+			return
 		}
 		cnd.Where("index_status = ?", indexStatus)
 	}
@@ -44,68 +44,84 @@ func (c *KnowledgeDocumentController) AnyList() *web.JsonResult {
 	for _, item := range list {
 		results = append(results, builders.BuildKnowledgeDocumentList(&item))
 	}
-	return web.JsonData(&web.PageResult{Results: results, Page: paging})
+	httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
+	return
 }
 
-func (c *KnowledgeDocumentController) GetBy(id int64) *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeDocumentView); err != nil {
-		return web.JsonError(err)
+func KnowledgeDocumentGetBy(ctx *gin.Context, id int64) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeDocumentView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	item := services.KnowledgeDocumentService.Get(id)
 	if item == nil {
-		return web.JsonErrorMsg("文档不存在")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("文档不存在"))
+		return
 	}
-	return web.JsonData(builders.BuildKnowledgeDocument(item))
+	httpx.WriteJSON(ctx, builders.BuildKnowledgeDocument(item))
+	return
 }
 
-func (c *KnowledgeDocumentController) PostCreate() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeDocumentCreate)
+func KnowledgeDocumentPostCreate(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeDocumentCreate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.CreateKnowledgeDocumentRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	item, err := services.KnowledgeDocumentService.CreateKnowledgeDocument(req, operator)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(builders.BuildKnowledgeDocument(item))
+	httpx.WriteJSON(ctx, builders.BuildKnowledgeDocument(item))
+	return
 }
 
-func (c *KnowledgeDocumentController) PostUpdate() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeDocumentUpdate)
+func KnowledgeDocumentPostUpdate(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeDocumentUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.UpdateKnowledgeDocumentRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.KnowledgeDocumentService.UpdateKnowledgeDocument(req, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *KnowledgeDocumentController) PostDelete() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeDocumentDelete); err != nil {
-		return web.JsonError(err)
+func KnowledgeDocumentPostDelete(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeDocumentDelete); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	var req struct {
 		ID int64 `json:"id"`
 	}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	if err := services.KnowledgeDocumentService.DeleteKnowledgeDocument(req.ID); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }

@@ -5,23 +5,22 @@ import (
 	"cs-agent/internal/pkg/constants"
 	"cs-agent/internal/pkg/dto/request"
 	"cs-agent/internal/pkg/dto/response"
+	"cs-agent/internal/pkg/httpx"
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/web"
 )
 
-type KnowledgeFAQController struct {
-	Ctx *gin.Context
-}
-
-func (c *KnowledgeFAQController) AnyList() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeFAQView); err != nil {
-		return web.JsonError(err)
+func KnowledgeFAQAnyList(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeFAQView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
-	cnd := params.NewPagedSqlCnd(c.Ctx,
+	cnd := params.NewPagedSqlCnd(ctx,
 		params.QueryFilter{ParamName: "knowledgeBaseId"},
 		params.QueryFilter{ParamName: "question", Op: params.Like},
 		params.QueryFilter{ParamName: "indexStatus"},
@@ -31,64 +30,80 @@ func (c *KnowledgeFAQController) AnyList() *web.JsonResult {
 	for _, item := range list {
 		results = append(results, builders.BuildKnowledgeFAQ(&item))
 	}
-	return web.JsonData(&web.PageResult{Results: results, Page: paging})
+	httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
+	return
 }
 
-func (c *KnowledgeFAQController) GetBy(id int64) *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeFAQView); err != nil {
-		return web.JsonError(err)
+func KnowledgeFAQGetBy(ctx *gin.Context, id int64) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeFAQView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	item := services.KnowledgeFAQService.Get(id)
 	if item == nil {
-		return web.JsonErrorMsg("FAQ不存在")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("FAQ不存在"))
+		return
 	}
-	return web.JsonData(builders.BuildKnowledgeFAQ(item))
+	httpx.WriteJSON(ctx, builders.BuildKnowledgeFAQ(item))
+	return
 }
 
-func (c *KnowledgeFAQController) PostCreate() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeFAQCreate)
+func KnowledgeFAQPostCreate(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeFAQCreate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.CreateKnowledgeFAQRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	item, err := services.KnowledgeFAQService.CreateKnowledgeFAQ(req, operator)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(builders.BuildKnowledgeFAQ(item))
+	httpx.WriteJSON(ctx, builders.BuildKnowledgeFAQ(item))
+	return
 }
 
-func (c *KnowledgeFAQController) PostUpdate() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeFAQUpdate)
+func KnowledgeFAQPostUpdate(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeFAQUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.UpdateKnowledgeFAQRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.KnowledgeFAQService.UpdateKnowledgeFAQ(req, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *KnowledgeFAQController) PostDelete() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeFAQDelete); err != nil {
-		return web.JsonError(err)
+func KnowledgeFAQPostDelete(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeFAQDelete); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	var req struct {
 		ID int64 `json:"id"`
 	}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.KnowledgeFAQService.DeleteKnowledgeFAQ(req.ID); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }

@@ -5,22 +5,21 @@ import (
 	"cs-agent/internal/pkg/constants"
 	"cs-agent/internal/pkg/dto/request"
 	"cs-agent/internal/pkg/enums"
+	"cs-agent/internal/pkg/httpx"
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/web"
 )
 
-type CompanyController struct {
-	Ctx *gin.Context
-}
-
-func (c *CompanyController) AnyList() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionCompanyView); err != nil {
-		return web.JsonError(err)
+func CompanyAnyList(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionCompanyView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	list, paging := services.CompanyService.FindPageByCnd(params.NewPagedSqlCnd(c.Ctx,
+	list, paging := services.CompanyService.FindPageByCnd(params.NewPagedSqlCnd(ctx,
 		params.QueryFilter{ParamName: "status"},
 		params.QueryFilter{ParamName: "name", Op: params.Like},
 		params.QueryFilter{ParamName: "code", Op: params.Like},
@@ -35,79 +34,99 @@ func (c *CompanyController) AnyList() *web.JsonResult {
 	for i := range results {
 		results[i].CustomerCount = countMap[results[i].ID]
 	}
-	return web.JsonData(&web.PageResult{Results: results, Page: paging})
+	httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
+	return
 }
 
-func (c *CompanyController) GetBy(id int64) *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionCompanyView); err != nil {
-		return web.JsonError(err)
+func CompanyGetBy(ctx *gin.Context, id int64) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionCompanyView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	item := services.CompanyService.Get(id)
 	if item == nil || item.Status == enums.StatusDeleted {
-		return web.JsonData(nil)
+		httpx.WriteJSON(ctx, nil)
+		return
 	}
 	ret := builders.BuildCompany(item)
-	return web.JsonData(&ret)
+	httpx.WriteJSON(ctx, &ret)
+	return
 }
 
-func (c *CompanyController) PostCreate() *web.JsonResult {
-	user, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionCompanyCreate)
+func CompanyPostCreate(ctx *gin.Context) {
+	user, err := services.AuthService.RequirePermission(ctx, constants.PermissionCompanyCreate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.CreateCompanyRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	item, err := services.CompanyService.CreateCompany(req, user)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	ret := builders.BuildCompany(item)
-	return web.JsonData(&ret)
+	httpx.WriteJSON(ctx, &ret)
+	return
 }
 
-func (c *CompanyController) PostUpdate() *web.JsonResult {
-	user, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionCompanyUpdate)
+func CompanyPostUpdate(ctx *gin.Context) {
+	user, err := services.AuthService.RequirePermission(ctx, constants.PermissionCompanyUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.UpdateCompanyRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.CompanyService.UpdateCompany(req, user); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *CompanyController) PostDelete() *web.JsonResult {
-	user, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionCompanyDelete)
+func CompanyPostDelete(ctx *gin.Context) {
+	user, err := services.AuthService.RequirePermission(ctx, constants.PermissionCompanyDelete)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.DeleteCompanyRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.CompanyService.DeleteCompany(req.ID, *user); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *CompanyController) PostUpdate_status() *web.JsonResult {
-	user, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionCompanyUpdate)
+func CompanyPostUpdate_status(ctx *gin.Context) {
+	user, err := services.AuthService.RequirePermission(ctx, constants.PermissionCompanyUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.UpdateCompanyStatusRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.CompanyService.UpdateStatus(req.ID, req.Status, user); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }

@@ -10,160 +10,192 @@ import (
 	"strings"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/web"
 	"github.com/spf13/cast"
 )
 
-type MessageController struct {
-	Ctx *gin.Context
-}
-
-func (c *MessageController) AnyList() *web.JsonResult {
-	if services.ChannelService.GetEnabledChannel(c.Ctx) == nil {
-		return web.JsonErrorMsg("接入渠道未初始化")
+func MessageAnyList(ctx *gin.Context) {
+	if services.ChannelService.GetEnabledChannel(ctx) == nil {
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("接入渠道未初始化"))
+		return
 	}
-	external := httpx.GetExternalUser(c.Ctx)
+	external := httpx.GetExternalUser(ctx)
 	if external == nil {
-		return web.JsonErrorMsg("外部身份未初始化")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("外部身份未初始化"))
+		return
 	}
 
-	conversationID, _ := params.GetInt64(c.Ctx, "conversationId")
+	conversationID, _ := params.GetInt64(ctx, "conversationId")
 	if conversationID <= 0 {
-		return web.JsonErrorMsg("conversationId不能为空")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("conversationId不能为空"))
+		return
 	}
 	conversation := services.ConversationService.Get(conversationID)
 	if conversation == nil {
-		return web.JsonErrorMsg("会话不存在")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("会话不存在"))
+		return
 	}
 	if !services.ConversationService.IsCustomerConversationOwner(conversation, *external) {
-		return web.JsonErrorMsg("无权访问该会话")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("无权访问该会话"))
+		return
 	}
 
 	var (
-		senderType, _  = params.Get(c.Ctx, "senderType")
-		messageType, _ = params.Get(c.Ctx, "messageType")
-		cursor, _      = params.GetInt64(c.Ctx, "cursor")
-		limit, _       = params.GetInt(c.Ctx, "limit")
+		senderType, _  = params.Get(ctx, "senderType")
+		messageType, _ = params.Get(ctx, "messageType")
+		cursor, _      = params.GetInt64(ctx, "cursor")
+		limit, _       = params.GetInt(ctx, "limit")
 	)
 	list, nextCursor, hasMore := services.MessageService.FindByConversationIDCursor(
 		conversationID, cursor, limit, senderType, messageType,
 	)
 	results := builders.BuildMessages(list)
-	return web.JsonCursorData(results, cast.ToString(nextCursor), hasMore)
+	httpx.WriteJSON(ctx, httpx.CursorData(results, cast.ToString(nextCursor), hasMore))
+	return
 }
 
-func (c *MessageController) PostSend() *web.JsonResult {
-	if services.ChannelService.GetEnabledChannel(c.Ctx) == nil {
-		return web.JsonErrorMsg("接入渠道未初始化")
+func MessagePostSend(ctx *gin.Context) {
+	if services.ChannelService.GetEnabledChannel(ctx) == nil {
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("接入渠道未初始化"))
+		return
 	}
-	external := httpx.GetExternalUser(c.Ctx)
+	external := httpx.GetExternalUser(ctx)
 	if external == nil {
-		return web.JsonErrorMsg("外部身份未初始化")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("外部身份未初始化"))
+		return
 	}
 
 	req := request.SendConversationMessageRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	item, err := services.MessageService.SendCustomerMessage(req.ConversationID, req.ClientMsgID, req.MessageType, req.Content, req.Payload, *external)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(builders.BuildMessage(item))
+	httpx.WriteJSON(ctx, builders.BuildMessage(item))
+	return
 }
 
-func (c *MessageController) PostRead() *web.JsonResult {
-	if services.ChannelService.GetEnabledChannel(c.Ctx) == nil {
-		return web.JsonErrorMsg("接入渠道未初始化")
+func MessagePostRead(ctx *gin.Context) {
+	if services.ChannelService.GetEnabledChannel(ctx) == nil {
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("接入渠道未初始化"))
+		return
 	}
-	external := httpx.GetExternalUser(c.Ctx)
+	external := httpx.GetExternalUser(ctx)
 	if external == nil {
-		return web.JsonErrorMsg("外部身份未初始化")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("外部身份未初始化"))
+		return
 	}
 
 	req := request.ReadConversationRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.ConversationService.MarkCustomerConversationReadToMessage(req.ConversationID, req.MessageID, external); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *MessageController) PostUpload_image() *web.JsonResult {
-	if services.ChannelService.GetEnabledChannel(c.Ctx) == nil {
-		return web.JsonErrorMsg("接入渠道未初始化")
+func MessagePostUpload_image(ctx *gin.Context) {
+	if services.ChannelService.GetEnabledChannel(ctx) == nil {
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("接入渠道未初始化"))
+		return
 	}
-	external := httpx.GetExternalUser(c.Ctx)
+	external := httpx.GetExternalUser(ctx)
 	if external == nil {
-		return web.JsonErrorMsg("外部身份未初始化")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("外部身份未初始化"))
+		return
 	}
 
-	rawConv := strings.TrimSpace(params.FormValue(c.Ctx, "conversationId"))
+	rawConv := strings.TrimSpace(params.FormValue(ctx, "conversationId"))
 	if rawConv == "" {
-		return web.JsonErrorMsg("conversationId不能为空")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("conversationId不能为空"))
+		return
 	}
 	conversationID, err := strconv.ParseInt(rawConv, 10, 64)
 	if err != nil || conversationID <= 0 {
-		return web.JsonErrorMsg("conversationId不能为空")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("conversationId不能为空"))
+		return
 	}
 	conversation := services.ConversationService.Get(conversationID)
 	if conversation == nil {
-		return web.JsonErrorMsg("会话不存在")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("会话不存在"))
+		return
 	}
 	if !services.ConversationService.IsCustomerConversationOwner(conversation, *external) {
-		return web.JsonErrorMsg("无权访问该会话")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("无权访问该会话"))
+		return
 	}
 	if _, err := services.MessageService.ValidateConversationSender(conversationID, enums.IMSenderTypeCustomer, nil, external); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
-	header, err := c.Ctx.FormFile("file")
+	header, err := ctx.FormFile("file")
 	if err != nil {
-		return web.JsonErrorMsg("请选择上传图片")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("请选择上传图片"))
+		return
 	}
 	if !strings.HasPrefix(strings.ToLower(header.Header.Get("Content-Type")), "image/") {
-		return web.JsonErrorMsg("仅支持上传图片文件")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("仅支持上传图片文件"))
+		return
 	}
 
 	item, err := services.AssetService.UploadFile(header, "images", nil)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(builders.BuildAsset(item))
+	httpx.WriteJSON(ctx, builders.BuildAsset(item))
+	return
 }
 
-func (c *MessageController) PostUpload_attachment() *web.JsonResult {
-	if services.ChannelService.GetEnabledChannel(c.Ctx) == nil {
-		return web.JsonErrorMsg("接入渠道未初始化")
+func MessagePostUpload_attachment(ctx *gin.Context) {
+	if services.ChannelService.GetEnabledChannel(ctx) == nil {
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("接入渠道未初始化"))
+		return
 	}
-	external := httpx.GetExternalUser(c.Ctx)
+	external := httpx.GetExternalUser(ctx)
 	if external == nil {
-		return web.JsonErrorMsg("外部身份未初始化")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("外部身份未初始化"))
+		return
 	}
 
-	rawConv := strings.TrimSpace(params.FormValue(c.Ctx, "conversationId"))
+	rawConv := strings.TrimSpace(params.FormValue(ctx, "conversationId"))
 	if rawConv == "" {
-		return web.JsonErrorMsg("conversationId不能为空")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("conversationId不能为空"))
+		return
 	}
 	conversationID, err := strconv.ParseInt(rawConv, 10, 64)
 	if err != nil || conversationID <= 0 {
-		return web.JsonErrorMsg("conversationId不能为空")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("conversationId不能为空"))
+		return
 	}
 	if _, err := services.MessageService.ValidateConversationSender(conversationID, enums.IMSenderTypeCustomer, nil, external); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
-	header, err := c.Ctx.FormFile("file")
+	header, err := ctx.FormFile("file")
 	if err != nil {
-		return web.JsonErrorMsg("请选择上传附件")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("请选择上传附件"))
+		return
 	}
 	item, err := services.AssetService.UploadFile(header, "attachments", nil)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(builders.BuildAsset(item))
+	httpx.WriteJSON(ctx, builders.BuildAsset(item))
+	return
 }

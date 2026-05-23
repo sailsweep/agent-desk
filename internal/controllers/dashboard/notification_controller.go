@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"cs-agent/internal/pkg/httpx"
 	"strings"
 
 	"cs-agent/internal/builders"
@@ -11,27 +12,25 @@ import (
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/web"
 )
 
-type NotificationController struct {
-	Ctx *gin.Context
-}
-
-func (c *NotificationController) AnyList() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionNotificationView)
+func NotificationAnyList(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionNotificationView)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
-	cnd := params.NewPagedSqlCnd(c.Ctx,
+	cnd := params.NewPagedSqlCnd(ctx,
 		params.QueryFilter{ParamName: "type", ColumnName: "notification_type"},
 	).Eq("recipient_user_id", operator.UserID).
 		Eq("status", enums.StatusOk).
 		Desc("id")
 
-	switch strings.TrimSpace(c.Ctx.Query("readStatus")) {
+	switch strings.TrimSpace(ctx.Query("readStatus")) {
 	case "unread":
 		cnd.Where("read_at IS NULL")
 	case "read":
@@ -39,44 +38,54 @@ func (c *NotificationController) AnyList() *web.JsonResult {
 	}
 
 	list, paging := services.NotificationService.FindPageByCnd(cnd)
-	return web.JsonData(&web.PageResult{
+	httpx.WriteJSON(ctx, &web.PageResult{
 		Results: builders.BuildNotificationList(list),
 		Page:    paging,
 	})
+	return
 }
 
-func (c *NotificationController) GetUnread_count() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionNotificationView)
+func NotificationGetUnread_count(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionNotificationView)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(&response.NotificationUnreadCountResponse{
+	httpx.WriteJSON(ctx, &response.NotificationUnreadCountResponse{
 		UnreadCount: services.NotificationService.CountUnread(operator.UserID),
 	})
+	return
 }
 
-func (c *NotificationController) PostMark_read() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionNotificationUpdate)
+func NotificationPostMark_read(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionNotificationUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.MarkNotificationReadRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.NotificationService.MarkRead(req.ID, operator.UserID); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *NotificationController) PostMark_all_read() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionNotificationUpdate)
+func NotificationPostMark_all_read(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionNotificationUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.NotificationService.MarkAllRead(operator.UserID); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }

@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"context"
+	"cs-agent/internal/pkg/httpx"
 
 	"cs-agent/internal/ai/rag"
 	"cs-agent/internal/pkg/constants"
@@ -9,77 +10,90 @@ import (
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/web"
 )
 
-type KnowledgeRetrieveController struct {
-	Ctx *gin.Context
-}
-
-func (c *KnowledgeRetrieveController) PostDebugSearch() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeDocumentView); err != nil {
-		return web.JsonError(err)
+func KnowledgeRetrievePostDebugSearch(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeDocumentView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.KnowledgeSearchRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	resp, err := rag.Answer.DebugSearch(context.Background(), req)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(resp)
+	httpx.WriteJSON(ctx, resp)
+	return
 }
 
-func (c *KnowledgeRetrieveController) PostDebugAnswer() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeDocumentView)
+func KnowledgeRetrievePostDebugAnswer(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeDocumentView)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.KnowledgeAnswerRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	resp, err := rag.Answer.DebugAnswer(context.Background(), req, operator)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(resp)
+	httpx.WriteJSON(ctx, resp)
+	return
 }
 
-func (c *KnowledgeRetrieveController) PostBuild() *web.JsonResult {
+func KnowledgeRetrievePostBuild(ctx *gin.Context) {
 	req := struct {
 		DocumentID int64 `json:"documentId"`
 		FAQID      int64 `json:"faqId"`
 	}{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	if req.DocumentID > 0 {
-		if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeDocumentUpdate); err != nil {
-			return web.JsonError(err)
+		if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeDocumentUpdate); err != nil {
+			httpx.WriteJSON(ctx, err)
+			return
 		}
 		if err := rag.Answer.BuildDocumentIndex(context.Background(), req.DocumentID); err != nil {
-			return web.JsonError(err)
+			httpx.WriteJSON(ctx, err)
+			return
 		}
-		return web.JsonSuccess()
+		httpx.WriteJSON(ctx, nil)
+		return
 	}
 
 	if req.FAQID > 0 {
-		if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeFAQUpdate); err != nil {
-			return web.JsonError(err)
+		if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeFAQUpdate); err != nil {
+			httpx.WriteJSON(ctx, err)
+			return
 		}
 		if err := rag.Index.IndexFAQByID(context.Background(), req.FAQID); err != nil {
-			return web.JsonError(err)
+			httpx.WriteJSON(ctx, err)
+			return
 		}
-		return web.JsonSuccess()
+		httpx.WriteJSON(ctx, nil)
+		return
 	}
 
-	return web.JsonErrorMsg("documentId或faqId不能为空")
+	httpx.WriteJSON(ctx, web.JsonErrorMsg("documentId或faqId不能为空"))
+	return
 }

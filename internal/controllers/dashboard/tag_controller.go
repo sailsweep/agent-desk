@@ -4,124 +4,148 @@ import (
 	"cs-agent/internal/builders"
 	"cs-agent/internal/pkg/constants"
 	"cs-agent/internal/pkg/dto/request"
+	"cs-agent/internal/pkg/httpx"
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/web"
 )
 
-type TagController struct {
-	Ctx *gin.Context
-}
-
-func (c *TagController) AnyList() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionTagView); err != nil {
-		return web.JsonError(err)
+func TagAnyList(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionTagView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	list, paging := services.TagService.FindPageByCnd(params.NewPagedSqlCnd(c.Ctx,
+	list, paging := services.TagService.FindPageByCnd(params.NewPagedSqlCnd(ctx,
 		params.QueryFilter{ParamName: "status"},
 		params.QueryFilter{ParamName: "parentId"},
 		params.QueryFilter{ParamName: "name", Op: params.Like},
 	).Asc("sort_no").Desc("id"))
 	results := builders.BuildTagResponses(list)
-	return web.JsonData(&web.PageResult{Results: results, Page: paging})
+	httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
+	return
 }
 
-func (c *TagController) GetList_all() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionTagView); err != nil {
-		return web.JsonError(err)
+func TagGetList_all(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionTagView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	list := services.TagService.FindAll()
 	results := builders.BuildTagTreeResponses(list)
-	return web.JsonData(results)
+	httpx.WriteJSON(ctx, results)
+	return
 }
 
-func (c *TagController) GetBy(id int64) *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionTagView); err != nil {
-		return web.JsonError(err)
+func TagGetBy(ctx *gin.Context, id int64) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionTagView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	item := services.TagService.Get(id)
 	if item == nil {
-		return web.JsonErrorMsg("标签不存在")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("标签不存在"))
+		return
 	}
 	result := builders.BuildTagResponse(item)
-	return web.JsonData(&result)
+	httpx.WriteJSON(ctx, &result)
+	return
 }
 
-func (c *TagController) PostCreate() *web.JsonResult {
-	user, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionTagCreate)
+func TagPostCreate(ctx *gin.Context) {
+	user, err := services.AuthService.RequirePermission(ctx, constants.PermissionTagCreate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.CreateTagRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	item, err := services.TagService.CreateTag(req, user)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	result := builders.BuildTagResponse(item)
-	return web.JsonData(&result)
+	httpx.WriteJSON(ctx, &result)
+	return
 }
 
-func (c *TagController) PostUpdate() *web.JsonResult {
-	user, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionTagUpdate)
+func TagPostUpdate(ctx *gin.Context) {
+	user, err := services.AuthService.RequirePermission(ctx, constants.PermissionTagUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.UpdateTagRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.TagService.UpdateTag(req, user); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *TagController) PostDelete() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionTagDelete); err != nil {
-		return web.JsonError(err)
+func TagPostDelete(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionTagDelete); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.DeleteTagRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.TagService.DeleteTag(req.ID); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *TagController) PostUpdate_sort() *web.JsonResult {
+func TagPostUpdate_sort(ctx *gin.Context) {
 	var ids []int64
-	if err := params.ReadJSON(c.Ctx, &ids); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &ids); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.TagService.UpdateSort(ids); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *TagController) PostUpdate_status() *web.JsonResult {
-	user, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionTagUpdate)
+func TagPostUpdate_status(ctx *gin.Context) {
+	user, err := services.AuthService.RequirePermission(ctx, constants.PermissionTagUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.UpdateTagStatusRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.TagService.UpdateStatus(req.ID, req.Status, user); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }

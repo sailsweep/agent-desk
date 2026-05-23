@@ -4,23 +4,22 @@ import (
 	"cs-agent/internal/builders"
 	"cs-agent/internal/pkg/constants"
 	"cs-agent/internal/pkg/dto/response"
+	"cs-agent/internal/pkg/httpx"
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/web"
 )
 
-type KnowledgeRetrieveLogController struct {
-	Ctx *gin.Context
-}
-
-func (c *KnowledgeRetrieveLogController) AnyList() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeDocumentView); err != nil {
-		return web.JsonError(err)
+func KnowledgeRetrieveLogAnyList(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeDocumentView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
-	cnd := params.NewPagedSqlCnd(c.Ctx,
+	cnd := params.NewPagedSqlCnd(ctx,
 		params.QueryFilter{ParamName: "knowledgeBaseId"},
 		params.QueryFilter{ParamName: "question", Op: params.Like},
 		params.QueryFilter{ParamName: "channel"},
@@ -28,14 +27,14 @@ func (c *KnowledgeRetrieveLogController) AnyList() *web.JsonResult {
 		params.QueryFilter{ParamName: "chunkProvider"},
 	).Desc("id")
 
-	if answerStatus, ok := params.GetInt64(c.Ctx, "answerStatus"); ok && answerStatus > 0 {
+	if answerStatus, ok := params.GetInt64(ctx, "answerStatus"); ok && answerStatus > 0 {
 		cnd.Where("answer_status = ?", answerStatus)
 	}
-	if rerankEnabled, ok := params.GetInt64(c.Ctx, "rerankEnabled"); ok {
+	if rerankEnabled, ok := params.GetInt64(ctx, "rerankEnabled"); ok {
 		cnd.Where("rerank_enabled = ?", rerankEnabled > 0)
 	}
 
-	queryParams := params.NewQueryParams(c.Ctx)
+	queryParams := params.NewQueryParams(ctx)
 	queryParams.Cnd = *cnd
 	list, paging := services.KnowledgeRetrieveLogService.FindPageByParams(queryParams)
 	results := make([]response.KnowledgeRetrieveLogResponse, 0, len(list))
@@ -46,17 +45,20 @@ func (c *KnowledgeRetrieveLogController) AnyList() *web.JsonResult {
 		}
 		results = append(results, resp)
 	}
-	return web.JsonData(&web.PageResult{Results: results, Page: paging})
+	httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
+	return
 }
 
-func (c *KnowledgeRetrieveLogController) GetBy(id int64) *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionKnowledgeDocumentView); err != nil {
-		return web.JsonError(err)
+func KnowledgeRetrieveLogGetBy(ctx *gin.Context, id int64) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionKnowledgeDocumentView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	logItem := services.KnowledgeRetrieveLogService.Get(id)
 	if logItem == nil {
-		return web.JsonErrorMsg("检索日志不存在")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("检索日志不存在"))
+		return
 	}
 
 	logResp := builders.BuildKnowledgeRetrieveLog(logItem)
@@ -70,8 +72,9 @@ func (c *KnowledgeRetrieveLogController) GetBy(id int64) *web.JsonResult {
 		hitResults = append(hitResults, builders.BuildKnowledgeRetrieveHitResponse(&item))
 	}
 
-	return web.JsonData(response.KnowledgeRetrieveLogDetailResponse{
+	httpx.WriteJSON(ctx, response.KnowledgeRetrieveLogDetailResponse{
 		Log:  logResp,
 		Hits: hitResults,
 	})
+	return
 }

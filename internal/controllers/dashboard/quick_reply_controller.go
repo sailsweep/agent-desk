@@ -5,24 +5,23 @@ import (
 	"cs-agent/internal/pkg/dto/request"
 	"cs-agent/internal/pkg/dto/response"
 	"cs-agent/internal/pkg/enums"
+	"cs-agent/internal/pkg/httpx"
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/sqls"
 	"github.com/mlogclub/simple/web"
 )
 
-type QuickReplyController struct {
-	Ctx *gin.Context
-}
-
-func (c *QuickReplyController) AnyList() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionQuickReplyView); err != nil {
-		return web.JsonError(err)
+func QuickReplyAnyList(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionQuickReplyView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
-	cnd := params.NewPagedSqlCnd(c.Ctx,
+	cnd := params.NewPagedSqlCnd(ctx,
 		params.QueryFilter{ParamName: "status"},
 		params.QueryFilter{ParamName: "groupName"},
 		params.QueryFilter{ParamName: "title", Op: params.Like},
@@ -40,12 +39,14 @@ func (c *QuickReplyController) AnyList() *web.JsonResult {
 			SortNo:    item.SortNo,
 		})
 	}
-	return web.JsonData(&web.PageResult{Results: results, Page: paging})
+	httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
+	return
 }
 
-func (c *QuickReplyController) GetList_all() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionQuickReplyView); err != nil {
-		return web.JsonError(err)
+func QuickReplyGetList_all(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionQuickReplyView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	list := services.QuickReplyService.Find(sqls.NewCnd().Eq("status", enums.StatusOk).Asc("sort_no").Desc("id"))
 	results := make([]response.QuickReplyResponse, 0, len(list))
@@ -59,24 +60,28 @@ func (c *QuickReplyController) GetList_all() *web.JsonResult {
 			SortNo:    item.SortNo,
 		})
 	}
-	return web.JsonData(results)
+	httpx.WriteJSON(ctx, results)
+	return
 }
 
-func (c *QuickReplyController) PostCreate() *web.JsonResult {
-	user, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionQuickReplyCreate)
+func QuickReplyPostCreate(ctx *gin.Context) {
+	user, err := services.AuthService.RequirePermission(ctx, constants.PermissionQuickReplyCreate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.CreateQuickReplyRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	item, err := services.QuickReplyService.CreateQuickReply(req, user)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(&response.QuickReplyResponse{
+	httpx.WriteJSON(ctx, &response.QuickReplyResponse{
 		ID:        item.ID,
 		GroupName: item.GroupName,
 		Title:     item.Title,
@@ -84,35 +89,44 @@ func (c *QuickReplyController) PostCreate() *web.JsonResult {
 		Status:    item.Status,
 		SortNo:    item.SortNo,
 	})
+	return
 }
 
-func (c *QuickReplyController) PostUpdate() *web.JsonResult {
-	user, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionQuickReplyUpdate)
+func QuickReplyPostUpdate(ctx *gin.Context) {
+	user, err := services.AuthService.RequirePermission(ctx, constants.PermissionQuickReplyUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.UpdateQuickReplyRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.QuickReplyService.UpdateQuickReply(req, user); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *QuickReplyController) PostDelete() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionQuickReplyDelete); err != nil {
-		return web.JsonError(err)
+func QuickReplyPostDelete(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionQuickReplyDelete); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.DeleteQuickReplyRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.QuickReplyService.DeleteQuickReply(req.ID); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }

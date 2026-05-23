@@ -6,23 +6,22 @@ import (
 	"cs-agent/internal/pkg/dto/request"
 	"cs-agent/internal/pkg/dto/response"
 	"cs-agent/internal/pkg/enums"
+	"cs-agent/internal/pkg/httpx"
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/web"
 )
 
-type UserController struct {
-	Ctx *gin.Context
-}
-
-func (c *UserController) AnyList() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionUserView); err != nil {
-		return web.JsonError(err)
+func UserAnyList(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionUserView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
-	cnd := params.NewPagedSqlCnd(c.Ctx,
+	cnd := params.NewPagedSqlCnd(ctx,
 		params.QueryFilter{ParamName: "status"},
 		params.QueryFilter{ParamName: "username", Op: params.Like},
 		params.QueryFilter{ParamName: "nickname", Op: params.Like},
@@ -33,15 +32,17 @@ func (c *UserController) AnyList() *web.JsonResult {
 		Roles:       true,
 		Permissions: false,
 	})
-	return web.JsonData(&web.PageResult{Results: results, Page: paging})
+	httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
+	return
 }
 
-func (c *UserController) AnyList_all() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionUserView); err != nil {
-		return web.JsonError(err)
+func UserAnyList_all(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionUserView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
-	cnd := params.NewSqlCnd(c.Ctx,
+	cnd := params.NewSqlCnd(ctx,
 		params.QueryFilter{ParamName: "status"},
 		params.QueryFilter{ParamName: "username", Op: params.Like},
 		params.QueryFilter{ParamName: "nickname", Op: params.Like},
@@ -53,147 +54,180 @@ func (c *UserController) AnyList_all() *web.JsonResult {
 		Roles:       true,
 		Permissions: false,
 	})
-	return web.JsonData(results)
+	httpx.WriteJSON(ctx, results)
+	return
 }
 
-func (c *UserController) GetBy(id int64) *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionUserView); err != nil {
-		return web.JsonError(err)
+func UserGetBy(ctx *gin.Context, id int64) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionUserView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	item := services.UserService.Get(id)
 	if item == nil {
-		return web.JsonErrorMsg("用户不存在")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("用户不存在"))
+		return
 	}
-	return web.JsonData(builders.BuildUserResponse(item, builders.UserBuildOptions{
+	httpx.WriteJSON(ctx, builders.BuildUserResponse(item, builders.UserBuildOptions{
 		Roles:       true,
 		Permissions: true,
 	}))
+	return
 }
 
-func (c *UserController) PostCreate() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionUserCreate)
+func UserPostCreate(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionUserCreate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.CreateUserRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	user, generatedPassword, err := services.UserService.CreateUser(req, operator)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(&response.CreateUserResultResponse{
+	httpx.WriteJSON(ctx, &response.CreateUserResultResponse{
 		User:     builders.BuildUserResponse(user, builders.UserBuildOptions{Roles: true, Permissions: true}),
 		Password: generatedPassword,
 	})
+	return
 }
 
-func (c *UserController) PostUpdate() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionUserUpdate)
+func UserPostUpdate(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionUserUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.UpdateUserRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.UserService.UpdateUser(req, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *UserController) PostDelete() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionUserDelete)
+func UserPostDelete(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionUserDelete)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.DeleteUserRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.UserService.DeleteUser(req.ID, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *UserController) PostUpdate_status() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionUserUpdate)
+func UserPostUpdate_status(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionUserUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.UpdateUserStatusRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.UserService.UpdateStatus(req.ID, req.Status, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *UserController) PostReset_password() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionUserUpdate)
+func UserPostReset_password(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionUserUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	var req struct {
 		UserID int64 `json:"userId"`
 	}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	password, err := services.UserService.ResetPassword(req.UserID, operator)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(map[string]any{
+	httpx.WriteJSON(ctx, map[string]any{
 		"password": password,
 	})
+	return
 }
 
-func (c *UserController) PostChange_password() *web.JsonResult {
-	principal := services.AuthService.GetAuthPrincipal(c.Ctx)
+func UserPostChange_password(ctx *gin.Context) {
+	principal := services.AuthService.GetAuthPrincipal(ctx)
 	if principal == nil {
-		if _, err := services.AuthService.Authenticate(c.Ctx); err != nil {
-			return web.JsonError(err)
+		if _, err := services.AuthService.Authenticate(ctx); err != nil {
+			httpx.WriteJSON(ctx, err)
+			return
 		}
-		principal = services.AuthService.GetAuthPrincipal(c.Ctx)
+		principal = services.AuthService.GetAuthPrincipal(ctx)
 	}
 	if principal == nil {
-		return web.JsonErrorMsg("未登录或登录已过期")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("未登录或登录已过期"))
+		return
 	}
 
 	req := request.ChangePasswordRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.UserService.ChangeOwnPassword(req.Password, principal); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *UserController) PostAssign_role() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionUserAssignRole)
+func UserPostAssign_role(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionUserAssignRole)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.AssignRoleRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.UserService.AssignRoles(req.UserID, req.RoleIDs, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }

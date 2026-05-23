@@ -6,28 +6,27 @@ import (
 	"cs-agent/internal/pkg/dto/request"
 	"cs-agent/internal/pkg/dto/response"
 	"cs-agent/internal/pkg/enums"
+	"cs-agent/internal/pkg/httpx"
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/sqls"
 	"github.com/mlogclub/simple/web"
 )
 
-type AgentTeamController struct {
-	Ctx *gin.Context
-}
-
-func (c *AgentTeamController) AnyList() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAgentTeamView); err != nil {
-		return web.JsonError(err)
+func AgentTeamAnyList(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionAgentTeamView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	cnd := params.NewSqlCnd(c.Ctx,
+	cnd := params.NewSqlCnd(ctx,
 		params.QueryFilter{ParamName: "status"},
 		params.QueryFilter{ParamName: "leaderUserId"},
 		params.QueryFilter{ParamName: "name", Op: params.Like},
 	).Desc("id")
-	if _, ok := params.Get(c.Ctx, "status"); !ok {
+	if _, ok := params.Get(ctx, "status"); !ok {
 		cnd.Where("status <> ?", enums.StatusDeleted)
 	}
 	list := services.AgentTeamService.Find(cnd)
@@ -35,76 +34,94 @@ func (c *AgentTeamController) AnyList() *web.JsonResult {
 	for _, item := range list {
 		results = append(results, buildAgentTeamResponse(&item))
 	}
-	return web.JsonData(results)
+	httpx.WriteJSON(ctx, results)
+	return
 }
 
-func (c *AgentTeamController) GetList_all() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAgentTeamView); err != nil {
-		return web.JsonError(err)
+func AgentTeamGetList_all(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionAgentTeamView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	list := services.AgentTeamService.Find(sqls.NewCnd().Eq("status", enums.StatusOk))
 	results := make([]response.AgentTeamResponse, 0, len(list))
 	for _, item := range list {
 		results = append(results, buildAgentTeamResponse(&item))
 	}
-	return web.JsonData(results)
+	httpx.WriteJSON(ctx, results)
+	return
 }
 
-func (c *AgentTeamController) GetBy(id int64) *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAgentTeamView); err != nil {
-		return web.JsonError(err)
+func AgentTeamGetBy(ctx *gin.Context, id int64) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionAgentTeamView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	item := services.AgentTeamService.Get(id)
 	if item == nil || item.Status == enums.StatusDeleted {
-		return web.JsonErrorMsg("客服组不存在")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("客服组不存在"))
+		return
 	}
-	return web.JsonData(buildAgentTeamResponse(item))
+	httpx.WriteJSON(ctx, buildAgentTeamResponse(item))
+	return
 }
 
-func (c *AgentTeamController) PostCreate() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAgentTeamCreate)
+func AgentTeamPostCreate(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionAgentTeamCreate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.CreateAgentTeamRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	item, err := services.AgentTeamService.CreateAgentTeam(req, operator)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(buildAgentTeamResponse(item))
+	httpx.WriteJSON(ctx, buildAgentTeamResponse(item))
+	return
 }
 
-func (c *AgentTeamController) PostUpdate() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAgentTeamUpdate)
+func AgentTeamPostUpdate(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionAgentTeamUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.UpdateAgentTeamRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.AgentTeamService.UpdateAgentTeam(req, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *AgentTeamController) PostDelete() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAgentTeamDelete)
+func AgentTeamPostDelete(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionAgentTeamDelete)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	req := request.DeleteAgentTeamRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.AgentTeamService.DeleteAgentTeam(req.ID, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
 func buildAgentTeamResponse(item *models.AgentTeam) response.AgentTeamResponse {

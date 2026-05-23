@@ -5,22 +5,21 @@ import (
 	"cs-agent/internal/pkg/dto/request"
 	"cs-agent/internal/pkg/dto/response"
 	"cs-agent/internal/pkg/enums"
+	"cs-agent/internal/pkg/httpx"
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/web"
 )
 
-type AIConfigController struct {
-	Ctx *gin.Context
-}
-
-func (c *AIConfigController) AnyList() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAIConfigView); err != nil {
-		return web.JsonError(err)
+func AIConfigAnyList(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionAIConfigView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	list, paging := services.AIConfigService.FindPageByCnd(params.NewPagedSqlCnd(c.Ctx,
+	list, paging := services.AIConfigService.FindPageByCnd(params.NewPagedSqlCnd(ctx,
 		params.QueryFilter{ParamName: "status"},
 		params.QueryFilter{ParamName: "provider"},
 		params.QueryFilter{ParamName: "modelType"},
@@ -31,15 +30,17 @@ func (c *AIConfigController) AnyList() *web.JsonResult {
 	for _, item := range list {
 		results = append(results, response.BuildAIConfigResponse(&item))
 	}
-	return web.JsonData(&web.PageResult{Results: results, Page: paging})
+	httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
+	return
 }
 
-func (c *AIConfigController) AnyList_all() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAIConfigView); err != nil {
-		return web.JsonError(err)
+func AIConfigAnyList_all(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionAIConfigView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
-	list := services.AIConfigService.Find(params.NewSqlCnd(c.Ctx,
+	list := services.AIConfigService.Find(params.NewSqlCnd(ctx,
 		params.QueryFilter{ParamName: "modelType"},
 	).Eq("status", enums.StatusOk).Desc("sort_no").Desc("id"))
 
@@ -47,97 +48,121 @@ func (c *AIConfigController) AnyList_all() *web.JsonResult {
 	for _, item := range list {
 		results = append(results, response.BuildAIConfigResponse(&item))
 	}
-	return web.JsonData(results)
+	httpx.WriteJSON(ctx, results)
+	return
 }
 
-func (c *AIConfigController) GetBy(id int64) *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAIConfigView); err != nil {
-		return web.JsonError(err)
+func AIConfigGetBy(ctx *gin.Context, id int64) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionAIConfigView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	item := services.AIConfigService.Get(id)
 	if item == nil || item.Status == enums.StatusDeleted {
-		return web.JsonErrorMsg("AI配置不存在")
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("AI配置不存在"))
+		return
 	}
-	return web.JsonData(response.BuildAIConfigResponse(item))
+	httpx.WriteJSON(ctx, response.BuildAIConfigResponse(item))
+	return
 }
 
-func (c *AIConfigController) PostCreate() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAIConfigCreate)
+func AIConfigPostCreate(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionAIConfigCreate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.CreateAIConfigRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	item, err := services.AIConfigService.CreateAIConfig(req, operator)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonData(response.BuildAIConfigResponse(item))
+	httpx.WriteJSON(ctx, response.BuildAIConfigResponse(item))
+	return
 }
 
-func (c *AIConfigController) PostUpdate() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAIConfigUpdate)
+func AIConfigPostUpdate(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionAIConfigUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.UpdateAIConfigRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.AIConfigService.UpdateAIConfig(req, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *AIConfigController) PostDelete() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAIConfigDelete)
+func AIConfigPostDelete(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionAIConfigDelete)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.DeleteAIConfigRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.AIConfigService.DeleteAIConfig(req.ID, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *AIConfigController) PostUpdate_status() *web.JsonResult {
-	operator, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAIConfigUpdate)
+func AIConfigPostUpdate_status(ctx *gin.Context) {
+	operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionAIConfigUpdate)
 	if err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	req := request.UpdateAIConfigStatusRequest{}
-	if err := params.ReadJSON(c.Ctx, &req); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.AIConfigService.UpdateStatus(req.ID, req.Status, operator); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
 
-func (c *AIConfigController) PostUpdate_sort() *web.JsonResult {
-	if _, err := services.AuthService.RequirePermission(c.Ctx, constants.PermissionAIConfigUpdate); err != nil {
-		return web.JsonError(err)
+func AIConfigPostUpdate_sort(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionAIConfigUpdate); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 
 	var ids []int64
-	if err := params.ReadJSON(c.Ctx, &ids); err != nil {
-		return web.JsonError(err)
+	if err := params.ReadJSON(ctx, &ids); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
 	}
 	if err := services.AIConfigService.UpdateSort(ids); err != nil {
-		return web.JsonError(err)
+		httpx.WriteJSON(ctx, err)
+		return
 	}
-	return web.JsonSuccess()
+	httpx.WriteJSON(ctx, nil)
+	return
 }
