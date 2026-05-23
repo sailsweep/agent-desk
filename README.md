@@ -280,16 +280,26 @@ make migration      # 执行 migration
 
 ## Docker
 
+推荐使用 Docker Compose 同时启动应用、MySQL 和 Qdrant：
+
 ```bash
-docker build -t cs-agent .
-docker run --rm -p 8083:8083 -v cs-agent-data:/app/data cs-agent
+docker compose up -d --build
 ```
 
-容器默认使用 `/app/config/config.yaml`，镜像内会基于 `config/config.example.yaml` 放置一份默认配置。生产环境建议通过挂载配置文件覆盖：
+Compose 默认会启动：
+
+- `cs-agent`：应用服务，端口 `8083`
+- `mysql`：MySQL 8.4，数据卷 `mysql-data`
+- `qdrant`：向量数据库，数据卷 `qdrant-data`，端口 `6333`/`6334`
+
+Compose 使用 [docker/cs-agent.yaml](docker/cs-agent.yaml) 作为容器内配置，应用会通过 Docker 内部服务名访问 `mysql` 和 `qdrant`。
+
+也可以只构建应用镜像，但需要自行准备 MySQL 和 Qdrant，并挂载对应配置：
 
 ```bash
+docker build -t cs-agent .
 docker run --rm -p 8083:8083 \
-  -v $(pwd)/config/config.yaml:/app/config/config.yaml:ro \
+  -v $(pwd)/docker/cs-agent.yaml:/app/config/config.yaml:ro \
   -v cs-agent-data:/app/data \
   cs-agent
 ```
