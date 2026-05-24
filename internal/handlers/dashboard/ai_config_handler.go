@@ -25,7 +25,7 @@ func AIConfigAnyList(ctx *gin.Context) {
 		params.QueryFilter{ParamName: "modelType"},
 		params.QueryFilter{ParamName: "name", Op: params.Like},
 		params.QueryFilter{ParamName: "modelName", Op: params.Like},
-	).Desc("sort_no").Desc("id"))
+	).Asc("sort_no").Desc("id"))
 	results := make([]response.AIConfigResponse, 0, len(list))
 	for _, item := range list {
 		results = append(results, response.BuildAIConfigResponse(&item))
@@ -145,7 +145,7 @@ func AIConfigPostUpdate_status(ctx *gin.Context) {
 	httpx.WriteJSON(ctx, nil)
 }
 
-func AIConfigPostUpdate_sort(ctx *gin.Context) {
+func AIConfigPostUpdateSort(ctx *gin.Context) {
 	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionAIConfigUpdate); err != nil {
 		httpx.WriteJSON(ctx, err)
 		return

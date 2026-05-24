@@ -226,7 +226,7 @@ func registerDashboardAIConfigRoutes(group *gin.RouterGroup) {
 	group.Any("/list", dashboard.AIConfigAnyList)
 	group.Any("/list_all", dashboard.AIConfigAnyList_all)
 	group.POST("/update", dashboard.AIConfigPostUpdate)
-	group.POST("/update_sort", dashboard.AIConfigPostUpdate_sort)
+	group.POST("/update_sort", dashboard.AIConfigPostUpdateSort)
 	group.POST("/update_status", dashboard.AIConfigPostUpdate_status)
 }
 

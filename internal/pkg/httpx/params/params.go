@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -54,7 +55,7 @@ func ReadForm(ctx *gin.Context, obj any) error {
 	if err := decoder.Decode(obj, values); err != nil {
 		return err
 	}
-	return validate.Struct(obj)
+	return validateStruct(obj)
 }
 
 func ReadJSON(ctx *gin.Context, obj any) error {
@@ -63,6 +64,23 @@ func ReadJSON(ctx *gin.Context, obj any) error {
 	}
 	if err := ctx.ShouldBindJSON(obj); err != nil {
 		return err
+	}
+	return validateStruct(obj)
+}
+
+func validateStruct(obj any) error {
+	if obj == nil {
+		return nil
+	}
+	value := reflect.ValueOf(obj)
+	for value.Kind() == reflect.Pointer {
+		if value.IsNil() {
+			return validate.Struct(obj)
+		}
+		value = value.Elem()
+	}
+	if value.Kind() != reflect.Struct {
+		return nil
 	}
 	return validate.Struct(obj)
 }
