@@ -23,6 +23,9 @@ import (
 
 func NewServer() (*gin.Engine, error) {
 	cfg := config.Current()
+
+	gin.SetMode(gin.ReleaseMode)
+
 	app := gin.New()
 	app.Use(corsMiddleware())
 	app.Use(gin.Recovery())
