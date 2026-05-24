@@ -15,9 +15,9 @@ import { formatDateTime } from "@/lib/utils";
 function getStatusVariant(status: number) {
   switch (status) {
     case IMConversationStatus.AIServing:
-      return "bg-violet-500/15 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300"
+      return "bg-primary/10 text-primary"
     case IMConversationStatus.Pending:
-      return "bg-blue-500/15 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"
+      return "bg-amber-500/15 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300"
     case IMConversationStatus.Active:
       return "bg-emerald-500/15 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300"
     case IMConversationStatus.Closed:
@@ -49,8 +49,8 @@ export function ConversationList({ onAfterSelect }: ConversationListProps) {
           return (
             <div
               key={conversation.id}
-              className={`cursor-pointer px-2.5 py-1.5 transition-colors hover:bg-muted/50 border-b ${
-                isSelected ? "bg-muted/80" : ""
+              className={`cursor-pointer border-b border-border/80 px-3 py-2 transition-colors hover:bg-muted/40 ${
+                isSelected ? "bg-accent/70" : ""
               }`}
               onClick={() => {
                 void selectConversation(conversation.id).then(
@@ -65,7 +65,7 @@ export function ConversationList({ onAfterSelect }: ConversationListProps) {
                 <div className="flex items-center gap-2">
                   <Avatar className="size-7 shrink-0">
                     <AvatarImage src="" />
-                    <AvatarFallback className="bg-primary/10">
+                    <AvatarFallback className="bg-primary/10 text-primary">
                       <UserIcon className="size-3.5 text-primary" />
                     </AvatarFallback>
                   </Avatar>
@@ -94,7 +94,7 @@ export function ConversationList({ onAfterSelect }: ConversationListProps) {
                 </div>
                 <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
                   <span
-                    className={`rounded px-1 py-0.5 ${getStatusVariant(
+                    className={`rounded-md px-1.5 py-0.5 ${getStatusVariant(
                       conversation.status
                     )}`}
                   >
@@ -102,7 +102,7 @@ export function ConversationList({ onAfterSelect }: ConversationListProps) {
                   </span>
                   {conversation.status === IMConversationStatus.Pending &&
                   conversation.currentTeamName ? (
-                    <span className="rounded bg-muted px-1 py-0.5">
+                    <span className="rounded-md bg-muted px-1.5 py-0.5">
                       值班组：{conversation.currentTeamName}
                     </span>
                   ) : null}

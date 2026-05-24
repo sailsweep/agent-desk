@@ -199,12 +199,12 @@ export function ConversationInfoPanel({
       className={cn(
         "flex h-full min-h-0 flex-col overflow-hidden",
         embedded
-          ? "bg-background text-foreground"
-          : "border-border bg-card text-card-foreground",
+          ? "bg-card text-card-foreground"
+          : "border-border/80 bg-card text-card-foreground",
         className,
       )}
     >
-      <div className="flex h-12.5 shrink-0 items-center border-b border-border px-3">
+      <div className="flex h-12.5 shrink-0 items-center border-b border-border/80 bg-card px-3">
         <h2 className="text-sm font-medium text-foreground">会话信息</h2>
       </div>
 

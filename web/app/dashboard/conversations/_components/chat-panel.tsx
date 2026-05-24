@@ -173,7 +173,7 @@ export function ChatPanel() {
       toast.error(error instanceof Error ? error.message : "设置已读失败");
     });
   }, [
-    conversation?.id,
+    conversation,
     getViewport,
     isNearBottom,
     loading,
@@ -386,7 +386,7 @@ export function ChatPanel() {
   );
 
   const bottomPanel = (
-    <div className="h-full overflow-auto border-t border-border bg-background">
+    <div className="h-full overflow-auto border-t border-border/80 bg-card">
       {isClosedConversation ? (
         <div className="h-full flex justify-center items-center">
           当前会话已关闭

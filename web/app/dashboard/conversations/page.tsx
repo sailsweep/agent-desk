@@ -47,6 +47,19 @@ import { ChatPanel } from "./_components/chat-panel";
 import { ConversationInfoPanel } from "./_components/conversation-info-panel";
 import { ConversationList } from "./_components/conversation-list";
 
+const workbenchIconButtonClassName =
+  "size-8 text-muted-foreground hover:bg-muted hover:text-foreground";
+
+function getCustomerOnlineClassName(online?: boolean) {
+  return online
+    ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300"
+    : "border-border bg-muted text-muted-foreground";
+}
+
+function getCustomerOnlineDotClassName(online?: boolean) {
+  return online ? "bg-emerald-500" : "bg-muted-foreground/70";
+}
+
 export default function ConversationsPage() {
   const conversation = useAgentConversationsStore(
     agentConversationSelectors.selectedConversation,
@@ -156,7 +169,7 @@ export default function ConversationsPage() {
 
   const renderConversationSidebar = (opts?: { onListAfterSelect?: () => void }) => (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-inherit">
-      <div className="flex h-12.5 shrink-0 items-start justify-between gap-2 border-b border-border p-2">
+      <div className="flex h-12.5 shrink-0 items-start justify-between gap-2 border-b border-border/80 bg-card px-2 py-2">
         <div ref={filterContainerRef} className="relative min-w-0 flex-1">
           {showFilterDropdown ? (
             <DropdownMenu>
@@ -229,7 +242,7 @@ export default function ConversationsPage() {
         <Button
           variant="ghost"
           size="icon"
-          className="mt-0.5 shrink-0 lg:hidden"
+          className={`${workbenchIconButtonClassName} mt-0.5 shrink-0 lg:hidden`}
           onClick={() => setMobileMenuOpen(false)}
         >
           <X className="size-4" />
@@ -240,13 +253,13 @@ export default function ConversationsPage() {
   );
 
   const workspaceContent = (
-    <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-background text-foreground">
-      <div className="flex h-12.5 shrink-0 items-center justify-between gap-3 border-b border-border px-3 py-1">
+    <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-card text-card-foreground">
+      <div className="flex h-12.5 shrink-0 items-center justify-between gap-3 border-b border-border/80 bg-card px-3 py-1">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden"
+            className={`${workbenchIconButtonClassName} lg:hidden`}
             onClick={() => setMobileMenuOpen(true)}
           >
             <Menu className="size-4" />
@@ -254,7 +267,7 @@ export default function ConversationsPage() {
           <Button
             variant="ghost"
             size="icon"
-            className="hidden lg:flex"
+            className={`${workbenchIconButtonClassName} hidden lg:flex`}
             onClick={handleSidebarToggle}
           >
             {sidebarCollapsed ? (
@@ -267,31 +280,29 @@ export default function ConversationsPage() {
             <>
               <Avatar className="size-8 shrink-0 lg:size-9">
                 <AvatarImage src="" />
-              <AvatarFallback>客</AvatarFallback>
+                <AvatarFallback className="bg-primary/10 text-sm text-primary">
+                  客
+                </AvatarFallback>
               </Avatar>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="min-w-0 truncate font-medium leading-tight">
+                  <p className="min-w-0 truncate text-sm font-medium leading-tight">
                     {conversation.customerName || `客户 #${conversation.customerId || conversation.id}`}
                   </p>
                   <span
-                    className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 text-[11px] ${
-                      conversation.customerOnline
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                        : "border-slate-200 bg-slate-100 text-slate-600"
-                    }`}
+                    className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] leading-none ${getCustomerOnlineClassName(
+                      conversation.customerOnline,
+                    )}`}
                   >
                     <span
-                      className={`size-1.5 rounded-full ${
-                        conversation.customerOnline
-                          ? "bg-emerald-500"
-                          : "bg-slate-400"
-                      }`}
+                      className={`size-1.5 rounded-full ${getCustomerOnlineDotClassName(
+                        conversation.customerOnline,
+                      )}`}
                     />
                     {conversation.customerOnline ? "用户在线" : "用户离线"}
                   </span>
                 </div>
-                <p className="mt-0.5 truncate text-xs text-muted-foreground sm:text-sm">
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">
                   <span>渠道 #{conversation.channelId || "-"}</span>
                   {conversation.customerId ? (
                     <>
@@ -318,7 +329,7 @@ export default function ConversationsPage() {
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden"
+            className={`${workbenchIconButtonClassName} lg:hidden`}
             disabled={!conversation}
             aria-label="会话信息"
             onClick={() => setMobileCustomerSheetOpen(true)}
@@ -328,7 +339,12 @@ export default function ConversationsPage() {
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
-                <Button variant="ghost" size="icon" disabled={!conversation} />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={workbenchIconButtonClassName}
+                  disabled={!conversation}
+                />
               }
             >
               <MoreHorizontalIcon className="size-4" />
@@ -360,7 +376,7 @@ export default function ConversationsPage() {
           <Button
             variant="ghost"
             size="icon"
-            className="hidden lg:flex"
+            className={`${workbenchIconButtonClassName} hidden lg:flex`}
             onClick={handleInfoPanelToggle}
             aria-label={infoPanelCollapsed ? "展开会话信息" : "收起会话信息"}
           >
@@ -390,7 +406,7 @@ export default function ConversationsPage() {
         />
       )}
       <div
-        className={`fixed top-12 bottom-0 left-0 z-40 flex w-[min(22rem,calc(100vw-0.75rem))] max-w-[min(22rem,calc(100vw-0.75rem))] flex-col overflow-hidden border-r border-border bg-card text-card-foreground shadow-lg transition-transform duration-300 ease-out will-change-transform touch-manipulation overscroll-contain supports-[padding:max(0px)]:pb-[env(safe-area-inset-bottom)] lg:hidden ${
+        className={`fixed top-12 bottom-0 left-0 z-40 flex w-[min(22rem,calc(100vw-0.75rem))] max-w-[min(22rem,calc(100vw-0.75rem))] flex-col overflow-hidden border-r border-border/80 bg-card text-card-foreground shadow-xl transition-transform duration-300 ease-out will-change-transform touch-manipulation overscroll-contain supports-[padding:max(0px)]:pb-[env(safe-area-inset-bottom)] lg:hidden ${
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"
         }`}
         aria-hidden={!mobileMenuOpen}
@@ -415,14 +431,14 @@ export default function ConversationsPage() {
             onResize={(panelSize: { asPercentage: number }) => {
               setSidebarCollapsed(panelSize.asPercentage <= 1);
             }}
-            className="min-h-0"
+            className="min-h-0 border-r border-border/80 bg-card"
           >
             <div className="flex h-full min-h-0 flex-col overflow-hidden bg-card text-card-foreground">
               {renderConversationSidebar()}
             </div>
           </ResizablePanel>
           <ResizableHandle withHandle />
-          <ResizablePanel defaultSize="50%" minSize="32%" className="min-h-0">
+          <ResizablePanel defaultSize="50%" minSize="32%" className="min-h-0 bg-card">
             <div className="flex h-full min-h-0 flex-col overflow-hidden">
               {workspaceContent}
             </div>
@@ -438,7 +454,7 @@ export default function ConversationsPage() {
             onResize={(panelSize: { asPercentage: number }) => {
               setInfoPanelCollapsed(panelSize.asPercentage <= 1);
             }}
-            className="min-h-0"
+            className="min-h-0 border-l border-border/80 bg-card"
           >
             <ConversationInfoPanel conversation={conversation} className="h-full" />
           </ResizablePanel>

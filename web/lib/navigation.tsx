@@ -167,7 +167,7 @@ export const dashboardNavSections: DashboardNavSectionConfig[] = [
     ],
   },
   {
-    title: "知识与AI",
+    title: "AI能力",
     items: [
       {
         title: "知识库",
@@ -176,31 +176,31 @@ export const dashboardNavSections: DashboardNavSectionConfig[] = [
         requiredPermission: "knowledgeBase.view",
       },
       {
-        title: "AI配置",
+        title: "模型配置",
         url: "/dashboard/ai-configs",
         icon: <BrainCircuitIcon />,
         requiredPermission: "aiConfig.view",
       },
       {
-        title: "AI Agent",
+        title: "智能客服",
         url: "/dashboard/ai-agents",
         icon: <MessageSquareMoreIcon />,
         requiredPermission: "aiAgent.view",
       },
       {
-        title: "Skills",
+        title: "能力编排",
         url: "/dashboard/skill-definition",
         icon: <MessageSquareCodeIcon />,
         requiredPermission: "skillDefinition.view",
       },
       {
-        title: "MCP调试",
+        title: "工具调试",
         url: "/dashboard/mcp",
         icon: <MessageSquareCodeIcon />,
         requiredPermission: "mcp.view",
       },
       {
-        title: "Agent日志",
+        title: "运行日志",
         url: "/dashboard/agent-run-logs",
         icon: <ActivitySquareIcon />,
         requiredPermission: "conversation.view",
