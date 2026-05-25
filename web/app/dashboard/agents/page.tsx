@@ -21,6 +21,7 @@ import { ListPagination } from "@/components/list-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
+import { OptionCombobox } from "@/components/option-combobox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,13 +29,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -53,25 +47,29 @@ import {
   type CreateAdminAgentProfilePayload,
   type PageResult,
 } from "@/lib/api/admin";
-import { getEnumLabel, getEnumOptions } from "@/lib/enums";
-import {
-  ServiceStatus,
-  ServiceStatusLabels,
-} from "@/lib/generated/enums";
+import { useI18n } from "@/i18n/provider";
+import { ServiceStatus } from "@/lib/generated/enums";
 import { formatDateTime } from "@/lib/utils";
 import { EditDialog } from "./_components/edit";
 import { AgentTeamSidebar } from "./_components/team-sidebar";
 
-const serviceStatusOptions = [
-  { value: "all", label: "全部状态" },
-  ...getEnumOptions(ServiceStatusLabels),
-];
+type TFunction = (key: string, values?: Record<string, string | number>) => string;
 
-function getStatusLabel(value: number) {
-  return getEnumLabel(ServiceStatusLabels, value as ServiceStatus);
+function getServiceStatusOptions(t: TFunction) {
+  return [
+    { value: "all", label: t("agentProfile.allStatuses") },
+    { value: String(ServiceStatus.Idle), label: t("agentProfile.statusIdle") },
+    { value: String(ServiceStatus.Busy), label: t("agentProfile.statusBusy") },
+  ];
+}
+
+function getStatusLabel(value: number, t: TFunction) {
+  return getServiceStatusOptions(t).find((item) => item.value === String(value))?.label ?? String(value);
 }
 
 export default function DashboardAgentsPage() {
+  const t = useI18n();
+  const serviceStatusOptions = getServiceStatusOptions(t);
   const [selectedTeam, setSelectedTeam] = useState<AdminAgentTeam | null>(null);
   const [teams, setTeams] = useState<AdminAgentTeam[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -108,11 +106,11 @@ export default function DashboardAgentsPage() {
       });
       setResult(data);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载客服档案失败");
+      toast.error(error instanceof Error ? error.message : t("agentProfile.loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [agentCode, displayName, limit, page, selectedTeam?.id, statusFilter]);
+  }, [agentCode, displayName, limit, page, selectedTeam?.id, statusFilter, t]);
 
   useEffect(() => {
     void loadData();
@@ -193,16 +191,16 @@ export default function DashboardAgentsPage() {
     try {
       if (editingItem) {
         await updateAgentProfile({ id: editingItem.id, ...payload });
-        toast.success(`已更新客服档案：${editingItem.displayName}`);
+        toast.success(t("agentProfile.updated", { name: editingItem.displayName }));
       } else {
         await createAgentProfile(payload);
-        toast.success(`已创建客服档案：${payload.displayName}`);
+        toast.success(t("agentProfile.created", { name: payload.displayName }));
       }
       setDialogOpen(false);
       setEditingItem(null);
       await loadData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "保存客服档案失败");
+      toast.error(error instanceof Error ? error.message : t("agentProfile.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -212,10 +210,10 @@ export default function DashboardAgentsPage() {
     setActionLoadingId(item.id);
     try {
       await deleteAgentProfile(item.id);
-      toast.success(`已删除客服档案：${item.displayName}`);
+      toast.success(t("agentProfile.deleted", { name: item.displayName }));
       await loadData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "删除客服档案失败");
+      toast.error(error instanceof Error ? error.message : t("agentProfile.deleteFailed"));
     } finally {
       setActionLoadingId(null);
     }
@@ -241,7 +239,7 @@ export default function DashboardAgentsPage() {
             size="icon"
             className="absolute top-4 left-1/2 z-10 size-7 -translate-x-1/2 rounded-full shadow-sm"
             onClick={() => setSidebarCollapsed((value) => !value)}
-            aria-label={sidebarCollapsed ? "展开客服组列表" : "折叠客服组列表"}
+            aria-label={sidebarCollapsed ? t("agentProfile.expandTeams") : t("agentProfile.collapseTeams")}
           >
             {sidebarCollapsed ? (
               <PanelLeftOpenIcon className="size-3.5" />
@@ -256,7 +254,7 @@ export default function DashboardAgentsPage() {
               actions={
                 <Button onClick={openCreateDialog}>
                   <PlusIcon />
-                  新建
+                  {t("agentProfile.new")}
                 </Button>
               }
             >
@@ -268,7 +266,7 @@ export default function DashboardAgentsPage() {
                       setDisplayNameInput(event.target.value)
                     }
                     onKeyDown={handleFilterKeyDown}
-                    placeholder="按展示名筛选"
+                    placeholder={t("agentProfile.filterDisplayName")}
                     className="pl-9"
                   />
                 </div>
@@ -276,37 +274,26 @@ export default function DashboardAgentsPage() {
                   value={agentCodeInput}
                   onChange={(event) => setAgentCodeInput(event.target.value)}
                   onKeyDown={handleFilterKeyDown}
-                  placeholder="按客服工号筛选"
+                  placeholder={t("agentProfile.filterAgentCode")}
                   className="w-full sm:w-44"
                 />
-                <Select
-                  value={statusFilterInput}
-                  onValueChange={(value) =>
-                    setStatusFilterInput(value ?? "all")
-                  }
-                >
-                  <SelectTrigger className="w-full sm:w-36">
-                    <SelectValue>
-                      {serviceStatusOptions.find(
-                        (item) => item.value === statusFilterInput,
-                      )?.label ?? "全部状态"}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {serviceStatusOptions.map((item) => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="w-full sm:w-36">
+                  <OptionCombobox
+                    value={statusFilterInput}
+                    options={serviceStatusOptions}
+                    placeholder={t("agentProfile.allStatuses")}
+                    searchPlaceholder={t("agentProfile.searchStatus")}
+                    emptyText={t("agentProfile.emptyStatus")}
+                    onChange={(value) => setStatusFilterInput(value ?? "all")}
+                  />
+                </div>
                 <Button
                   variant="outline"
                   onClick={applyFilters}
                   disabled={loading}
                 >
                   <SearchIcon />
-                  查询
+                  {t("agentProfile.query")}
                 </Button>
             </DashboardToolbar>
             <DashboardTableShell
@@ -328,12 +315,12 @@ export default function DashboardAgentsPage() {
                 <Table>
                   <TableHeader className="bg-muted/40">
                     <TableRow>
-                      <TableHead>客服</TableHead>
-                      <TableHead>服务规则</TableHead>
-                      <TableHead>分配策略</TableHead>
-                      <TableHead>最近时间</TableHead>
+                      <TableHead>{t("agentProfile.columnAgent")}</TableHead>
+                      <TableHead>{t("agentProfile.columnRules")}</TableHead>
+                      <TableHead>{t("agentProfile.columnDispatch")}</TableHead>
+                      <TableHead>{t("agentProfile.columnRecent")}</TableHead>
                       <TableHead className="w-[92px] text-right">
-                        操作
+                        {t("agentProfile.columnActions")}
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -360,21 +347,23 @@ export default function DashboardAgentsPage() {
                               <div className="text-xs text-muted-foreground">
                                 {item.nickname ||
                                   item.username ||
-                                  `用户#${item.userId}`}
+                                  t("agentProfile.userFallback", { id: item.userId })}
                               </div>
                               <div className="mt-1 text-xs text-muted-foreground">
-                                工号：{item.agentCode}
+                                {t("agentProfile.agentCode", { code: item.agentCode })}
                               </div>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">
-                            {getStatusLabel(item.serviceStatus)}
+                            {getStatusLabel(item.serviceStatus, t)}
                           </Badge>
                           <div className="mt-2 text-sm text-muted-foreground">
-                            最大并发 {item.maxConcurrentCount} / 优先级{" "}
-                            {item.priorityLevel}
+                            {t("agentProfile.capacityPriority", {
+                              capacity: item.maxConcurrentCount,
+                              priority: item.priorityLevel,
+                            })}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -385,8 +374,8 @@ export default function DashboardAgentsPage() {
                               }
                             >
                               {item.autoAssignEnabled
-                                ? "自动分配"
-                                : "不自动分配"}
+                                ? t("agentProfile.autoAssign")
+                                : t("agentProfile.noAutoAssign")}
                             </Badge>
                             <Badge
                               variant={
@@ -396,17 +385,17 @@ export default function DashboardAgentsPage() {
                               }
                             >
                               {item.receiveOfflineMessage
-                                ? "离线接收"
-                                : "离线不接收"}
+                                ? t("agentProfile.offlineReceive")
+                                : t("agentProfile.noOfflineReceive")}
                             </Badge>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            在线：{formatDateTime(item.lastOnlineAt)}
+                            {t("agentProfile.onlineAt", { time: formatDateTime(item.lastOnlineAt) })}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            状态：{formatDateTime(item.lastStatusAt)}
+                            {t("agentProfile.statusAt", { time: formatDateTime(item.lastStatusAt) })}
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
@@ -416,14 +405,14 @@ export default function DashboardAgentsPage() {
                               size="sm"
                               onClick={() => openEditDialog(item)}
                             >
-                              编辑
+                              {t("agentProfile.edit")}
                             </Button>
                             <DropdownMenu>
                               <DropdownMenuTrigger
                                 render={
                                   <Button variant="outline" size="icon-sm" />
                                 }
-                                aria-label={`更多操作 ${item.displayName}`}
+                                aria-label={t("agentProfile.moreActions", { name: item.displayName })}
                               >
                                 <MoreHorizontalIcon />
                               </DropdownMenuTrigger>
@@ -437,8 +426,8 @@ export default function DashboardAgentsPage() {
                                 >
                                   <Trash2Icon />
                                   {actionLoadingId === item.id
-                                    ? "删除中..."
-                                    : "删除"}
+                                    ? t("agentProfile.deleting")
+                                    : t("agentProfile.delete")}
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -450,11 +439,11 @@ export default function DashboardAgentsPage() {
                       <DashboardTableStateRow
                         colSpan={5}
                         loading={loading}
-                        loadingText="正在加载客服档案..."
+                        loadingText={t("agentProfile.loadingRows")}
                         emptyText={
                           selectedTeam
-                            ? "当前客服组下没有匹配的客服档案"
-                            : "没有匹配的客服档案"
+                            ? t("agentProfile.emptyTeamRows")
+                            : t("agentProfile.emptyRows")
                         }
                       />
                     ) : null}

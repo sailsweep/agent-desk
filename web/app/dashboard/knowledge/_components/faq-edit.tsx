@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, type Resolver } from "react-hook-form";
 import { z } from "zod/v4";
@@ -15,6 +15,7 @@ import {
   type CreateKnowledgeFAQPayload,
   type KnowledgeFAQ,
 } from "@/lib/api/admin";
+import { useI18n } from "@/i18n/provider";
 
 type FAQEditDialogProps = {
   open: boolean;
@@ -25,20 +26,23 @@ type FAQEditDialogProps = {
   onSubmit: (payload: CreateKnowledgeFAQPayload) => Promise<void>;
 };
 
-const formSchema = z.object({
-  question: z.string().trim().min(1, "问题不能为空").max(500, "问题最多500个字符"),
-  answer: z.string().trim().min(1, "答案不能为空"),
+type TFunction = (key: string, values?: Record<string, string | number>) => string;
+
+function createFormSchema(t: TFunction) {
+  return z.object({
+  question: z.string().trim().min(1, t("knowledge.faqQuestionRequired")).max(500, t("knowledge.faqQuestionMax")),
+  answer: z.string().trim().min(1, t("knowledge.faqAnswerRequired")),
   similarQuestionsText: z.string(),
-  remark: z.string().trim().max(500, "备注最多500个字符"),
-});
+  remark: z.string().trim().max(500, t("knowledge.remarkMax")),
+  });
+}
 
-type EditForm = z.infer<typeof formSchema>;
-
-const resolver = zodResolver(formSchema as never) as Resolver<
-  z.input<typeof formSchema>,
-  undefined,
-  z.output<typeof formSchema>
->;
+type EditForm = {
+  question: string;
+  answer: string;
+  similarQuestionsText: string;
+  remark: string;
+};
 
 const emptyForm: EditForm = {
   question: "",
@@ -113,13 +117,15 @@ function FAQEditDialogBody({
   onOpenChange,
   onSubmit,
 }: FAQEditDialogBodyProps) {
+  const t = useI18n();
   const [loading, setLoading] = useState(false);
   const formId = "knowledge-faq-edit-form";
-  const form = useForm<
-    z.input<typeof formSchema>,
-    undefined,
-    z.output<typeof formSchema>
-  >({
+  const formSchema = useMemo(() => createFormSchema(t), [t]);
+  const resolver = useMemo(
+    () => zodResolver(formSchema) as Resolver<EditForm>,
+    [formSchema],
+  );
+  const form = useForm<EditForm>({
     resolver,
     defaultValues: emptyForm,
   });
@@ -157,56 +163,56 @@ function FAQEditDialogBody({
     <ProjectDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={itemId ? "编辑FAQ" : "新建FAQ"}
+      title={itemId ? t("knowledge.editFAQTitle") : t("knowledge.createFAQTitle")}
       allowFullscreen
       size="xl"
       footer={
         <>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-            取消
+            {t("knowledge.cancel")}
           </Button>
           <Button type="submit" form={formId} disabled={saving || loading}>
-            {saving ? "保存中..." : itemId ? "保存" : "创建"}
+            {saving ? t("knowledge.saving") : itemId ? t("knowledge.save") : t("knowledge.create")}
           </Button>
         </>
       }
     >
       {loading ? (
-        <div className="flex items-center justify-center py-12 text-muted-foreground">加载中...</div>
+        <div className="flex items-center justify-center py-12 text-muted-foreground">{t("knowledge.loading")}</div>
       ) : (
         <form id={formId} onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
           <Field data-invalid={!!errors.question}>
-            <FieldLabel htmlFor="faq-question">标准问题</FieldLabel>
+            <FieldLabel htmlFor="faq-question">{t("knowledge.standardQuestion")}</FieldLabel>
             <FieldContent>
-              <Input id="faq-question" placeholder="请输入标准问题" {...register("question")} />
+              <Input id="faq-question" placeholder={t("knowledge.questionPlaceholder")} {...register("question")} />
               <FieldError errors={[errors.question]} />
             </FieldContent>
           </Field>
 
           <Field data-invalid={!!errors.answer}>
-            <FieldLabel htmlFor="faq-answer">答案</FieldLabel>
+            <FieldLabel htmlFor="faq-answer">{t("knowledge.answer")}</FieldLabel>
             <FieldContent>
-              <Textarea id="faq-answer" rows={8} placeholder="请输入FAQ答案" {...register("answer")} />
+              <Textarea id="faq-answer" rows={8} placeholder={t("knowledge.answerPlaceholder")} {...register("answer")} />
               <FieldError errors={[errors.answer]} />
             </FieldContent>
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="faq-similar-questions">相似问题</FieldLabel>
+            <FieldLabel htmlFor="faq-similar-questions">{t("knowledge.similarQuestions")}</FieldLabel>
             <FieldContent>
               <Textarea
                 id="faq-similar-questions"
                 rows={5}
-                placeholder={"一行一个相似问题"}
+                placeholder={t("knowledge.similarQuestionsPlaceholder")}
                 {...register("similarQuestionsText")}
               />
             </FieldContent>
           </Field>
 
           <Field data-invalid={!!errors.remark}>
-            <FieldLabel htmlFor="faq-remark">备注</FieldLabel>
+            <FieldLabel htmlFor="faq-remark">{t("knowledge.remark")}</FieldLabel>
             <FieldContent>
-              <Textarea id="faq-remark" rows={3} placeholder="备注" {...register("remark")} />
+              <Textarea id="faq-remark" rows={3} placeholder={t("knowledge.remarkPlaceholder")} {...register("remark")} />
               <FieldError errors={[errors.remark]} />
             </FieldContent>
           </Field>
@@ -215,4 +221,3 @@ function FAQEditDialogBody({
     </ProjectDialog>
   );
 }
-

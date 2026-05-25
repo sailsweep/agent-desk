@@ -5,6 +5,7 @@ import { CopyIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import { useI18n } from "@/i18n/provider"
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,7 @@ export function InitialPasswordDialog({
   password,
   onOpenChange,
 }: InitialPasswordDialogProps) {
+  const t = useI18n()
   const [copying, setCopying] = useState(false)
 
   async function handleCopy() {
@@ -37,9 +39,9 @@ export function InitialPasswordDialog({
     setCopying(true)
     try {
       await navigator.clipboard.writeText(password)
-      toast.success("密码已复制")
+      toast.success(t("user.copied"))
     } catch {
-      toast.error("复制失败，请手动复制")
+      toast.error(t("user.copyFailed"))
     } finally {
       setCopying(false)
     }
@@ -49,13 +51,13 @@ export function InitialPasswordDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>用户已创建</DialogTitle>
+          <DialogTitle>{t("user.createdTitle")}</DialogTitle>
           <DialogDescription>
-            {username || "-"} 的初始密码已生成，仅在此展示一次，请及时复制并安全传达。
+            {t("user.initialPasswordDescription", { username: username || "-" })}
           </DialogDescription>
         </DialogHeader>
         <div className="rounded-xl border bg-muted/40 p-4">
-          <div className="text-xs text-muted-foreground">初始密码</div>
+          <div className="text-xs text-muted-foreground">{t("user.initialPassword")}</div>
           <div className="mt-2 break-all font-mono text-base">{password}</div>
         </div>
         <DialogFooter>
@@ -66,10 +68,10 @@ export function InitialPasswordDialog({
             disabled={copying || !password}
           >
             <CopyIcon />
-            {copying ? "复制中..." : "复制密码"}
+            {copying ? t("user.copying") : t("user.copyPassword")}
           </Button>
           <Button type="button" onClick={() => onOpenChange(false)}>
-            关闭
+            {t("user.close")}
           </Button>
         </DialogFooter>
       </DialogContent>

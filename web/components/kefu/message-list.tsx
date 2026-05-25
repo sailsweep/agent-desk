@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button"
 import type { ImMessage } from "@/lib/api/im"
 import { renderIMMessageHTML } from "@/lib/im-message"
 import { cn, formatDateTime } from "@/lib/utils"
+import { useI18n } from "@/i18n/provider"
 
 type KefuMessageListProps = {
   messages?: ImMessage[] | null
@@ -44,9 +45,12 @@ function getDayKey(value?: string) {
   ).padStart(2, "0")}`
 }
 
-function getTimelineLabel(value?: string) {
+function getTimelineLabel(
+  value: string | undefined,
+  t: (key: string, values?: Record<string, string | number>) => string
+) {
   if (!value) {
-    return "刚刚"
+    return t("kefu.justNow")
   }
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
@@ -58,7 +62,7 @@ function getTimelineLabel(value?: string) {
     date.getMinutes()
   ).padStart(2, "0")}`
   if (currentDayKey === todayDayKey) {
-    return `今天 ${timeText}`
+    return t("kefu.todayAt", { time: timeText })
   }
   return `${currentDayKey} ${timeText}`
 }
@@ -74,6 +78,7 @@ export const KefuMessageList = forwardRef<KefuMessageListHandle, KefuMessageList
     },
     ref
   ) {
+    const t = useI18n()
     const containerRef = useRef<HTMLDivElement>(null)
     const contentRef = useRef<HTMLDivElement>(null)
     const frameRef = useRef<number | null>(null)
@@ -227,14 +232,14 @@ export const KefuMessageList = forwardRef<KefuMessageListHandle, KefuMessageList
                 onClick={() => void handleLoadOlder()}
                 className="h-7 rounded-full bg-background/90 text-xs text-muted-foreground shadow-sm hover:bg-background hover:text-sky-700 dark:hover:text-sky-400"
               >
-                {loadingOlder ? "加载中…" : "加载更早的消息"}
+                {loadingOlder ? t("kefu.loadingOlder") : t("kefu.loadOlder")}
               </Button>
             </div>
           ) : null}
 
           {safeMessages.length === 0 ? (
             <div className="flex min-h-32 items-center justify-center px-3 py-6 text-center text-sm leading-6 text-muted-foreground">
-              请描述你的问题，我们会尽快为你处理。
+              {t("kefu.emptyPrompt")}
             </div>
           ) : null}
 
@@ -250,6 +255,7 @@ export const KefuMessageList = forwardRef<KefuMessageListHandle, KefuMessageList
                 message={message}
                 showTimeline={showTimeline}
                 onImageSettled={handleImageSettled}
+                timelineLabel={getTimelineLabel(message.sentAt, t)}
               />
             )
           })}
@@ -263,13 +269,15 @@ type MessageItemProps = {
   message: ImMessage
   showTimeline: boolean
   onImageSettled: () => void
+  timelineLabel: string
 }
 
 const MessageItem = memo(
-  function MessageItem({ message, showTimeline, onImageSettled }: MessageItemProps) {
+  function MessageItem({ message, showTimeline, onImageSettled, timelineLabel }: MessageItemProps) {
+    const t = useI18n()
     const { open } = useImageLightbox()
     const isCustomer = message.senderType === "customer"
-    const senderName = isCustomer ? "我" : message.senderName?.trim() || "客服"
+    const senderName = isCustomer ? t("kefu.customerSelf") : message.senderName?.trim() || t("kefu.agentLabel")
     const avatarSrc =
       !isCustomer && message.senderAvatar?.trim() ? message.senderAvatar.trim() : undefined
     const htmlContent = renderIMMessageHTML(message)
@@ -283,7 +291,7 @@ const MessageItem = memo(
               variant="outline"
               className="border-border bg-background/85 text-[11px] font-medium text-muted-foreground shadow-sm"
             >
-              {getTimelineLabel(message.sentAt)}
+              {timelineLabel}
             </Badge>
           </div>
         ) : null}
@@ -293,7 +301,7 @@ const MessageItem = memo(
             <Avatar className="mt-5">
               {avatarSrc ? <AvatarImage src={avatarSrc} alt="" /> : null}
               <AvatarFallback className="bg-muted text-muted-foreground">
-                {fallbackName || "客"}
+                {fallbackName || t("kefu.customerFallback")}
               </AvatarFallback>
             </Avatar>
           ) : null}
@@ -308,7 +316,7 @@ const MessageItem = memo(
               <span className="font-medium">{senderName}</span>
               <span>{formatDateTime(message.sentAt)}</span>
               {isCustomer ? (
-                <span>{message.agentRead ? "客服已读" : "客服未读"}</span>
+                <span>{message.agentRead ? t("kefu.agentRead") : t("kefu.agentUnread")}</span>
               ) : null}
             </div>
             <div
@@ -338,6 +346,7 @@ const MessageItem = memo(
   (prevProps, nextProps) =>
     isSameMessageItemRender(prevProps.message, nextProps.message) &&
     prevProps.showTimeline === nextProps.showTimeline &&
+    prevProps.timelineLabel === nextProps.timelineLabel &&
     prevProps.onImageSettled === nextProps.onImageSettled
 )
 

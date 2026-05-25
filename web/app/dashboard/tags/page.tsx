@@ -50,6 +50,7 @@ import {
   DashboardTableStateRow,
   DashboardToolbar,
 } from "@/components/dashboard-page"
+import { OptionCombobox } from "@/components/option-combobox"
 import { EditDialog } from "./_components/edit"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -71,6 +72,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useI18n } from "@/i18n/provider"
 
 type TagNode = TagTree & {
   children: TagNode[]
@@ -151,12 +153,6 @@ function filterTree(nodes: TagNode[], keyword: string, status?: number): TagNode
   return result
 }
 
-const listStatusOptions = [
-  { value: "all", label: "全部状态" },
-  { value: "0", label: "启用" },
-  { value: "1", label: "禁用" },
-] as const
-
 type SortableRowProps = {
   item: TagNode & { hasChildren: boolean }
   disabled: boolean
@@ -178,6 +174,7 @@ function SortableRow({
   onDelete,
   actionLoadingId,
 }: SortableRowProps) {
+  const t = useI18n()
   const {
     attributes,
     listeners,
@@ -211,7 +208,7 @@ function SortableRow({
           size="icon"
           className="size-8 cursor-grab active:cursor-grabbing"
           disabled={disabled}
-          aria-label={`拖拽排序 ${item.name}`}
+          aria-label={t("tag.dragSort", { name: item.name })}
           {...attributes}
           {...listeners}
         >
@@ -250,10 +247,10 @@ function SortableRow({
             checked={item.status === 0}
             disabled={actionLoadingId === item.id}
             onCheckedChange={() => void onToggleStatus(item)}
-            aria-label={`${item.name} 状态切换`}
+            aria-label={t("tag.toggleStatus", { name: item.name })}
           />
           <Badge variant={item.status === 0 ? "default" : "outline"}>
-            {item.status === 0 ? "启用" : "禁用"}
+            {item.status === 0 ? t("status.ok") : t("status.disabled")}
           </Badge>
         </div>
       </TableCell>
@@ -272,12 +269,12 @@ function SortableRow({
             size="sm"
             onClick={() => onEdit(item)}
           >
-            编辑
+            {t("tag.edit")}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger
               render={<Button variant="outline" size="icon-sm" />}
-              aria-label={`更多操作 ${item.name}`}
+              aria-label={t("tag.moreActions", { name: item.name })}
             >
               <MoreHorizontalIcon />
             </DropdownMenuTrigger>
@@ -287,7 +284,7 @@ function SortableRow({
                 className="text-destructive focus:text-destructive"
               >
                 <Trash2Icon />
-                {actionLoadingId === item.id ? "删除中..." : "删除"}
+                {actionLoadingId === item.id ? t("tag.deleting") : t("tag.delete")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -298,6 +295,7 @@ function SortableRow({
 }
 
 export default function DashboardTagsPage() {
+  const t = useI18n()
   const [keywordInput, setKeywordInput] = useState("")
   const [statusFilterInput, setStatusFilterInput] = useState("all")
   const [keyword, setKeyword] = useState("")
@@ -324,6 +322,15 @@ export default function DashboardTagsPage() {
     })
   )
 
+  const listStatusOptions = useMemo(
+    () => [
+      { value: "all", label: t("status.all") },
+      { value: "0", label: t("status.ok") },
+      { value: "1", label: t("status.disabled") },
+    ],
+    [t]
+  )
+
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
@@ -336,11 +343,11 @@ export default function DashboardTagsPage() {
       setAllTags(Array.isArray(listData.results) ? listData.results : [])
       setExpandedIds(collectParentIds(nextTree))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载标签失败")
+      toast.error(error instanceof Error ? error.message : t("tag.loadFailed"))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     void loadData()
@@ -415,16 +422,16 @@ export default function DashboardTagsPage() {
           id: editingItem.id,
           ...payload,
         })
-        toast.success(`已更新标签：${editingItem.name}`)
+        toast.success(t("tag.updated", { name: editingItem.name }))
       } else {
         await createTag(payload)
-        toast.success(`已创建标签：${payload.name}`)
+        toast.success(t("tag.created", { name: payload.name }))
       }
       setDialogOpen(false)
       setEditingItem(null)
       await loadData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "保存标签失败")
+      toast.error(error instanceof Error ? error.message : t("tag.saveFailed"))
     } finally {
       setSaving(false)
     }
@@ -435,10 +442,10 @@ export default function DashboardTagsPage() {
     try {
       const nextStatus = item.status === 0 ? 1 : 0
       await updateTagStatus(item.id, nextStatus)
-      toast.success(`已${nextStatus === 0 ? "启用" : "禁用"}：${item.name}`)
+      toast.success(t(nextStatus === 0 ? "tag.enabled" : "tag.disabled", { name: item.name }))
       await loadData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "更新状态失败")
+      toast.error(error instanceof Error ? error.message : t("tag.statusUpdateFailed"))
     } finally {
       setActionLoadingId(null)
     }
@@ -448,10 +455,10 @@ export default function DashboardTagsPage() {
     setActionLoadingId(item.id)
     try {
       await deleteTag(item.id)
-      toast.success(`已删除标签：${item.name}`)
+      toast.success(t("tag.deleted", { name: item.name }))
       await loadData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "删除标签失败")
+      toast.error(error instanceof Error ? error.message : t("tag.deleteFailed"))
     } finally {
       setActionLoadingId(null)
     }
@@ -498,7 +505,7 @@ export default function DashboardTagsPage() {
     }
 
     if (activeItem.parentId !== overItem.parentId) {
-      toast.error("只能在同一父标签下拖拽排序")
+      toast.error(t("tag.sameParentOnly"))
       return
     }
 
@@ -521,15 +528,15 @@ export default function DashboardTagsPage() {
       const movedIndex = siblingIds.indexOf(movedId)
       const targetIndex = siblingIds.indexOf(targetId)
       if (movedIndex < 0 || targetIndex < 0) {
-        throw new Error("找不到标签")
+        throw new Error(t("tag.notFound"))
       }
       const newSiblingIds = arrayMove(siblingIds, movedIndex, targetIndex)
       await updateTagSort(newSiblingIds)
-      toast.success("标签排序已更新")
+      toast.success(t("tag.sortUpdated"))
       await loadData()
     } catch (error) {
       setFlatList(previousList)
-      toast.error(error instanceof Error ? error.message : "更新标签排序失败")
+      toast.error(error instanceof Error ? error.message : t("tag.sortUpdateFailed"))
     } finally {
       setSorting(false)
     }
@@ -543,17 +550,17 @@ export default function DashboardTagsPage() {
             <>
               <Button variant="outline" onClick={() => void loadData()} disabled={loading}>
                 <RefreshCwIcon className={loading ? "animate-spin" : ""} />
-                刷新
+                {t("tag.refresh")}
               </Button>
               <Button variant="outline" onClick={expandAll} disabled={loading}>
-                展开全部
+                {t("tag.expandAll")}
               </Button>
               <Button variant="outline" onClick={collapseAll} disabled={loading}>
-                折叠全部
+                {t("tag.collapseAll")}
               </Button>
               <Button onClick={openCreateDialog}>
                 <PlusIcon />
-                新建标签
+                {t("tag.new")}
               </Button>
             </>
           }
@@ -564,24 +571,22 @@ export default function DashboardTagsPage() {
               value={keywordInput}
               onChange={(event) => setKeywordInput(event.target.value)}
               onKeyDown={handleFilterKeyDown}
-              placeholder="按名称筛选"
+              placeholder={t("tag.filterName")}
               className="pl-9"
             />
           </div>
-          <select
+          <OptionCombobox
             value={statusFilterInput}
-            onChange={(e) => handleStatusFilterChange(e.target.value)}
-            className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 xl:w-36"
-          >
-            {listStatusOptions.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </select>
+            options={listStatusOptions}
+            placeholder={t("status.all")}
+            searchPlaceholder={t("tag.searchStatus")}
+            emptyText={t("tag.emptyStatus")}
+            disabled={loading}
+            onChange={handleStatusFilterChange}
+          />
           <Button variant="outline" onClick={applyFilters} disabled={loading}>
             <SearchIcon />
-            查询
+            {t("tag.query")}
           </Button>
         </DashboardToolbar>
         <DashboardTableShell>
@@ -594,11 +599,11 @@ export default function DashboardTagsPage() {
                 <TableHeader className="bg-muted/40">
                   <TableRow>
                     <TableHead className="w-14" />
-                    <TableHead className="min-w-[260px]">标签名称</TableHead>
-                    <TableHead>状态</TableHead>
-                    <TableHead>备注</TableHead>
-                    <TableHead>创建时间</TableHead>
-                    <TableHead className="w-[92px] text-right">操作</TableHead>
+                    <TableHead className="min-w-[260px]">{t("tag.columnName")}</TableHead>
+                    <TableHead>{t("tag.columnStatus")}</TableHead>
+                    <TableHead>{t("tag.columnRemark")}</TableHead>
+                    <TableHead>{t("tag.columnCreatedAt")}</TableHead>
+                    <TableHead className="w-[92px] text-right">{t("tag.columnActions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -624,8 +629,8 @@ export default function DashboardTagsPage() {
                     <DashboardTableStateRow
                       colSpan={6}
                       loading={loading}
-                      loadingText="正在加载标签..."
-                      emptyText="没有匹配的标签"
+                      loadingText={t("tag.loading")}
+                      emptyText={t("tag.empty")}
                     />
                   ) : null}
                 </TableBody>

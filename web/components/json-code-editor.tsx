@@ -3,6 +3,7 @@
 import { useEffect, useMemo } from "react"
 
 import { cn } from "@/lib/utils"
+import { useI18n } from "@/i18n/provider"
 
 type JsonCodeEditorProps = {
   value: string
@@ -12,7 +13,7 @@ type JsonCodeEditorProps = {
   className?: string
 }
 
-function validateJson(value: string) {
+function validateJson(value: string, fallbackMessage: string) {
   const text = value.trim()
   if (!text) {
     return null
@@ -21,7 +22,7 @@ function validateJson(value: string) {
     JSON.parse(text)
     return null
   } catch (error) {
-    return error instanceof Error ? error.message : "JSON 格式不合法"
+    return error instanceof Error ? error.message : fallbackMessage
   }
 }
 
@@ -32,7 +33,8 @@ export function JsonCodeEditor({
   disabled = false,
   className,
 }: JsonCodeEditorProps) {
-  const error = useMemo(() => validateJson(value), [value])
+  const t = useI18n()
+  const error = useMemo(() => validateJson(value, t("json.invalid")), [t, value])
   const lineCount = Math.max(1, value.split("\n").length)
 
   useEffect(() => {
@@ -49,7 +51,7 @@ export function JsonCodeEditor({
             error ? "text-rose-300" : "text-emerald-300"
           )}
         >
-          {error ? "格式错误" : "格式正确"}
+          {error ? t("json.invalidLabel") : t("json.valid")}
         </span>
       </div>
       <div className="flex min-h-52">
@@ -68,7 +70,7 @@ export function JsonCodeEditor({
         />
       </div>
       <div className="border-t border-slate-800 px-3 py-2 text-xs text-slate-400">
-        {error || "输入合法 JSON 后即可测试工具调用。"}
+        {error || t("json.readyHint")}
       </div>
     </div>
   )

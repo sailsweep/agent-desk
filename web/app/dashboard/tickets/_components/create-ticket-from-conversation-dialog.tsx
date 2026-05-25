@@ -2,6 +2,7 @@
 
 import { toast } from "sonner"
 
+import { useI18n } from "@/i18n/provider"
 import { createTicketFromConversation } from "@/lib/api/ticket"
 import { EditDialog } from "./edit"
 
@@ -26,6 +27,7 @@ export function CreateTicketFromConversationDialog({
   onOpenChange,
   onSuccess,
 }: CreateTicketFromConversationDialogProps) {
+  const t = useI18n()
   const initialValues = conversation
     ? {
         title: conversation.customerName || "",
@@ -43,11 +45,11 @@ export function CreateTicketFromConversationDialog({
       fixedConversationId={conversation?.id}
       fixedCustomerId={conversation?.customerId}
       initialValues={initialValues}
-      titleOverride="会话转工单"
-      descriptionOverride="从当前会话上下文创建正式工单"
+      titleOverride={t("ticket.conversationToTicket")}
+      descriptionOverride={t("ticket.conversationToTicketDescription")}
       onSubmit={async (payload) => {
         if (!conversation?.id) {
-          throw new Error("会话不存在")
+          throw new Error(t("ticket.conversationMissing"))
         }
         await createTicketFromConversation({
           conversationId: conversation.id,
@@ -56,7 +58,7 @@ export function CreateTicketFromConversationDialog({
           currentAssigneeId: payload.currentAssigneeId,
           tagIds: payload.tagIds,
         })
-        toast.success("工单创建成功")
+        toast.success(t("ticket.createSuccess"))
         onSuccess?.()
       }}
     />

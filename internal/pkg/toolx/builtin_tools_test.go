@@ -1,6 +1,10 @@
 package toolx
 
-import "testing"
+import (
+	"testing"
+
+	"cs-agent/internal/pkg/i18nx"
+)
 
 func TestResolveToolMetadata(t *testing.T) {
 	item := ResolveToolMetadata("builtin/create_ticket_with_confirmation", "")
@@ -31,5 +35,30 @@ func TestResolveToolMetadataFallsBackToName(t *testing.T) {
 	}
 	if item.SourceType != "mcp" {
 		t.Fatalf("unexpected source type: %s", item.SourceType)
+	}
+}
+
+func TestRegisteredToolTextUsesEnglishLocale(t *testing.T) {
+	title := GetRegisteredToolTitleLocale(GraphCreateTicketConfirm.Code, i18nx.LocaleEnUS)
+	if title != "Create Ticket With Confirmation" {
+		t.Fatalf("unexpected english title: %q", title)
+	}
+
+	description := GetRegisteredToolDescriptionLocale(GraphCreateTicketConfirm.Code, i18nx.LocaleEnUS)
+	want := "Guides ticket creation with parameter preparation, customer confirmation, actual ticket creation, and final result delivery."
+	if description != want {
+		t.Fatalf("unexpected english description: %q", description)
+	}
+}
+
+func TestRegisteredToolTextKeepsChineseLocale(t *testing.T) {
+	title := GetRegisteredToolTitleLocale(GraphCreateTicketConfirm.Code, i18nx.LocaleZhCN)
+	if title != GraphCreateTicketConfirm.Title {
+		t.Fatalf("unexpected chinese title: %q", title)
+	}
+
+	description := GetRegisteredToolDescriptionLocale(GraphCreateTicketConfirm.Code, i18nx.LocaleZhCN)
+	if description != GraphCreateTicketConfirm.Description {
+		t.Fatalf("unexpected chinese description: %q", description)
 	}
 }

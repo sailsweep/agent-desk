@@ -31,6 +31,7 @@ import {
   type UpdateTicketPayload,
   updateTicket,
 } from "@/lib/api/ticket"
+import { useI18n } from "@/i18n/provider"
 import { cn, formatDateTime } from "@/lib/utils"
 import { EditDialog } from "./edit"
 import { TicketAssignDialog } from "./ticket-assign-dialog"
@@ -43,18 +44,22 @@ type TicketDetailDialogProps = {
   onChanged: () => void
 }
 
-const statusOptions: Array<{ value: TicketStatus; label: string }> = [
-  { value: "pending", label: "待处理" },
-  { value: "in_progress", label: "处理中" },
-  { value: "done", label: "已处理" },
-]
+type TFunction = (key: string, values?: Record<string, string | number>) => string
 
-function sourceLabel(source: string) {
+function getStatusOptions(t: TFunction): Array<{ value: TicketStatus; label: string }> {
+  return [
+    { value: "pending", label: t("ticket.statusPending") },
+    { value: "in_progress", label: t("ticket.statusInProgress") },
+    { value: "done", label: t("ticket.statusDone") },
+  ]
+}
+
+function sourceLabel(source: string, t: TFunction) {
   switch (source) {
     case "manual":
-      return "手动创建"
+      return t("ticket.manualCreated")
     case "conversation":
-      return "会话生成"
+      return t("ticket.conversationGenerated")
     default:
       return source || "-"
   }
@@ -77,6 +82,7 @@ export function TicketDetailDialog({
   onOpenChange,
   onChanged,
 }: TicketDetailDialogProps) {
+  const t = useI18n()
   const [detail, setDetail] = useState<TicketDetail | null>(null)
   const [loading, setLoading] = useState(false)
   const [statusSaving, setStatusSaving] = useState<TicketStatus | null>(null)
@@ -120,13 +126,13 @@ export function TicketDetailDialog({
       if (loadSeqRef.current !== seq || !isCurrentOperation(targetTicketId, dialogSeq)) {
         return
       }
-      toast.error(error instanceof Error ? error.message : "加载工单详情失败")
+      toast.error(error instanceof Error ? error.message : t("ticket.loadDetailFailed"))
     } finally {
       if (loadSeqRef.current === seq) {
         setLoading(false)
       }
     }
-  }, [open, ticketId])
+  }, [open, t, ticketId])
 
   useEffect(() => {
     dialogSeqRef.current += 1
@@ -160,7 +166,7 @@ export function TicketDetailDialog({
       if (!isCurrentOperation(activeTicketId, activeDialogSeq)) {
         return
       }
-      toast.success("工单状态已更新")
+      toast.success(t("ticket.statusUpdated"))
       await loadDetail(activeTicketId, activeDialogSeq)
       if (!isCurrentOperation(activeTicketId, activeDialogSeq)) {
         return
@@ -170,7 +176,7 @@ export function TicketDetailDialog({
       if (!isCurrentOperation(activeTicketId, activeDialogSeq)) {
         return
       }
-      toast.error(error instanceof Error ? error.message : "更新工单状态失败")
+      toast.error(error instanceof Error ? error.message : t("ticket.statusUpdateFailed"))
     } finally {
       if (isCurrentOperation(activeTicketId, activeDialogSeq)) {
         setStatusSaving(null)
@@ -186,7 +192,7 @@ export function TicketDetailDialog({
     const activeDialogSeq = dialogSeqRef.current
     const content = progressContent.trim()
     if (isRichTextEmpty(content)) {
-      toast.error("请填写处理进展")
+      toast.error(t("ticket.progressRequired"))
       return
     }
     setProgressSaving(true)
@@ -198,7 +204,7 @@ export function TicketDetailDialog({
       if (!isCurrentOperation(activeTicketId, activeDialogSeq)) {
         return
       }
-      toast.success("处理进展已记录")
+      toast.success(t("ticket.progressRecorded"))
       setProgressContent("")
       setProgressOpen(false)
       await loadDetail(activeTicketId, activeDialogSeq)
@@ -210,7 +216,7 @@ export function TicketDetailDialog({
       if (!isCurrentOperation(activeTicketId, activeDialogSeq)) {
         return
       }
-      toast.error(error instanceof Error ? error.message : "记录处理进展失败")
+      toast.error(error instanceof Error ? error.message : t("ticket.progressCreateFailed"))
     } finally {
       if (isCurrentOperation(activeTicketId, activeDialogSeq)) {
         setProgressSaving(false)
@@ -233,7 +239,7 @@ export function TicketDetailDialog({
 
   async function handleUpdateTicket(payload: CreateTicketPayload | UpdateTicketPayload) {
     if (!("ticketId" in payload) || payload.ticketId <= 0) {
-      toast.error("请选择工单")
+      toast.error(t("ticket.selectTicket"))
       return
     }
     const activeDialogSeq = dialogSeqRef.current
@@ -243,7 +249,7 @@ export function TicketDetailDialog({
       if (!isCurrentOperation(payload.ticketId, activeDialogSeq)) {
         return
       }
-      toast.success("工单已更新")
+      toast.success(t("ticket.updated"))
       setEditOpen(false)
       await loadDetail(payload.ticketId, activeDialogSeq)
       if (!isCurrentOperation(payload.ticketId, activeDialogSeq)) {
@@ -254,7 +260,7 @@ export function TicketDetailDialog({
       if (!isCurrentOperation(payload.ticketId, activeDialogSeq)) {
         return
       }
-      toast.error(error instanceof Error ? error.message : "更新工单失败")
+      toast.error(error instanceof Error ? error.message : t("ticket.updateFailed"))
     } finally {
       if (isCurrentOperation(payload.ticketId, activeDialogSeq)) {
         setEditSaving(false)
@@ -265,7 +271,7 @@ export function TicketDetailDialog({
   async function handleUpdateCustomer(payload: CustomerFormSavePayload) {
     const activeCustomerId = getTicketCustomerId(ticket)
     if (!ticket?.id || activeCustomerId <= 0) {
-      toast.error("当前工单未关联客户")
+      toast.error(t("ticket.noLinkedCustomer"))
       return
     }
     if (customerEditSaving) {
@@ -279,7 +285,7 @@ export function TicketDetailDialog({
       if (!isCurrentOperation(activeTicketId, activeDialogSeq)) {
         return
       }
-      toast.success("已保存")
+      toast.success(t("ticket.saved"))
       setCustomerEditOpen(false)
       await loadDetail(activeTicketId, activeDialogSeq)
       if (!isCurrentOperation(activeTicketId, activeDialogSeq)) {
@@ -290,7 +296,7 @@ export function TicketDetailDialog({
       if (!isCurrentOperation(activeTicketId, activeDialogSeq)) {
         return
       }
-      toast.error(error instanceof Error ? error.message : "保存失败")
+      toast.error(error instanceof Error ? error.message : t("ticket.saveFailed"))
     } finally {
       if (isCurrentOperation(activeTicketId, activeDialogSeq)) {
         setCustomerEditSaving(false)
@@ -313,6 +319,7 @@ export function TicketDetailDialog({
 
   const ticket = detail?.ticket
   const customerId = getTicketCustomerId(ticket)
+  const statusOptions = getStatusOptions(t)
 
   return (
     <>
@@ -321,7 +328,7 @@ export function TicketDetailDialog({
         onOpenChange={onOpenChange}
         title={
           <div className="flex min-w-0 items-center gap-2 pr-16 text-base">
-            <span className="truncate">{ticket?.title ?? "工单详情"}</span>
+            <span className="truncate">{ticket?.title ?? t("ticket.detailTitle")}</span>
             {ticket ? <TicketStatusBadge status={ticket.status} /> : null}
           </div>
         }
@@ -329,8 +336,8 @@ export function TicketDetailDialog({
           ticket ? (
             <span className="flex flex-wrap items-center gap-2 text-sm">
               <span className="font-mono">{ticket.ticketNo}</span>
-              <span>{sourceLabel(ticket.source)}</span>
-              <span>创建人：{metadataValue(ticket.createdByName || ticket.createdBy)}</span>
+              <span>{sourceLabel(ticket.source, t)}</span>
+              <span>{t("ticket.creator", { name: metadataValue(ticket.createdByName || ticket.createdBy) })}</span>
             </span>
           ) : undefined
         }
@@ -342,21 +349,21 @@ export function TicketDetailDialog({
         {loading && !ticket ? (
           <div className="flex h-130 items-center justify-center gap-2 text-sm text-muted-foreground">
             <RefreshCcwIcon className="size-4 animate-spin" />
-            加载中...
+            {t("ticket.loading")}
           </div>
         ) : ticket ? (
           <div className="grid w-full h-full grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_380px] border-t">
             <div className="min-h-0 space-y-5 overflow-y-auto border-b p-6 lg:border-r lg:border-b-0">
               <section className="space-y-2">
-                <div className="text-sm font-medium text-muted-foreground">描述</div>
+                <div className="text-sm font-medium text-muted-foreground">{t("ticket.description")}</div>
                 <div className="rounded-md border bg-muted/30 px-3 py-2">
-                  <SafeRichHTML html={ticket.description} fallback="暂无描述" />
+                  <SafeRichHTML html={ticket.description} fallback={t("ticket.noDescription")} />
                 </div>
               </section>
 
               <section className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
                 <div className="space-y-2">
-                  <div className="text-sm font-medium text-muted-foreground">状态</div>
+                  <div className="text-sm font-medium text-muted-foreground">{t("ticket.columnStatus")}</div>
                   <div className="flex flex-wrap gap-2">
                     {statusOptions.map((option) => (
                       <Button
@@ -367,20 +374,20 @@ export function TicketDetailDialog({
                         disabled={!!statusSaving}
                         onClick={() => void handleStatusChange(option.value)}
                       >
-                        {statusSaving === option.value ? "更新中..." : option.label}
+                        {statusSaving === option.value ? t("ticket.updating") : option.label}
                       </Button>
                     ))}
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <div className="text-sm font-medium text-muted-foreground">负责人</div>
+                  <div className="text-sm font-medium text-muted-foreground">{t("ticket.columnAssignee")}</div>
                   <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2">
                     <div className="flex min-w-0 items-center gap-2 text-sm">
                       <UserRoundIcon className="size-4 shrink-0 text-muted-foreground" />
-                      <span className="truncate">{ticket.currentAssigneeName || "未分配"}</span>
+                      <span className="truncate">{ticket.currentAssigneeName || t("ticket.unassigned")}</span>
                     </div>
                     <Button type="button" size="sm" variant="outline" onClick={() => setAssignOpen(true)}>
-                      指派
+                      {t("ticket.assign")}
                     </Button>
                   </div>
                 </div>
@@ -388,9 +395,9 @@ export function TicketDetailDialog({
 
               <section className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="text-sm font-medium text-muted-foreground">标签</div>
+                  <div className="text-sm font-medium text-muted-foreground">{t("ticket.tags")}</div>
                   <Button type="button" size="sm" variant="outline" onClick={() => setEditOpen(true)}>
-                    编辑
+                    {t("ticket.edit")}
                   </Button>
                 </div>
                 {ticket.tags && ticket.tags.length > 0 ? (
@@ -402,13 +409,13 @@ export function TicketDetailDialog({
                     ))}
                   </div>
                 ) : (
-                  <div className="text-sm text-muted-foreground">暂无标签</div>
+                  <div className="text-sm text-muted-foreground">{t("ticket.emptyTags")}</div>
                 )}
               </section>
 
               <section className="space-y-3 rounded-md border p-3 text-sm">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="font-medium text-muted-foreground">客户信息</div>
+                  <div className="font-medium text-muted-foreground">{t("ticket.customerInfo")}</div>
                   <Button
                     type="button"
                     variant="ghost"
@@ -423,22 +430,22 @@ export function TicketDetailDialog({
                     }}
                   >
                     <PencilIcon className="size-3.5" />
-                    {customerId > 0 ? "编辑" : "关联或创建"}
+                    {customerId > 0 ? t("ticket.edit") : t("ticket.linkOrCreate")}
                   </Button>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <MetadataItem label="客户" value={ticket.customer?.name || ticket.customerId} />
-                  <MetadataItem label="联系方式" value={ticket.customer?.primaryMobile || ticket.customer?.primaryEmail} />
+                  <MetadataItem label={t("ticket.customer")} value={ticket.customer?.name || ticket.customerId} />
+                  <MetadataItem label={t("ticket.contact")} value={ticket.customer?.primaryMobile || ticket.customer?.primaryEmail} />
                 </div>
               </section>
 
               <section className="space-y-3 rounded-md border p-3 text-sm">
-                <div className="font-medium text-muted-foreground">工单信息</div>
+                <div className="font-medium text-muted-foreground">{t("ticket.ticketInfo")}</div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <MetadataItem label="来源" value={sourceLabel(ticket.source)} />
-                  <MetadataItem label="渠道" value={ticket.channel} />
-                  <MetadataItem label="会话 ID" value={ticket.conversationId || undefined} />
-                  <MetadataItem label="最后更新" value={ticket.updatedAt ? formatDateTime(ticket.updatedAt) : undefined} />
+                  <MetadataItem label={t("ticket.source")} value={sourceLabel(ticket.source, t)} />
+                  <MetadataItem label={t("ticket.channel")} value={ticket.channel} />
+                  <MetadataItem label={t("ticket.conversationId")} value={ticket.conversationId || undefined} />
+                  <MetadataItem label={t("ticket.columnUpdated")} value={ticket.updatedAt ? formatDateTime(ticket.updatedAt) : undefined} />
                 </div>
               </section>
             </div>
@@ -447,11 +454,11 @@ export function TicketDetailDialog({
               <div className="flex items-center justify-between gap-2 px-4 py-2">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <MessageSquareTextIcon className="size-4 text-muted-foreground" />
-                  处理进展
+                  {t("ticket.progress")}
                 </div>
                 <Button type="button" size="sm" onClick={() => setProgressOpen(true)}>
                   <PlusIcon className="size-3.5" />
-                  添加进展
+                  {t("ticket.addProgress")}
                 </Button>
               </div>
               <Separator />
@@ -471,7 +478,7 @@ export function TicketDetailDialog({
                         </div>
                         <div className="min-w-0 flex-1 pb-3">
                           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                            <span>{progress.authorName || `用户#${progress.authorId}`}</span>
+                            <span>{progress.authorName || t("ticket.userFallback", { id: progress.authorId })}</span>
                             <span>{progress.createdAt ? formatDateTime(progress.createdAt) : "-"}</span>
                           </div>
                           <SafeRichHTML html={progress.content} className="mt-1" />
@@ -481,14 +488,14 @@ export function TicketDetailDialog({
                   </div>
                 ) : (
                   <div className="rounded-md border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
-                    暂无处理进展
+                    {t("ticket.noProgress")}
                   </div>
                 )}
               </div>
             </aside>
           </div>
         ) : (
-          <div className="flex h-[360px] items-center justify-center text-sm text-muted-foreground">请选择工单</div>
+          <div className="flex h-[360px] items-center justify-center text-sm text-muted-foreground">{t("ticket.chooseTicket")}</div>
         )}
       </ProjectDialog>
 
@@ -533,13 +540,13 @@ export function TicketDetailDialog({
       >
         <DialogContent className="max-w-2xl gap-0 p-0 sm:max-w-3xl">
           <DialogHeader className="px-6 pt-6">
-            <DialogTitle>添加处理进展</DialogTitle>
+            <DialogTitle>{t("ticket.addProgress")}</DialogTitle>
           </DialogHeader>
           <div className="px-6 py-4">
             <ContentEditor
               value={{ mode: "html", raw: progressContent }}
               onChange={(next) => setProgressContent(next.raw)}
-              placeholder="记录本次处理进展"
+              placeholder={t("ticket.progressPlaceholder")}
               disabled={progressSaving}
               allowedModes={["html"]}
               height={260}
@@ -555,11 +562,11 @@ export function TicketDetailDialog({
                 setProgressContent("")
               }}
             >
-              取消
+              {t("ticket.cancel")}
             </Button>
             <Button type="button" disabled={progressSaving} onClick={() => void handleCreateProgress()}>
               <SendIcon className="size-3.5" />
-              {progressSaving ? "提交中..." : "提交"}
+              {progressSaving ? t("ticket.submitting") : t("ticket.submit")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -12,6 +12,7 @@ import (
 	"cs-agent/internal/pkg/config"
 	"cs-agent/internal/pkg/ginx"
 	"cs-agent/internal/pkg/httpx"
+	"cs-agent/internal/pkg/i18nx"
 	"cs-agent/internal/services"
 	webspa "cs-agent/web"
 
@@ -32,6 +33,7 @@ func NewServer() (*gin.Engine, error) {
 	app.Use(gin.Recovery())
 	app.Use(requestLogMiddleware())
 	app.Use(maxBodySizeMiddleware(cfg.Storage.MaxRequestBodySizeBytes()))
+	app.Use(i18nx.Middleware())
 
 	addRouter(app)
 
@@ -51,7 +53,7 @@ func NewServer() (*gin.Engine, error) {
 		},
 		NotFoundPrefixes: notFoundPrefixes,
 		NotFoundHandler: func(ctx *gin.Context) {
-			httpx.WriteHttpStatusJSON(ctx, http.StatusNotFound, web.JsonErrorCode(http.StatusNotFound, "Not found"))
+			httpx.WriteHttpStatusJSON(ctx, http.StatusNotFound, web.JsonErrorCode(http.StatusNotFound, i18nx.T(ctx, "error.notFound", nil)))
 		},
 	})
 

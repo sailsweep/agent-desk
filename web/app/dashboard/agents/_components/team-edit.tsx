@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckIcon, ChevronsUpDownIcon } from "lucide-react";
-import { Controller, Resolver, useForm } from "react-hook-form";
+import { Controller, type Resolver, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod/v4";
 
@@ -14,6 +14,7 @@ import {
   fetchUsersAll,
   type AdminUser,
 } from "@/lib/api/admin";
+import { OptionCombobox } from "@/components/option-combobox";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -42,16 +43,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Status, StatusLabels } from "@/lib/generated/enums";
-import { getEnumOptions } from "@/lib/enums";
+import { useI18n } from "@/i18n/provider";
+import { Status } from "@/lib/generated/enums";
+
+type TFunction = (key: string, values?: Record<string, string | number>) => string;
 
 type TeamEditDialogProps = {
   open: boolean;
@@ -61,13 +57,6 @@ type TeamEditDialogProps = {
   onSubmit: (payload: CreateAdminAgentTeamPayload) => Promise<void>;
 };
 
-const statusOptions = getEnumOptions(StatusLabels)
-  .filter((option) => option.value !== Status.Deleted)
-  .map((option) => ({
-    value: String(option.value),
-    label: option.label,
-  }));
-
 const emptyForm: EditForm = {
   name: "",
   leaderUserId: "0",
@@ -76,22 +65,32 @@ const emptyForm: EditForm = {
   remark: "",
 };
 
-const editFormSchema = z.object({
-  name: z.string().trim().min(1, "客服组名称不能为空"),
-  leaderUserId: z.string().trim().regex(/^\d+$/, "组长用户不合法"),
+type EditForm = {
+  name: string;
+  leaderUserId: string;
+  status: string;
+  description: string;
+  remark: string;
+};
+
+function createEditFormSchema(t: TFunction) {
+  return z.object({
+  name: z.string().trim().min(1, t("agentProfile.teamNameRequired")),
+  leaderUserId: z.string().trim().regex(/^\d+$/, t("agentProfile.leaderInvalid")),
   status: z.enum([String(Status.Ok), String(Status.Disabled)], {
-    message: "请选择状态",
+    message: t("agentProfile.teamStatusRequired"),
   }),
   description: z.string().trim(),
   remark: z.string().trim(),
-});
+  });
+}
 
-type EditForm = z.infer<typeof editFormSchema>;
-const editFormResolver = zodResolver(editFormSchema as never) as Resolver<
-  z.input<typeof editFormSchema>,
-  undefined,
-  z.output<typeof editFormSchema>
->;
+function getStatusOptions(t: TFunction) {
+  return [
+    { value: String(Status.Ok), label: t("agentProfile.enabled") },
+    { value: String(Status.Disabled), label: t("agentProfile.disabled") },
+  ];
+}
 
 function buildForm(item: AdminAgentTeam | null): EditForm {
   if (!item) {
@@ -146,6 +145,7 @@ function TeamEditDialogBody({
   onOpenChange,
   onSubmit,
 }: TeamEditDialogBodyProps) {
+  const t = useI18n();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [userSelectOpen, setUserSelectOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -153,19 +153,21 @@ function TeamEditDialogBody({
     value: String(user.id),
     label: `${user.nickname || user.username} (${user.username})`,
   }));
+  const statusOptions = useMemo(() => getStatusOptions(t), [t]);
   const loadUsers = useCallback(async () => {
     try {
       const data = await fetchUsersAll();
       setUsers(data);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载用户选项失败");
+      toast.error(error instanceof Error ? error.message : t("agentProfile.loadUsersFailed"));
     }
-  }, []);
-  const form = useForm<
-    z.input<typeof editFormSchema>,
-    undefined,
-    z.output<typeof editFormSchema>
-  >({
+  }, [t]);
+  const editFormSchema = useMemo(() => createEditFormSchema(t), [t]);
+  const editFormResolver = useMemo(
+    () => zodResolver(editFormSchema) as Resolver<EditForm>,
+    [editFormSchema],
+  );
+  const form = useForm<EditForm>({
     resolver: editFormResolver,
     defaultValues: emptyForm,
   });
@@ -188,13 +190,13 @@ function TeamEditDialogBody({
         const data = await fetchAgentTeam(itemId);
         reset(buildForm(data));
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "加载客服组详情失败");
+        toast.error(error instanceof Error ? error.message : t("agentProfile.loadTeamDetailFailed"));
       } finally {
         setLoading(false);
       }
     }
     void loadDetail();
-  }, [itemId, reset]);
+  }, [itemId, reset, t]);
 
   useEffect(() => {
     void loadUsers();
@@ -207,28 +209,28 @@ function TeamEditDialogBody({
   return (
     <DialogContent className="max-w-xl gap-0 p-0 sm:max-w-xl">
       <DialogHeader className="px-6 pt-6">
-        <DialogTitle>{itemId ? "编辑" : "新建"}</DialogTitle>
+        <DialogTitle>{itemId ? t("agentProfile.teamEditTitle") : t("agentProfile.teamCreateTitle")}</DialogTitle>
       </DialogHeader>
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="text-muted-foreground">加载中...</div>
+          <div className="text-muted-foreground">{t("agentProfile.loading")}</div>
         </div>
       ) : (
         <form onSubmit={handleSubmit(onFormSubmit)}>
           <div className="space-y-4 p-6">
             <Field data-invalid={!!errors.name}>
-              <FieldLabel htmlFor="agent-team-name">客服组名称</FieldLabel>
+              <FieldLabel htmlFor="agent-team-name">{t("agentProfile.teamName")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="agent-team-name"
-                  placeholder="请输入客服组名称"
+                  placeholder={t("agentProfile.teamNamePlaceholder")}
                   {...register("name")}
                 />
                 <FieldError errors={[errors.name]} />
               </FieldContent>
             </Field>
             <Field data-invalid={!!errors.leaderUserId}>
-              <FieldLabel>组长</FieldLabel>
+              <FieldLabel>{t("agentProfile.leader")}</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
@@ -247,19 +249,19 @@ function TeamEditDialogBody({
                       >
                         <span className="truncate">
                           {field.value === "0"
-                            ? "暂不设置"
-                            : userOptions.find((option) => option.value === field.value)?.label ?? "请选择组长"}
+                            ? t("agentProfile.noLeader")
+                            : userOptions.find((option) => option.value === field.value)?.label ?? t("agentProfile.selectLeader")}
                         </span>
                         <ChevronsUpDownIcon className="ml-2 size-4 shrink-0 opacity-50" />
                       </PopoverTrigger>
                       <PopoverContent className="w-[var(--radix-popper-anchor-width)] p-0" align="start">
                         <Command>
-                          <CommandInput placeholder="搜索用户..." />
+                          <CommandInput placeholder={t("agentProfile.searchUser")} />
                           <CommandList>
-                            <CommandEmpty>没有匹配的用户</CommandEmpty>
+                            <CommandEmpty>{t("agentProfile.emptyUser")}</CommandEmpty>
                             <CommandGroup>
                               <CommandItem
-                                value="暂不设置"
+                                value={t("agentProfile.noLeader")}
                                 onSelect={() => {
                                   field.onChange("0");
                                   setUserSelectOpen(false);
@@ -268,7 +270,7 @@ function TeamEditDialogBody({
                                 <CheckIcon
                                   className={`mr-2 size-4 ${field.value === "0" ? "opacity-100" : "opacity-0"}`}
                                 />
-                                暂不设置
+                                {t("agentProfile.noLeader")}
                               </CommandItem>
                               {userOptions.map((option) => (
                                 <CommandItem
@@ -298,54 +300,42 @@ function TeamEditDialogBody({
               </FieldContent>
             </Field>
             <Field data-invalid={!!errors.status}>
-              <FieldLabel>状态</FieldLabel>
+              <FieldLabel>{t("agentProfile.status")}</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
                   name="status"
                   render={({ field }) => (
-                    <Select
+                    <OptionCombobox
+                      options={statusOptions}
                       value={field.value}
-                      onValueChange={field.onChange}
-                      modal={false}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue>
-                          {statusOptions.find(
-                            (item) => item.value === field.value,
-                          )?.label ?? "请选择状态"}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {statusOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onChange={field.onChange}
+                      placeholder={t("agentProfile.selectStatus")}
+                      searchPlaceholder={t("agentProfile.searchStatus")}
+                      emptyText={t("agentProfile.emptyStatus")}
+                    />
                   )}
                 />
                 <FieldError errors={[errors.status]} />
               </FieldContent>
             </Field>
             <Field>
-              <FieldLabel htmlFor="agent-team-description">职责说明</FieldLabel>
+              <FieldLabel htmlFor="agent-team-description">{t("agentProfile.description")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="agent-team-description"
-                  placeholder="例如：负责售前咨询与线索转化"
+                  placeholder={t("agentProfile.descriptionPlaceholder")}
                   {...register("description")}
                 />
               </FieldContent>
             </Field>
             <Field>
-              <FieldLabel htmlFor="agent-team-remark">备注</FieldLabel>
+              <FieldLabel htmlFor="agent-team-remark">{t("agentProfile.remark")}</FieldLabel>
               <FieldContent>
                 <Textarea
                   id="agent-team-remark"
                   rows={4}
-                  placeholder="请输入备注"
+                  placeholder={t("agentProfile.remarkPlaceholder")}
                   {...register("remark")}
                 />
               </FieldContent>
@@ -358,10 +348,10 @@ function TeamEditDialogBody({
               onClick={() => onOpenChange(false)}
               disabled={saving}
             >
-              取消
+              {t("agentProfile.cancel")}
             </Button>
             <Button type="submit" disabled={saving || loading}>
-              {saving ? "保存中..." : "保存"}
+              {saving ? t("agentProfile.saving") : t("agentProfile.save")}
             </Button>
           </DialogFooter>
         </form>

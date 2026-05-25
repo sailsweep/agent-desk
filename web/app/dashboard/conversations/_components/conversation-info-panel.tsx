@@ -43,20 +43,31 @@ import {
 } from "@/lib/api/customer-contact";
 import {
   ContactType,
-  ContactTypeLabels,
   Gender,
-  GenderLabels,
 } from "@/lib/generated/enums";
 import { useAgentConversationsStore } from "@/lib/stores/agent-conversations";
 import { cn, formatDateTime } from "@/lib/utils";
+import { useI18n } from "@/i18n/provider";
 import {
   ConversationTagBadges,
   ConversationTagPicker,
 } from "./conversation-tag-picker";
 import { TicketStatusBadge } from "../../tickets/_components/ticket-status-badge";
 
-function contactTypeLabel(contactType: ContactType | string) {
-  return ContactTypeLabels[contactType as ContactType] ?? contactType;
+function contactTypeLabel(
+  contactType: ContactType | string,
+  t: (key: string, values?: Record<string, string | number>) => string
+) {
+  switch (contactType) {
+    case ContactType.Mobile:
+      return t("conversation.contactMobile");
+    case ContactType.Email:
+      return t("conversation.contactEmail");
+    case ContactType.Other:
+      return t("conversation.contactOther");
+    default:
+      return String(contactType);
+  }
 }
 
 function ContactTypeIcon({ contactType }: { contactType: ContactType | string }) {
@@ -113,6 +124,7 @@ function SectionHeading({
 }
 
 function UnlinkedCustomerEmpty({ conversation }: { conversation: AgentConversation }) {
+  const t = useI18n();
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const loadConversations = useAgentConversationsStore((s) => s.loadConversations);
 
@@ -120,9 +132,11 @@ function UnlinkedCustomerEmpty({ conversation }: { conversation: AgentConversati
     <div className="space-y-6 pt-2">
       <div className="flex flex-col items-center justify-center rounded-xl bg-muted/35 px-4 py-8 text-center">
         <UserRoundIcon className="mb-2 size-10 text-muted-foreground" aria-hidden />
-        <p className="text-sm font-medium text-foreground">尚未关联 CRM 客户</p>
+        <p className="text-sm font-medium text-foreground">
+          {t("conversation.unlinkedCustomerTitle")}
+        </p>
         <p className="mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground">
-          当前会话未绑定客户主档。绑定后可在此维护公司与联系方式。
+          {t("conversation.unlinkedCustomerDescription")}
         </p>
         <Button
           type="button"
@@ -130,7 +144,7 @@ function UnlinkedCustomerEmpty({ conversation }: { conversation: AgentConversati
           onClick={() => setLinkDialogOpen(true)}
         >
           <Link2Icon className="size-4" />
-          关联或创建客户
+          {t("conversation.linkOrCreateCustomer")}
         </Button>
       </div>
       <CustomerLinkOrCreateDialog
@@ -144,6 +158,7 @@ function UnlinkedCustomerEmpty({ conversation }: { conversation: AgentConversati
 }
 
 function MissingCustomerEmpty({ conversation }: { conversation: AgentConversation }) {
+  const t = useI18n();
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const loadConversations = useAgentConversationsStore((s) => s.loadConversations);
 
@@ -151,9 +166,11 @@ function MissingCustomerEmpty({ conversation }: { conversation: AgentConversatio
     <div className="space-y-6 pt-2">
       <div className="flex flex-col items-center justify-center rounded-xl bg-muted/35 px-4 py-8 text-center">
         <UserRoundIcon className="mb-2 size-10 text-muted-foreground" aria-hidden />
-        <p className="text-sm font-medium text-foreground">客户已删除或不存在</p>
+        <p className="text-sm font-medium text-foreground">
+          {t("conversation.missingCustomerTitle")}
+        </p>
         <p className="mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground">
-          当前会话绑定的客户主档已不可用。你可以重新关联已有客户，或直接新建一个客户并绑定到当前会话。
+          {t("conversation.missingCustomerDescription")}
         </p>
         <Button
           type="button"
@@ -161,14 +178,14 @@ function MissingCustomerEmpty({ conversation }: { conversation: AgentConversatio
           onClick={() => setLinkDialogOpen(true)}
         >
           <Link2Icon className="size-4" />
-          重新关联或创建客户
+          {t("conversation.relinkOrCreateCustomer")}
         </Button>
       </div>
       <div className="space-y-2">
-        <SectionHeading>会话归属</SectionHeading>
+        <SectionHeading>{t("conversation.conversationOwner")}</SectionHeading>
         <div className="space-y-2">
-          <DetailRow label="渠道ID" value={conversation.channelId ? `${conversation.channelId}` : "-"} />
-          <DetailRow label="客户ID" value={conversation.customerId ? `${conversation.customerId}` : "-"} />
+          <DetailRow label={t("conversation.channelId")} value={conversation.channelId ? `${conversation.channelId}` : "-"} />
+          <DetailRow label={t("conversation.customerId")} value={conversation.customerId ? `${conversation.customerId}` : "-"} />
         </div>
       </div>
       <CustomerLinkOrCreateDialog
@@ -192,6 +209,7 @@ export function ConversationInfoPanel({
   className,
   variant = "default",
 }: ConversationInfoPanelProps) {
+  const t = useI18n();
   const embedded = variant === "embedded";
 
   return (
@@ -205,7 +223,9 @@ export function ConversationInfoPanel({
       )}
     >
       <div className="flex h-12.5 shrink-0 items-center border-b border-border/80 bg-card px-3">
-        <h2 className="text-sm font-medium text-foreground">会话信息</h2>
+        <h2 className="text-sm font-medium text-foreground">
+          {t("conversation.conversationInfo")}
+        </h2>
       </div>
 
       <div
@@ -217,8 +237,8 @@ export function ConversationInfoPanel({
         {!conversation ? (
           <p className="pt-4 text-sm text-muted-foreground">
             {embedded
-              ? "请选择会话以查看会话信息"
-              : "请选择左侧会话以查看会话信息"}
+              ? t("conversation.selectConversationForInfo")
+              : t("conversation.selectSidebarConversationForInfo")}
           </p>
         ) : (
           <div className="space-y-4 py-3">
@@ -235,6 +255,7 @@ function ConversationTagSection({
 }: {
   conversation: AgentConversation;
 }) {
+  const t = useI18n();
   const setConversationTags = useAgentConversationsStore(
     (state) => state.setConversationTags,
   );
@@ -253,7 +274,7 @@ function ConversationTagSection({
         }
       } catch (error) {
         if (!cancelled) {
-          toast.error(error instanceof Error ? error.message : "加载标签失败");
+          toast.error(error instanceof Error ? error.message : t("conversation.loadTagsFailed"));
         }
       } finally {
         if (!cancelled) {
@@ -267,7 +288,7 @@ function ConversationTagSection({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   return (
     <section className="space-y-2 border-t pt-2">
@@ -283,14 +304,14 @@ function ConversationTagSection({
           />
         }
       >
-        会话标签
+        {t("conversation.conversationTags")}
       </SectionHeading>
       <ConversationTagBadges
         tags={conversation.tags}
         availableTags={availableTags}
       />
       {!conversation.tags || conversation.tags.length === 0 ? (
-        <p className="text-sm text-muted-foreground">暂未设置会话标签</p>
+        <p className="text-sm text-muted-foreground">{t("conversation.noConversationTags")}</p>
       ) : null}
     </section>
   );
@@ -317,6 +338,7 @@ type CustomerLinkedBodyProps = {
 };
 
 function CustomerLinkedBody({ conversation, customerId }: CustomerLinkedBodyProps) {
+  const t = useI18n();
   const [loading, setLoading] = useState(true);
   const [customer, setCustomer] = useState<AdminCustomer | null>(null);
   const [contacts, setContacts] = useState<AdminCustomerContact[]>([]);
@@ -337,14 +359,14 @@ function CustomerLinkedBody({ conversation, customerId }: CustomerLinkedBodyProp
       const list = await fetchCustomerContacts(customerId);
       setContacts(Array.isArray(list) ? list : []);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "加载客户信息失败";
+      const msg = e instanceof Error ? e.message : t("conversation.loadCustomerFailed");
       toast.error(msg);
       setCustomer(null);
       setContacts([]);
     } finally {
       setLoading(false);
     }
-  }, [customerId]);
+  }, [customerId, t]);
 
   useEffect(() => {
     void load();
@@ -360,7 +382,7 @@ function CustomerLinkedBody({ conversation, customerId }: CustomerLinkedBodyProp
 
   if (loading && !customer) {
     return (
-      <p className="pt-4 text-sm text-muted-foreground">加载客户信息…</p>
+      <p className="pt-4 text-sm text-muted-foreground">{t("conversation.loadingCustomer")}</p>
     );
   }
 
@@ -373,18 +395,20 @@ function CustomerLinkedBody({ conversation, customerId }: CustomerLinkedBodyProp
     );
   }
 
-  const displayName = customer.name.trim() || "未填写姓名";
+  const displayName = customer.name.trim() || t("conversation.unnamedCustomer");
   const company = customer.company ?? null;
   const genderLabel =
-    customer.gender === Gender.Male || customer.gender === Gender.Female
-      ? GenderLabels[customer.gender as Gender] ?? String(customer.gender)
+    customer.gender === Gender.Male
+      ? t("conversation.genderMale")
+      : customer.gender === Gender.Female
+        ? t("conversation.genderFemale")
       : null;
 
   return (
     <div className="space-y-4">
       {isProfileEmpty ? (
         <div className="rounded-lg bg-amber-500/10 px-3 py-2.5 text-xs leading-relaxed text-amber-950 dark:text-amber-100">
-          客户主档已关联，但基础信息尚未填写。请点击「编辑」补全资料。
+          {t("conversation.customerProfileEmpty")}
         </div>
       ) : null}
 
@@ -415,29 +439,29 @@ function CustomerLinkedBody({ conversation, customerId }: CustomerLinkedBodyProp
             onClick={() => setCustomerEditOpen(true)}
           >
             <PencilIcon className="size-3.5" />
-            编辑
+            {t("conversation.edit")}
           </Button>
         </div>
 
         <div className="space-y-2">
           <DetailRow
-            label="最近活跃"
+            label={t("conversation.lastActive")}
             value={
               customer.lastActiveAt ? formatDateTime(customer.lastActiveAt) : ""
             }
           />
           <DetailRow
-            label="备注"
+            label={t("conversation.remark")}
             value={customer.remark.trim() ? customer.remark : ""}
             valueClassName="whitespace-pre-wrap"
           />
           <DetailRow
-            label="创建时间"
+            label={t("conversation.createdAt")}
             value={formatDateTime(customer.createdAt)}
             valueClassName="whitespace-pre-wrap"
           />
           <DetailRow
-            label="更新时间"
+            label={t("conversation.updatedAt")}
             value={formatDateTime(customer.updatedAt)}
             valueClassName="whitespace-pre-wrap"
           />
@@ -446,16 +470,16 @@ function CustomerLinkedBody({ conversation, customerId }: CustomerLinkedBodyProp
 
       <section className="space-y-2">
         {contacts.length === 0 ? (
-          <p className="text-sm text-muted-foreground">暂无联系方式</p>
+          <p className="text-sm text-muted-foreground">{t("conversation.noContacts")}</p>
         ) : (
           <ul className="space-y-3">
             {contacts.map((row) => {
               const tags: string[] = [];
               if (row.isPrimary) {
-                tags.push("主");
+                tags.push(t("conversation.primaryContactBadge"));
               }
               if (row.isVerified) {
-                tags.push("已验证");
+                tags.push(t("conversation.verifiedContactBadge"));
               }
               return (
                 <li key={row.id} className="text-sm">
@@ -465,7 +489,7 @@ function CustomerLinkedBody({ conversation, customerId }: CustomerLinkedBodyProp
                       <p className="break-all font-medium leading-snug text-foreground">
                         {row.contactValue}
                         <span className="ml-2 text-xs font-normal text-muted-foreground">
-                          {contactTypeLabel(row.contactType)}
+                          {contactTypeLabel(row.contactType, t)}
                         </span>
                         {tags.length > 0 ? (
                           <span className="ml-2 text-xs text-muted-foreground">
@@ -516,28 +540,28 @@ function CustomerLinkedBody({ conversation, customerId }: CustomerLinkedBodyProp
                   onClick={() => setCompanyEditOpen(true)}
                 >
                   <PencilIcon className="size-3.5" />
-                  编辑
+                  {t("conversation.edit")}
                 </Button>
               </div>
               <div className="space-y-2 pt-1">
                 <DetailRow
-                  label="创建"
+                  label={t("conversation.createdAt")}
                   value={formatDateTime(company.createdAt)}
                 />
                 <DetailRow
-                  label="更新"
+                  label={t("conversation.updatedAt")}
                   value={formatDateTime(company.updatedAt)}
                 />
               </div>
               <DetailRow
-                label="备注"
+                label={t("conversation.remark")}
                 value={company.remark.trim() ? company.remark : ""}
                 valueClassName="whitespace-pre-wrap"
               />
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              公司信息加载失败或公司已删除。
+              {t("conversation.companyUnavailable")}
             </p>
           )}
         </section>
@@ -559,11 +583,11 @@ function CustomerLinkedBody({ conversation, customerId }: CustomerLinkedBodyProp
           setCustomerEditSaving(true);
           try {
             await saveCustomerProfile({ ...payload, id: customer.id });
-            toast.success("已保存");
+            toast.success(t("conversation.saved"));
             void load();
             setCustomerEditOpen(false);
           } catch (e) {
-            toast.error(e instanceof Error ? e.message : "保存失败");
+            toast.error(e instanceof Error ? e.message : t("conversation.saveFailed"));
           } finally {
             setCustomerEditSaving(false);
           }
@@ -584,6 +608,7 @@ function CustomerLinkedBody({ conversation, customerId }: CustomerLinkedBodyProp
 }
 
 function RelatedTicketsSection({ conversation }: { conversation: AgentConversation }) {
+  const t = useI18n();
   const [tickets, setTickets] = useState<TicketItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -602,7 +627,7 @@ function RelatedTicketsSection({ conversation }: { conversation: AgentConversati
         }
       } catch (error) {
         if (!cancelled) {
-          toast.error(error instanceof Error ? error.message : "加载关联工单失败");
+          toast.error(error instanceof Error ? error.message : t("conversation.loadTicketsFailed"));
         }
       } finally {
         if (!cancelled) {
@@ -614,13 +639,13 @@ function RelatedTicketsSection({ conversation }: { conversation: AgentConversati
     return () => {
       cancelled = true;
     };
-  }, [conversation.id]);
+  }, [conversation.id, t]);
 
   return (
     <section className="space-y-2 border-t pt-2">
-      <SectionHeading>关联工单</SectionHeading>
+      <SectionHeading>{t("conversation.relatedTickets")}</SectionHeading>
       {loading ? (
-        <p className="text-sm text-muted-foreground">加载工单中…</p>
+        <p className="text-sm text-muted-foreground">{t("conversation.loadingTickets")}</p>
       ) : tickets.length > 0 ? (
         <div className="space-y-2">
           {tickets.map((ticket) => (
@@ -648,7 +673,7 @@ function RelatedTicketsSection({ conversation }: { conversation: AgentConversati
           ))}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">当前会话暂无关联工单</p>
+        <p className="text-sm text-muted-foreground">{t("conversation.noRelatedTickets")}</p>
       )}
     </section>
   );
@@ -667,6 +692,7 @@ function CompanyEditDialog({
   company,
   onSaved,
 }: CompanyEditDialogProps) {
+  const t = useI18n();
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [remark, setRemark] = useState("");
@@ -684,7 +710,7 @@ function CompanyEditDialog({
   const handleSubmit = async () => {
     const trimmedName = name.trim();
     if (!trimmedName) {
-      toast.error("公司名称不能为空");
+      toast.error(t("conversation.companyNameRequired"));
       return;
     }
     setSaving(true);
@@ -695,11 +721,11 @@ function CompanyEditDialog({
         code: code.trim(),
         remark: remark.trim(),
       });
-      toast.success("已保存");
+      toast.success(t("conversation.saved"));
       onSaved();
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "保存失败");
+      toast.error(e instanceof Error ? e.message : t("conversation.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -709,23 +735,23 @@ function CompanyEditDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md" showCloseButton>
         <DialogHeader>
-          <DialogTitle>编辑公司</DialogTitle>
+          <DialogTitle>{t("conversation.editCompany")}</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-4 py-1">
           <Field orientation="vertical">
-            <FieldLabel htmlFor="co-name">公司名称</FieldLabel>
+            <FieldLabel htmlFor="co-name">{t("conversation.companyName")}</FieldLabel>
             <FieldContent>
               <Input id="co-name" value={name} onChange={(e) => setName(e.target.value)} />
             </FieldContent>
           </Field>
           <Field orientation="vertical">
-            <FieldLabel htmlFor="co-code">公司编码</FieldLabel>
+            <FieldLabel htmlFor="co-code">{t("conversation.companyCode")}</FieldLabel>
             <FieldContent>
               <Input id="co-code" value={code} onChange={(e) => setCode(e.target.value)} />
             </FieldContent>
           </Field>
           <Field orientation="vertical">
-            <FieldLabel htmlFor="co-remark">备注</FieldLabel>
+            <FieldLabel htmlFor="co-remark">{t("conversation.remark")}</FieldLabel>
             <FieldContent>
               <Textarea
                 id="co-remark"
@@ -738,10 +764,10 @@ function CompanyEditDialog({
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            取消
+            {t("conversation.cancel")}
           </Button>
           <Button type="button" disabled={saving} onClick={() => void handleSubmit()}>
-            {saving ? "保存中…" : "保存"}
+            {saving ? t("conversation.saving") : t("conversation.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

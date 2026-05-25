@@ -34,13 +34,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -57,41 +50,20 @@ import {
   updateCustomerStatus,
   type AdminCustomer,
 } from "@/lib/api/customer";
-import { getEnumLabel, getEnumOptions } from "@/lib/enums";
-import {
-  Gender,
-  GenderLabels,
-  Status,
-  StatusLabels,
-} from "@/lib/generated/enums";
+import { Gender, Status } from "@/lib/generated/enums";
+import { useI18n } from "@/i18n/provider";
 import { EditDialog } from "./_components/edit";
-
-const listStatusOptions = [
-  { value: "all", label: "全部状态" },
-  ...getEnumOptions(StatusLabels)
-    .filter((item) => Number(item.value) !== Status.Deleted)
-    .map((item) => ({
-      value: String(item.value),
-      label: item.label,
-    })),
-] as const;
-
-const genderOptions = [
-  { value: "all", label: "全部性别" },
-  ...getEnumOptions(GenderLabels).map((item) => ({
-    value: String(item.value),
-    label: item.label,
-  })),
-] as const;
 
 function getLabel(
   value: string,
   options: ReadonlyArray<{ value: string; label: string }>,
+  fallback: string,
 ) {
-  return options.find((item) => item.value === value)?.label ?? "请选择";
+  return options.find((item) => item.value === value)?.label ?? fallback;
 }
 
 export default function DashboardCustomersPage() {
+  const t = useI18n();
   const [keywordInput, setKeywordInput] = useState("");
   const [statusFilterInput, setStatusFilterInput] = useState("all");
   const [genderFilterInput, setGenderFilterInput] = useState("all");
@@ -103,7 +75,7 @@ export default function DashboardCustomersPage() {
   const [companyFilter, setCompanyFilter] = useState("0");
 
   const [companyOptions, setCompanyOptions] = useState<ComboboxOption[]>([
-    { value: "0", label: "全部公司" },
+    { value: "0", label: t("customer.allCompanies") },
   ]);
   const [companyNameMap, setCompanyNameMap] = useState<Record<number, string>>(
     {},
@@ -120,13 +92,30 @@ export default function DashboardCustomersPage() {
     results: [],
     page: { page: 1, limit: 20, total: 0 },
   });
+  const listStatusOptions = useMemo(
+    () => [
+      { value: "all", label: t("status.all") },
+      { value: String(Status.Ok), label: t("status.ok") },
+      { value: String(Status.Disabled), label: t("status.disabled") },
+    ],
+    [t],
+  );
+  const genderOptions = useMemo(
+    () => [
+      { value: "all", label: t("customer.allGenders") },
+      { value: String(Gender.Unknown), label: t("customerForm.genderUnknown") },
+      { value: String(Gender.Male), label: t("customerForm.genderMale") },
+      { value: String(Gender.Female), label: t("customerForm.genderFemale") },
+    ],
+    [t],
+  );
 
   useEffect(() => {
     async function loadCompanies() {
       try {
         const data = await fetchCompanies({ status: 0, page: 1, limit: 500 });
         const opts: ComboboxOption[] = [
-          { value: "0", label: "全部公司" },
+          { value: "0", label: t("customer.allCompanies") },
           ...data.results.map((item) => ({
             value: String(item.id),
             label: item.name,
@@ -143,7 +132,7 @@ export default function DashboardCustomersPage() {
       }
     }
     void loadCompanies();
-  }, []);
+  }, [t]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -158,11 +147,11 @@ export default function DashboardCustomersPage() {
       });
       setResult(data);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载客户列表失败");
+      toast.error(error instanceof Error ? error.message : t("customer.loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [companyFilter, genderFilter, keyword, limit, page, statusFilter]);
+  }, [companyFilter, genderFilter, keyword, limit, page, statusFilter, t]);
 
   useEffect(() => {
     void loadData();
@@ -171,9 +160,9 @@ export default function DashboardCustomersPage() {
   const companyFilterLabel = useMemo(() => {
     return (
       companyOptions.find((item) => item.value === companyFilterInput)?.label ??
-      "全部公司"
+      t("customer.allCompanies")
     );
-  }, [companyFilterInput, companyOptions]);
+  }, [companyFilterInput, companyOptions, t]);
 
   function applyFilters() {
     setKeyword(keywordInput);
@@ -217,14 +206,14 @@ export default function DashboardCustomersPage() {
       await saveCustomerProfile(payload);
       toast.success(
         editingItem
-          ? `已更新客户：${editingItem.name}`
-          : `已创建客户：${payload.name}`,
+          ? t("customer.updated", { name: editingItem.name })
+          : t("customer.created", { name: payload.name }),
       );
       setDialogOpen(false);
       setEditingItem(null);
       await loadData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "保存客户失败");
+      toast.error(error instanceof Error ? error.message : t("customer.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -235,10 +224,10 @@ export default function DashboardCustomersPage() {
     try {
       const nextStatus = item.status === 0 ? 1 : 0;
       await updateCustomerStatus(item.id, nextStatus);
-      toast.success(`已${nextStatus === 0 ? "启用" : "禁用"}：${item.name}`);
+      toast.success(t(nextStatus === 0 ? "customer.enabled" : "customer.disabled", { name: item.name }));
       await loadData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "更新状态失败");
+      toast.error(error instanceof Error ? error.message : t("customer.statusUpdateFailed"));
     } finally {
       setActionLoadingId(null);
     }
@@ -248,17 +237,19 @@ export default function DashboardCustomersPage() {
     setActionLoadingId(item.id);
     try {
       await deleteCustomer(item.id);
-      toast.success(`已删除客户：${item.name}`);
+      toast.success(t("customer.deleted", { name: item.name }));
       await loadData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "删除客户失败");
+      toast.error(error instanceof Error ? error.message : t("customer.deleteFailed"));
     } finally {
       setActionLoadingId(null);
     }
   }
 
   function getGenderText(gender: number) {
-    return getEnumLabel(GenderLabels, gender as Gender);
+    if (gender === Gender.Male) return t("customerForm.genderMale");
+    if (gender === Gender.Female) return t("customerForm.genderFemale");
+    return t("customerForm.genderUnknown");
   }
 
   return (
@@ -268,7 +259,7 @@ export default function DashboardCustomersPage() {
           actions={
             <Button onClick={openCreateDialog}>
               <PlusIcon />
-              新建
+              {t("customer.new")}
             </Button>
           }
         >
@@ -278,60 +269,38 @@ export default function DashboardCustomersPage() {
               value={keywordInput}
               onChange={(event) => setKeywordInput(event.target.value)}
               onKeyDown={handleFilterKeyDown}
-              placeholder="姓名、手机、邮箱、公司、联系方式"
+              placeholder={t("customer.keywordPlaceholder")}
               className="pl-9"
             />
           </div>
 
-          <Select
+          <OptionCombobox
             value={genderFilterInput}
-            onValueChange={(v) => setGenderFilterInput(v ?? "all")}
-          >
-            <SelectTrigger className="w-full xl:w-28">
-              <SelectValue>
-                {getLabel(genderFilterInput, genderOptions)}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {genderOptions.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            options={genderOptions}
+            placeholder={getLabel(genderFilterInput, genderOptions, t("customer.select"))}
+            onChange={(v) => setGenderFilterInput(v)}
+          />
 
           <div className="w-full xl:w-56">
             <OptionCombobox
               value={companyFilterInput}
               options={companyOptions}
               placeholder={companyFilterLabel}
-              searchPlaceholder="搜索公司名称"
+              searchPlaceholder={t("customer.searchCompany")}
               onChange={(v) => setCompanyFilterInput(v)}
             />
           </div>
 
-          <Select
+          <OptionCombobox
             value={statusFilterInput}
-            onValueChange={(v) => setStatusFilterInput(v ?? "all")}
-          >
-            <SelectTrigger className="w-full xl:w-28">
-              <SelectValue>
-                {getLabel(statusFilterInput, listStatusOptions)}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {listStatusOptions.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            options={listStatusOptions}
+            placeholder={getLabel(statusFilterInput, listStatusOptions, t("customer.select"))}
+            onChange={(v) => setStatusFilterInput(v)}
+          />
 
           <Button variant="outline" onClick={applyFilters} disabled={loading}>
             <SearchIcon />
-            查询
+            {t("customer.query")}
           </Button>
         </DashboardToolbar>
 
@@ -354,13 +323,13 @@ export default function DashboardCustomersPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-20">ID</TableHead>
-                <TableHead>客户名称</TableHead>
-                <TableHead className="w-20">性别</TableHead>
-                <TableHead>所属公司</TableHead>
-                <TableHead>手机号</TableHead>
-                <TableHead>邮箱</TableHead>
-                <TableHead className="w-24">状态</TableHead>
-                <TableHead className="w-40">操作</TableHead>
+                <TableHead>{t("customer.columnName")}</TableHead>
+                <TableHead className="w-20">{t("customer.columnGender")}</TableHead>
+                <TableHead>{t("customer.columnCompany")}</TableHead>
+                <TableHead>{t("customer.columnMobile")}</TableHead>
+                <TableHead>{t("customer.columnEmail")}</TableHead>
+                <TableHead className="w-24">{t("customer.columnStatus")}</TableHead>
+                <TableHead className="w-40">{t("customer.columnActions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -368,8 +337,8 @@ export default function DashboardCustomersPage() {
                 <DashboardTableStateRow
                   colSpan={8}
                   loading={loading}
-                  loadingText="正在加载客户数据..."
-                  emptyText="暂无客户数据"
+                  loadingText={t("customer.loading")}
+                  emptyText={t("customer.empty")}
                 />
               ) : (
                 result.results.map((item) => {
@@ -397,7 +366,7 @@ export default function DashboardCustomersPage() {
                         <Badge
                           variant={item.status === 0 ? "default" : "secondary"}
                         >
-                          {item.status === 0 ? "启用" : "禁用"}
+                          {item.status === 0 ? t("status.ok") : t("status.disabled")}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -407,7 +376,7 @@ export default function DashboardCustomersPage() {
                             size="sm"
                             onClick={() => openEditDialog(item)}
                           >
-                            编辑
+                            {t("customer.edit")}
                           </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger
@@ -418,7 +387,7 @@ export default function DashboardCustomersPage() {
                                   disabled={actionLoading}
                                 />
                               }
-                              aria-label={`更多操作 ${item.name}`}
+                              aria-label={t("customer.moreActions", { name: item.name })}
                             >
                               <MoreHorizontalIcon />
                             </DropdownMenuTrigger>
@@ -431,16 +400,16 @@ export default function DashboardCustomersPage() {
                                 onClick={() => void handleToggleStatus(item)}
                               >
                                 {actionLoadingId === item.id ? (
-                                  "处理中..."
+                                  t("customer.processing")
                                 ) : item.status === 0 ? (
                                   <>
                                     <BanIcon />
-                                    禁用
+                                    {t("customer.disable")}
                                   </>
                                 ) : (
                                   <>
                                     <CheckCircle2Icon />
-                                    启用
+                                    {t("customer.enable")}
                                   </>
                                 )}
                               </DropdownMenuItem>
@@ -450,7 +419,7 @@ export default function DashboardCustomersPage() {
                                 onClick={() => void handleDelete(item)}
                               >
                                 <Trash2Icon />
-                                删除
+                                {t("customer.delete")}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

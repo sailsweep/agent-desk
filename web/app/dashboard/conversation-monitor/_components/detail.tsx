@@ -26,6 +26,7 @@ import {
   renderIMMessageHTML,
 } from "@/lib/im-message";
 import { formatDateTime } from "@/lib/utils";
+import { useI18n } from "@/i18n/provider";
 
 type ConversationDetailDialogProps = {
   open: boolean;
@@ -34,7 +35,7 @@ type ConversationDetailDialogProps = {
   item: AdminConversation | null;
   detail: AdminConversationDetail | null;
   messages?: AdminMessage[] | null;
-  /** 是否还有更早消息（cursor 分页） */
+  /** Whether older messages are available through cursor pagination. */
   messagesHasMore?: boolean;
   loadingMoreMessages?: boolean;
   onLoadMoreMessages?: () => void | Promise<void>;
@@ -46,44 +47,53 @@ type ConversationDetailDialogProps = {
   onOpenClose: () => void;
 };
 
-function getStatusMeta(status: number) {
+function getStatusMeta(
+  status: number,
+  t: (key: string, values?: Record<string, string | number>) => string
+) {
   switch (status) {
     case 1:
-      return { label: "AI接待中", variant: "secondary" as const };
+      return { label: t("conversation.filterAiServing"), variant: "secondary" as const };
     case 2:
-      return { label: "待接入", variant: "outline" as const };
+      return { label: t("conversation.filterPending"), variant: "outline" as const };
     case 3:
-      return { label: "处理中", variant: "secondary" as const };
+      return { label: t("conversation.filterActive"), variant: "secondary" as const };
     case 4:
-      return { label: "已关闭", variant: "outline" as const };
+      return { label: t("conversation.filterClosed"), variant: "outline" as const };
     default:
-      return { label: "未知", variant: "outline" as const };
+      return { label: t("conversationMonitor.unknown"), variant: "outline" as const };
   }
 }
 
-function getServiceModeLabel(mode: number) {
+function getServiceModeLabel(
+  mode: number,
+  t: (key: string, values?: Record<string, string | number>) => string
+) {
   switch (mode) {
     case 1:
-      return "AI 接待";
+      return t("conversationMonitor.serviceAi");
     case 2:
-      return "人工接待";
+      return t("conversationMonitor.serviceHuman");
     case 3:
-      return "AI 优先";
+      return t("conversationMonitor.serviceAiFirst");
     default:
-      return "未定义";
+      return t("conversationMonitor.serviceUndefined");
   }
 }
 
-function getSenderLabel(message: AdminMessage) {
+function getSenderLabel(
+  message: AdminMessage,
+  t: (key: string, values?: Record<string, string | number>) => string
+) {
   switch (message.senderType) {
     case "agent":
-      return message.senderName || "客服";
+      return message.senderName || t("conversationMonitor.senderAgent");
     case "customer":
-      return message.senderName || "用户";
+      return message.senderName || t("conversationMonitor.senderCustomer");
     case "ai":
       return "AI";
     case "system":
-      return "系统";
+      return t("conversationMonitor.senderSystem");
     default:
       return message.senderType;
   }
@@ -150,12 +160,13 @@ export function ConversationDetailDialog({
   onRead,
   onOpenClose,
 }: ConversationDetailDialogProps) {
+  const t = useI18n();
   const messages = Array.isArray(rawMessages) ? rawMessages : [];
   const currentConversation = detail ?? item;
   const isClosedConversation = currentConversation?.status === 4;
   const isPendingConversation = currentConversation?.status === 2;
   const statusMeta = currentConversation
-    ? getStatusMeta(currentConversation.status)
+    ? getStatusMeta(currentConversation.status, t)
     : null;
   const messageBottomRef = useRef<HTMLDivElement | null>(null);
   const messagesScrollRootRef = useRef<HTMLDivElement | null>(null);
@@ -249,7 +260,7 @@ export function ConversationDetailDialog({
       onOpenChange={onOpenChange}
       title={
         <div className="flex items-center gap-3">
-          <span>{currentConversation?.customerName || "会话详情"}</span>
+          <span>{currentConversation?.customerName || t("conversationMonitor.detailFallbackTitle")}</span>
 
           <div>
             {statusMeta ? (
@@ -268,8 +279,10 @@ export function ConversationDetailDialog({
         <div className="flex w-full flex-wrap items-center justify-between gap-3">
           <div className="text-sm text-muted-foreground">
             {currentConversation
-              ? `最后活跃：${formatDateTime(currentConversation.lastMessageAt)}`
-              : "暂无会话信息"}
+              ? t("conversationMonitor.lastActivePrefix", {
+                  time: formatDateTime(currentConversation.lastMessageAt),
+                })
+              : t("conversationMonitor.noConversationInfo")}
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -278,7 +291,7 @@ export function ConversationDetailDialog({
               disabled={saving || !currentConversation || currentConversation.status !== 2}
             >
               <MessageCircleMoreIcon />
-              {saving ? "处理中..." : "分配会话"}
+              {saving ? t("conversationMonitor.processing") : t("conversationMonitor.assign")}
             </Button>
             <Button
               variant="outline"
@@ -288,7 +301,7 @@ export function ConversationDetailDialog({
               }
             >
               <MessageCircleMoreIcon />
-              {saving ? "处理中..." : "重试分配"}
+              {saving ? t("conversationMonitor.processing") : t("conversationMonitor.retryDispatch")}
             </Button>
             <Button
               variant="outline"
@@ -296,7 +309,7 @@ export function ConversationDetailDialog({
               disabled={saving || !currentConversation}
             >
               <CheckCheckIcon />
-              {saving ? "处理中..." : "标记已读"}
+              {saving ? t("conversationMonitor.processing") : t("conversationMonitor.markRead")}
             </Button>
             <Button
               type="button"
@@ -305,7 +318,7 @@ export function ConversationDetailDialog({
               disabled={saving || !currentConversation || currentConversation.status !== 3}
             >
               <MessageCircleMoreIcon />
-              {saving ? "处理中..." : "转接会话"}
+              {saving ? t("conversationMonitor.processing") : t("conversationMonitor.transfer")}
             </Button>
             {!isClosedConversation ? (
               <Button
@@ -314,7 +327,7 @@ export function ConversationDetailDialog({
                 disabled={saving || !currentConversation}
               >
                 <EyeIcon />
-                {saving ? "处理中..." : "关闭会话"}
+                {saving ? t("conversationMonitor.processing") : t("conversationMonitor.close")}
               </Button>
             ) : null}
           </div>
@@ -323,7 +336,7 @@ export function ConversationDetailDialog({
     >
       {loading ? (
         <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-muted-foreground">
-          正在加载会话详情...
+          {t("conversationMonitor.loadingDetail")}
         </div>
       ) : currentConversation ? (
         <div className="flex min-h-0 flex-1 flex-row overflow-hidden border-t">
@@ -331,32 +344,32 @@ export function ConversationDetailDialog({
             <div className="space-y-4 p-6">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <InfoItem
-                  label="接待模式"
-                  value={getServiceModeLabel(currentConversation.serviceMode)}
+                  label={t("conversationMonitor.columnServiceMode")}
+                  value={getServiceModeLabel(currentConversation.serviceMode, t)}
                 />
                 <InfoItem
-                  label="当前客服"
+                  label={t("conversationMonitor.currentAssignee")}
                   value={currentConversation.currentAssigneeName || "-"}
                 />
                 <InfoItem
-                  label="渠道ID"
+                  label={t("conversation.channelId")}
                   value={`${currentConversation.channelId || "-"}`}
                 />
                 <InfoItem
-                  label="客服未读"
+                  label={t("conversationMonitor.agentUnread")}
                   value={`${currentConversation.agentUnreadCount}`}
                 />
                 <InfoItem
-                  label="用户未读"
+                  label={t("conversationMonitor.customerUnread")}
                   value={`${currentConversation.customerUnreadCount}`}
                 />
                 <InfoItem
-                  label="最后活跃"
+                  label={t("conversationMonitor.columnLastActive")}
                   value={formatDateTime(currentConversation.lastMessageAt)}
                   fullWidth
                 />
                 <InfoItem
-                  label="关闭时间"
+                  label={t("conversationMonitor.closedAt")}
                   value={formatDateTime(currentConversation.closedAt)}
                   fullWidth
                 />
@@ -369,9 +382,13 @@ export function ConversationDetailDialog({
               <div className="space-y-4 p-6">
                 <section className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">参与方</p>
+                    <p className="text-sm font-medium">
+                      {t("conversationMonitor.participants")}
+                    </p>
                     <span className="text-xs text-muted-foreground">
-                      {detail?.participants?.length ?? 0} 人
+                      {t("conversationMonitor.participantCount", {
+                        count: detail?.participants?.length ?? 0,
+                      })}
                     </span>
                   </div>
                   {detail?.participants?.length ? (
@@ -387,17 +404,21 @@ export function ConversationDetailDialog({
                             </span>
                           </div>
                           <div className="mt-1 text-sm text-muted-foreground">
-                            标识：{getParticipantIdentity(participant)}
+                            {t("conversationMonitor.participantIdentity", {
+                              value: getParticipantIdentity(participant),
+                            })}
                           </div>
                           <div className="mt-1 text-xs text-muted-foreground">
-                            加入时间：{formatDateTime(participant.joinedAt)}
+                            {t("conversationMonitor.participantJoinedAt", {
+                              time: formatDateTime(participant.joinedAt),
+                            })}
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
                     <div className="rounded-lg border border-dashed bg-background p-4 text-sm text-muted-foreground">
-                      暂无参与方信息
+                      {t("conversationMonitor.emptyParticipants")}
                     </div>
                   )}
                 </section>
@@ -406,16 +427,6 @@ export function ConversationDetailDialog({
           </aside>
 
           <section className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
-            {/* <div className="flex items-center justify-between border-b px-6 py-4">
-              <div>
-                <p className="text-sm font-medium">聊天记录</p>
-              </div>
-              <div className="text-xs text-muted-foreground">
-                消息数：{messages.length}
-                {messagesHasMore ? " · 向上滑可加载更早" : ""}
-              </div>
-            </div> */}
-
             <div ref={messagesScrollRootRef} className="min-h-0 flex-1">
               <ScrollArea className="h-full min-h-0 bg-muted/10">
                 <div className="space-y-4 px-6 py-5">
@@ -425,8 +436,8 @@ export function ConversationDetailDialog({
                       className="flex min-h-8 flex-col items-center justify-center py-2 text-xs text-muted-foreground"
                     >
                       {loadingMoreMessages
-                        ? "正在加载更早的消息…"
-                        : "继续上滑加载更早消息"}
+                        ? t("conversationMonitor.loadingOlder")
+                        : t("conversationMonitor.loadOlderHint")}
                     </div>
                   ) : null}
                   {messages.length ? (
@@ -449,13 +460,13 @@ export function ConversationDetailDialog({
                             <div
                               className={`text-xs text-muted-foreground ${layout.metaClassName}`}
                             >
-                              <span>{getSenderLabel(message)}</span>
+                              <span>{getSenderLabel(message, t)}</span>
                               <span className="mx-2">·</span>
                               <span>{formatDateTime(message.sentAt)}</span>
                               {isRecalled ? (
                                 <>
                                   <span className="mx-2">·</span>
-                                  <span>已撤回</span>
+                                  <span>{t("conversationMonitor.messageRecalled")}</span>
                                 </>
                               ) : null}
                             </div>
@@ -463,7 +474,9 @@ export function ConversationDetailDialog({
                               className={`rounded-2xl border px-4 py-3 text-sm leading-6 ${layout.bubbleClassName}`}
                             >
                               {isRecalled ? (
-                                <div className="text-muted-foreground">该消息已撤回</div>
+                                <div className="text-muted-foreground">
+                                  {t("conversationMonitor.messageRecalledBody")}
+                                </div>
                               ) : isHtmlMessage ? (
                                 <ImMessageHTML
                                   html={renderIMMessageHTML(message)}
@@ -485,8 +498,14 @@ export function ConversationDetailDialog({
                             <div
                               className={`text-xs text-muted-foreground ${layout.metaClassName}`}
                             >
-                              客服 {message.agentRead ? "已读" : "未读"} / 用户{" "}
-                              {message.customerRead ? "已读" : "未读"}
+                              {t("conversationMonitor.readStatus", {
+                                agent: message.agentRead
+                                  ? t("conversationMonitor.read")
+                                  : t("conversationMonitor.unread"),
+                                customer: message.customerRead
+                                  ? t("conversationMonitor.read")
+                                  : t("conversationMonitor.unread"),
+                              })}
                             </div>
                           </div>
                         </div>
@@ -494,7 +513,7 @@ export function ConversationDetailDialog({
                     })
                   ) : (
                     <div className="flex h-full min-h-80 items-center justify-center rounded-xl border border-dashed bg-background text-sm text-muted-foreground">
-                      暂无消息记录
+                      {t("conversationMonitor.emptyMessages")}
                     </div>
                   )}
                   <div ref={messageBottomRef} />
@@ -505,7 +524,7 @@ export function ConversationDetailDialog({
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-muted-foreground">
-          暂无可展示的会话详情
+          {t("conversationMonitor.emptyDetail")}
         </div>
       )}
     </ProjectDialog>
@@ -534,10 +553,11 @@ type MessageImageProps = {
 };
 
 function MessageImage({ src, alt, onPreview }: MessageImageProps) {
+  const t = useI18n();
   if (!src) {
     return (
       <div className="text-sm whitespace-pre-wrap break-words">
-        {alt || "[图片]"}
+        {alt || t("conversationMonitor.imageFallback")}
       </div>
     );
   }
@@ -550,7 +570,7 @@ function MessageImage({ src, alt, onPreview }: MessageImageProps) {
     >
       <Image
         src={src}
-        alt={alt || "消息图片"}
+        alt={alt || t("conversationMonitor.messageImageAlt")}
         width={480}
         height={360}
         className="max-h-64 w-auto max-w-full rounded-md object-contain"

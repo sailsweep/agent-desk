@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo, useState } from "react";
-import { Resolver, useForm } from "react-hook-form";
+import { type Resolver, useForm } from "react-hook-form";
 import { z } from "zod/v4";
 
 import { OptionCombobox } from "@/components/option-combobox";
@@ -23,7 +23,9 @@ import {
   type MCPToolCatalogItem,
   type SkillDefinition,
 } from "@/lib/api/admin";
+import { useI18n } from "@/i18n/provider";
  
+type TFunction = (key: string, values?: Record<string, string | number>) => string;
 
 type SkillEditDialogProps = {
   open: boolean;
@@ -42,25 +44,29 @@ const emptyForm: EditForm = {
   remark: "",
 };
 
-const skillFormSchema = z.object({
+function createSkillFormSchema(t: TFunction) {
+  return z.object({
   code: z
     .string()
     .trim()
-    .min(1, "Skill 编码不能为空")
-    .regex(/^[a-zA-Z0-9_-]+$/, "Skill 编码仅支持字母、数字、下划线和中划线"),
-  name: z.string().trim().min(1, "Skill 名称不能为空"),
+    .min(1, t("skillDefinition.codeRequired"))
+    .regex(/^[a-zA-Z0-9_-]+$/, t("skillDefinition.codeInvalid")),
+  name: z.string().trim().min(1, t("skillDefinition.nameRequired")),
   description: z.string().trim(),
-  instruction: z.string().trim().min(1, "技能说明不能为空"),
+  instruction: z.string().trim().min(1, t("skillDefinition.instructionRequired")),
   examplesText: z.string().trim(),
   remark: z.string().trim(),
-});
+  });
+}
 
-type EditForm = z.infer<typeof skillFormSchema>;
-const editFormResolver = zodResolver(skillFormSchema as never) as Resolver<
-  z.input<typeof skillFormSchema>,
-  undefined,
-  z.output<typeof skillFormSchema>
->;
+type EditForm = {
+  code: string;
+  name: string;
+  description: string;
+  instruction: string;
+  examplesText: string;
+  remark: string;
+};
 
 function buildForm(item: SkillDefinition | null): EditForm {
   if (!item) {
@@ -127,6 +133,7 @@ function SkillEditDialogBody({
   onOpenChange,
   onSubmit,
 }: SkillEditDialogBodyProps) {
+  const t = useI18n();
   const formId = "skill-definition-edit-form";
   const [loading, setLoading] = useState(false);
   const [toolCatalog, setToolCatalog] = useState<MCPToolCatalogItem[]>([]);
@@ -134,11 +141,12 @@ function SkillEditDialogBody({
     string[]
   >([]);
   const [toolCodeToAdd, setToolCodeToAdd] = useState("");
-  const form = useForm<
-    z.input<typeof skillFormSchema>,
-    undefined,
-    z.output<typeof skillFormSchema>
-  >({
+  const skillFormSchema = useMemo(() => createSkillFormSchema(t), [t]);
+  const editFormResolver = useMemo(
+    () => zodResolver(skillFormSchema) as Resolver<EditForm>,
+    [skillFormSchema],
+  );
+  const form = useForm<EditForm>({
     resolver: editFormResolver,
     defaultValues: emptyForm,
   });
@@ -237,7 +245,7 @@ function SkillEditDialogBody({
     <ProjectDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={itemId ? "编辑" : "新建"}
+      title={itemId ? t("skillDefinition.editTitle") : t("skillDefinition.createTitle")}
       size="xl"
       allowFullscreen
       footer={
@@ -248,17 +256,17 @@ function SkillEditDialogBody({
             onClick={() => onOpenChange(false)}
             disabled={saving}
           >
-            取消
+            {t("skillDefinition.cancel")}
           </Button>
           <Button type="submit" form={formId} disabled={saving || loading}>
-            {saving ? "保存中..." : itemId ? "保存" : "创建"}
+            {saving ? t("skillDefinition.saving") : itemId ? t("skillDefinition.save") : t("skillDefinition.create")}
           </Button>
         </>
       }
     >
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="text-muted-foreground">加载中...</div>
+          <div className="text-muted-foreground">{t("skillDefinition.loading")}</div>
         </div>
       ) : (
         <form
@@ -268,11 +276,11 @@ function SkillEditDialogBody({
         >
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field data-invalid={!!errors.code}>
-              <FieldLabel htmlFor="skill-code">编码</FieldLabel>
+              <FieldLabel htmlFor="skill-code">{t("skillDefinition.code")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="skill-code"
-                  placeholder="例如：refund_skill"
+                  placeholder={t("skillDefinition.codePlaceholder")}
                   aria-invalid={!!errors.code}
                   {...register("code")}
                 />
@@ -280,11 +288,11 @@ function SkillEditDialogBody({
               </FieldContent>
             </Field>
             <Field data-invalid={!!errors.name}>
-              <FieldLabel htmlFor="skill-name">名称</FieldLabel>
+              <FieldLabel htmlFor="skill-name">{t("skillDefinition.name")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="skill-name"
-                  placeholder="例如：退款处理"
+                  placeholder={t("skillDefinition.namePlaceholder")}
                   aria-invalid={!!errors.name}
                   {...register("name")}
                 />
@@ -294,12 +302,12 @@ function SkillEditDialogBody({
           </div>
 
           <Field data-invalid={!!errors.description}>
-            <FieldLabel htmlFor="skill-description">描述</FieldLabel>
+            <FieldLabel htmlFor="skill-description">{t("skillDefinition.description")}</FieldLabel>
             <FieldContent>
               <Textarea
                 id="skill-description"
                 rows={3}
-                placeholder="描述这个 Skill 的用途、边界和适用场景"
+                placeholder={t("skillDefinition.descriptionPlaceholder")}
                 aria-invalid={!!errors.description}
                 {...register("description")}
               />
@@ -308,12 +316,12 @@ function SkillEditDialogBody({
           </Field>
 
           <Field data-invalid={!!errors.instruction}>
-            <FieldLabel htmlFor="skill-instruction">技能说明</FieldLabel>
+            <FieldLabel htmlFor="skill-instruction">{t("skillDefinition.instruction")}</FieldLabel>
             <FieldContent>
               <Textarea
                 id="skill-instruction"
                 rows={12}
-                placeholder="请输入 Skill 文档内容，描述目标、步骤、工具使用规则和边界。"
+                placeholder={t("skillDefinition.instructionPlaceholder")}
                 aria-invalid={!!errors.instruction}
                 {...register("instruction")}
               />
@@ -322,12 +330,12 @@ function SkillEditDialogBody({
           </Field>
 
           <Field data-invalid={!!errors.examplesText}>
-            <FieldLabel htmlFor="skill-examples">示例问法</FieldLabel>
+            <FieldLabel htmlFor="skill-examples">{t("skillDefinition.examples")}</FieldLabel>
             <FieldContent>
               <Textarea
                 id="skill-examples"
                 rows={5}
-                placeholder={"每行一个典型用户问法，例如：\n我要申请退款\n帮我查下订单"}
+                placeholder={t("skillDefinition.examplesPlaceholder")}
                 aria-invalid={!!errors.examplesText}
                 {...register("examplesText")}
               />
@@ -336,16 +344,16 @@ function SkillEditDialogBody({
           </Field>
 
           <Field>
-            <FieldLabel>工具白名单</FieldLabel>
+            <FieldLabel>{t("skillDefinition.toolWhitelist")}</FieldLabel>
             <FieldContent className="space-y-3">
               <div className="flex items-center gap-2">
                 <div className="flex-1">
                   <OptionCombobox
                     value={toolCodeToAdd}
                     options={addableToolOptions}
-                    placeholder="选择该 Skill 允许使用的工具"
-                    searchPlaceholder="搜索 toolCode 或工具名"
-                    emptyText="没有可添加的工具"
+                    placeholder={t("skillDefinition.selectTool")}
+                    searchPlaceholder={t("skillDefinition.searchTool")}
+                    emptyText={t("skillDefinition.emptyTool")}
                     onChange={handleAddToolWhitelist}
                   />
                 </div>
@@ -355,13 +363,13 @@ function SkillEditDialogBody({
                   disabled={!toolCodeToAdd}
                   onClick={() => handleAddToolWhitelist(toolCodeToAdd)}
                 >
-                  添加
+                  {t("skillDefinition.add")}
                 </Button>
               </div>
               <div className="flex flex-wrap gap-2">
                 {selectedToolOptions.length === 0 ? (
                   <span className="text-sm text-muted-foreground">
-                    不限制时，Skill 会继承 Agent 的可用工具范围。
+                    {t("skillDefinition.inheritAgentTools")}
                   </span>
                 ) : (
                   selectedToolOptions.map((option) => (
@@ -382,12 +390,12 @@ function SkillEditDialogBody({
           </Field>
 
           <Field data-invalid={!!errors.remark}>
-            <FieldLabel htmlFor="skill-remark">备注</FieldLabel>
+            <FieldLabel htmlFor="skill-remark">{t("skillDefinition.remark")}</FieldLabel>
             <FieldContent>
               <Textarea
                 id="skill-remark"
                 rows={3}
-                placeholder="记录内部备注或维护说明"
+                placeholder={t("skillDefinition.remarkPlaceholder")}
                 aria-invalid={!!errors.remark}
                 {...register("remark")}
               />

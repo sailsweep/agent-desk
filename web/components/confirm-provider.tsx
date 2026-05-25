@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useI18n } from "@/i18n/provider"
 
 type ConfirmOptions = {
   title?: ReactNode
@@ -39,14 +40,11 @@ const ConfirmContext = createContext<ConfirmContextValue | null>(null)
 
 const defaultState: ConfirmState = {
   open: false,
-  title: "请确认操作",
-  description: "确认后将继续执行当前操作。",
-  confirmText: "确认",
-  cancelText: "取消",
   variant: "default",
 }
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
+  const t = useI18n()
   const [state, setState] = useState<ConfirmState>(defaultState)
   const resolverRef = useRef<((value: boolean) => void) | null>(null)
 
@@ -63,17 +61,17 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
 
     setState({
       open: true,
-      title: options.title ?? defaultState.title,
-      description: options.description ?? defaultState.description,
-      confirmText: options.confirmText ?? defaultState.confirmText,
-      cancelText: options.cancelText ?? defaultState.cancelText,
+      title: options.title ?? t("confirm.title"),
+      description: options.description ?? t("confirm.description"),
+      confirmText: options.confirmText ?? t("confirm.confirm"),
+      cancelText: options.cancelText ?? t("confirm.cancel"),
       variant: options.variant ?? defaultState.variant,
     })
 
     return new Promise<boolean>((resolve) => {
       resolverRef.current = resolve
     })
-  }, [])
+  }, [t])
 
   return (
     <ConfirmContext.Provider value={{ confirm }}>

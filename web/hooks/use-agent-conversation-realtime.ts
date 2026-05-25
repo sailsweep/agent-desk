@@ -15,6 +15,7 @@ import {
 import { createRealtimeConnectionManager } from "@/lib/realtime-connection"
 import { getNotificationBody, showNotification } from "@/lib/services/notification"
 import { useAgentConversationsStore } from "@/lib/stores/agent-conversations"
+import { useI18n } from "@/i18n/provider"
 
 type AgentRealtimeConnection = ReturnType<typeof createRealtimeConnectionManager>
 type AgentRealtimeEnvelope = {
@@ -29,6 +30,7 @@ type AgentRealtimeEnvelope = {
 }
 
 export function useAgentConversationRealtime() {
+  const t = useI18n()
   const selectedConversationId = useAgentConversationsStore(
     (state) => state.selectedConversationId
   )
@@ -91,7 +93,7 @@ export function useAgentConversationRealtime() {
           const store = useAgentConversationsStore.getState()
           if (eventType === "resyncRequired") {
             void store.resyncRealtimeData(conversationId).catch((error) => {
-              toast.error(error instanceof Error ? error.message : "同步会话数据失败")
+              toast.error(error instanceof Error ? error.message : t("conversation.syncConversationDataFailed"))
             })
             return
           }
@@ -100,7 +102,7 @@ export function useAgentConversationRealtime() {
             const message = normalizeRealtimeMessage<AgentMessage>(payload)
             if (!message) {
               void store.resyncRealtimeData(conversationId).catch((error) => {
-                toast.error(error instanceof Error ? error.message : "同步消息失败")
+                toast.error(error instanceof Error ? error.message : t("conversation.syncMessagesFailed"))
               })
               return
             }
@@ -115,7 +117,7 @@ export function useAgentConversationRealtime() {
               document.visibilityState !== "visible"
 
             if (shouldNotify) {
-              showNotification("新消息", getNotificationBody(message), () => {
+              showNotification(t("conversation.newMessage"), getNotificationBody(message), () => {
                 void store.selectConversation(message.conversationId)
               })
             }
@@ -134,7 +136,7 @@ export function useAgentConversationRealtime() {
             store.applyRealtimeConversationChanged(payload)
             if (shouldReloadConversationListForRealtimePatch(payload)) {
               void store.resyncRealtimeData(conversationId).catch((error) => {
-                toast.error(error instanceof Error ? error.message : "同步会话列表失败")
+                toast.error(error instanceof Error ? error.message : t("conversation.syncConversationListFailed"))
               })
             }
           }
@@ -159,7 +161,7 @@ export function useAgentConversationRealtime() {
         })
       },
       onConnectError: (error) => {
-        toast.error(error instanceof Error ? error.message : "连接实时服务失败")
+        toast.error(error instanceof Error ? error.message : t("conversation.realtimeConnectFailed"))
       },
     })
 
@@ -171,7 +173,7 @@ export function useAgentConversationRealtime() {
       realtime.disconnect()
       subscribedConversationIdRef.current = null
     }
-  }, [setRealtimeStatus])
+  }, [setRealtimeStatus, t])
 
   useEffect(() => {
     const socket = realtimeRef.current?.getSocket()

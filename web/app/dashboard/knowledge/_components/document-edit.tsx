@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Controller, Resolver, useForm } from "react-hook-form"
+import { Controller, type Resolver, useForm } from "react-hook-form"
 import { z } from "zod/v4"
 
 import { ProjectDialog } from "@/components/project-dialog"
@@ -23,6 +23,7 @@ import {
 import {
   KnowledgeDocumentContentType,
 } from "@/lib/generated/enums"
+import { useI18n } from "@/i18n/provider"
 
 type DocumentEditDialogProps = {
   open: boolean
@@ -39,18 +40,21 @@ const emptyForm: EditForm = {
   content: "",
 }
 
-const knowledgeDocumentFormSchema = z.object({
-  title: z.string().trim().min(1, "标题不能为空").max(255, "标题最多255个字符"),
-  contentType: z.string().trim().min(1, "请选择内容类型"),
-  content: z.string().trim().min(1, "内容不能为空"),
-})
+type TFunction = (key: string, values?: Record<string, string | number>) => string
 
-type EditForm = z.infer<typeof knowledgeDocumentFormSchema>
-const editFormResolver = zodResolver(knowledgeDocumentFormSchema as never) as Resolver<
-  z.input<typeof knowledgeDocumentFormSchema>,
-  undefined,
-  z.output<typeof knowledgeDocumentFormSchema>
->
+function createKnowledgeDocumentFormSchema(t: TFunction) {
+  return z.object({
+  title: z.string().trim().min(1, t("knowledge.documentTitleRequired")).max(255, t("knowledge.documentTitleMax")),
+  contentType: z.string().trim().min(1, t("knowledge.contentTypeRequired")),
+  content: z.string().trim().min(1, t("knowledge.contentRequired")),
+  })
+}
+
+type EditForm = {
+  title: string
+  contentType: string
+  content: string
+}
 
 function buildForm(item: KnowledgeDocument | null): EditForm {
   if (!item) {
@@ -112,13 +116,15 @@ function DocumentFormDialogBody({
   onOpenChange,
   onSubmit,
 }: DocumentFormDialogBodyProps) {
+  const t = useI18n()
   const formId = "knowledge-document-edit-form"
   const [loading, setLoading] = useState(false)
-  const form = useForm<
-    z.input<typeof knowledgeDocumentFormSchema>,
-    undefined,
-    z.output<typeof knowledgeDocumentFormSchema>
-  >({
+  const knowledgeDocumentFormSchema = useMemo(() => createKnowledgeDocumentFormSchema(t), [t])
+  const editFormResolver = useMemo(
+    () => zodResolver(knowledgeDocumentFormSchema) as Resolver<EditForm>,
+    [knowledgeDocumentFormSchema],
+  )
+  const form = useForm<EditForm>({
     resolver: editFormResolver,
     defaultValues: emptyForm,
   })
@@ -163,7 +169,7 @@ function DocumentFormDialogBody({
     <ProjectDialog
       open={true}
       onOpenChange={onOpenChange}
-      title={itemId ? "编辑文档" : "新建文档"}
+      title={itemId ? t("knowledge.editDocumentTitle") : t("knowledge.createDocumentTitle")}
       size="xl"
       allowFullscreen
       footer={
@@ -174,26 +180,26 @@ function DocumentFormDialogBody({
             onClick={() => onOpenChange(false)}
             disabled={saving}
           >
-            取消
+            {t("knowledge.cancel")}
           </Button>
           <Button type="submit" form={formId} disabled={saving || loading}>
-            {saving ? "保存中..." : itemId ? "保存" : "创建"}
+            {saving ? t("knowledge.saving") : itemId ? t("knowledge.save") : t("knowledge.create")}
           </Button>
         </>
       }
     >
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="text-muted-foreground">加载中...</div>
+          <div className="text-muted-foreground">{t("knowledge.loading")}</div>
         </div>
       ) : (
         <form id={formId} onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
           <Field data-invalid={!!errors.title}>
-            <FieldLabel htmlFor="doc-title">标题</FieldLabel>
+            <FieldLabel htmlFor="doc-title">{t("knowledge.documentTitle")}</FieldLabel>
             <FieldContent>
               <Input
                 id="doc-title"
-                placeholder="文档标题"
+                placeholder={t("knowledge.documentTitlePlaceholder")}
                 aria-invalid={!!errors.title}
                 {...register("title")}
               />
@@ -202,7 +208,7 @@ function DocumentFormDialogBody({
           </Field>
 
           <Field data-invalid={!!errors.content}>
-            <FieldLabel htmlFor="doc-content">内容</FieldLabel>
+            <FieldLabel htmlFor="doc-content">{t("knowledge.content")}</FieldLabel>
             <FieldContent>
               <Controller
                 control={control}
@@ -223,7 +229,7 @@ function DocumentFormDialogBody({
                         shouldValidate: true,
                       })
                     }}
-                    placeholder="请输入文档内容"
+                    placeholder={t("knowledge.contentPlaceholder")}
                     disabled={saving}
                   />
                 )}

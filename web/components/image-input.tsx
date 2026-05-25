@@ -5,6 +5,7 @@ import { UploadIcon, XIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import { uploadAsset } from "@/lib/api/admin"
+import { useI18n } from "@/i18n/provider"
 import { cn } from "@/lib/utils"
 
 export type ImageInputProps = {
@@ -25,11 +26,13 @@ export function ImageInput({
   accept = "image/*",
   maxSize = 5 * 1024 * 1024,
   prefix,
-  placeholder = "点击上传图片",
+  placeholder,
   className,
 }: ImageInputProps) {
+  const t = useI18n()
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const resolvedPlaceholder = placeholder ?? t("upload.imagePlaceholder")
 
   function handleClick() {
     if (disabled || uploading) {
@@ -50,13 +53,13 @@ export function ImageInput({
     }
 
     if (!file.type.startsWith("image/")) {
-      toast.error("请选择图片文件")
+      toast.error(t("upload.chooseImage"))
       return
     }
 
     if (file.size > maxSize) {
       const maxSizeMB = (maxSize / 1024 / 1024).toFixed(0)
-      toast.error(`图片大小不能超过 ${maxSizeMB}MB`)
+      toast.error(t("upload.imageTooLarge", { maxSize: maxSizeMB }))
       return
     }
 
@@ -64,9 +67,9 @@ export function ImageInput({
     try {
       const result = await uploadAsset(file, prefix)
       onChange?.(result.url)
-      toast.success("图片上传成功")
+      toast.success(t("upload.imageUploaded"))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "上传图片失败")
+      toast.error(error instanceof Error ? error.message : t("upload.imageUploadFailed"))
     } finally {
       setUploading(false)
       if (fileInputRef.current) {
@@ -103,19 +106,19 @@ export function ImageInput({
           }
         }}
         role="button"
-        aria-label={value ? "更换图片" : placeholder}
+        aria-label={value ? t("upload.replaceImage") : resolvedPlaceholder}
       >
         {value ? (
           <>
-            <img src={value} alt="已上传图片" className="size-full object-cover" />
+            <img src={value} alt={t("upload.uploadedImage")} className="size-full object-cover" />
             <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-              <span className="text-sm text-white">更换图片</span>
+              <span className="text-sm text-white">{t("upload.replaceImage")}</span>
             </div>
           </>
         ) : (
           <div className="flex flex-col items-center gap-1 text-muted-foreground">
             <UploadIcon className="size-6" />
-            <span className="text-xs">{uploading ? "上传中..." : placeholder}</span>
+            <span className="text-xs">{uploading ? t("upload.uploading") : resolvedPlaceholder}</span>
           </div>
         )}
         {uploading && (
@@ -129,7 +132,7 @@ export function ImageInput({
           type="button"
           onClick={handleClear}
           className="absolute -right-2 -top-2 flex size-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm transition-colors hover:bg-destructive/80"
-          aria-label="删除图片"
+          aria-label={t("upload.deleteImage")}
         >
           <XIcon className="size-3" />
         </button>

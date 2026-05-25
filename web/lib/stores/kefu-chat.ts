@@ -41,6 +41,7 @@ import {
   readKefuChatRuntimeConfig,
   setKefuChatRuntimeConfig,
 } from "@/lib/sdk/runtime-config"
+import { translateCurrentMessage } from "@/i18n/messages"
 
 type ChatStatus = "connecting" | "connected" | "disconnected"
 
@@ -144,6 +145,10 @@ export type KefuChatStore = {
 
 let bootstrapToken = 0
 
+function t(key: string) {
+  return translateCurrentMessage(key)
+}
+
 export const useKefuChatStore = create<KefuChatStore>((set, get) => {
   const realtime = createRealtimeConnectionManager({
     createSocket: createImRealtimeConnection,
@@ -199,7 +204,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
           document.visibilityState !== "visible"
         ) {
           const state = get()
-          showNotification("新消息", getNotificationBody(message), () => {
+          showNotification(t("kefu.newMessage"), getNotificationBody(message), () => {
             state.setIsOpen(true)
             state.setIsVisible(true)
           })
@@ -231,7 +236,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
   }
 
   return {
-    title: "在线客服",
+    title: t("kefu.title"),
     subtitle: "",
     themeColor: "#2563eb",
     conversation: null,
@@ -288,7 +293,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
           }
 
           set({
-            title: widgetConfig.title || "在线客服",
+            title: widgetConfig.title || t("kefu.title"),
             subtitle: widgetConfig.subtitle || "",
             themeColor: widgetConfig.themeColor || "#2563eb",
           })
@@ -319,7 +324,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
           }
           set({
             status: "disconnected",
-            error: error instanceof Error ? error.message : "初始化失败",
+            error: error instanceof Error ? error.message : t("kefu.initFailed"),
           })
         }
       }
@@ -350,7 +355,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
         })
       } catch (error) {
         set({
-          error: error instanceof Error ? error.message : "加载消息失败",
+          error: error instanceof Error ? error.message : t("kefu.loadMessagesFailed"),
         })
         throw error
       }
@@ -386,7 +391,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
         })
       } catch (error) {
         set({
-          error: error instanceof Error ? error.message : "同步消息失败",
+          error: error instanceof Error ? error.message : t("kefu.syncMessagesFailed"),
         })
       }
     },
@@ -429,7 +434,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
       } catch (error) {
         set({
           messagesLoadingMore: false,
-          error: error instanceof Error ? error.message : "加载历史消息失败",
+          error: error instanceof Error ? error.message : t("kefu.loadHistoryFailed"),
         })
         throw error
       }
@@ -514,7 +519,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
       } catch (error) {
         set({
           sending: false,
-          error: error instanceof Error ? error.message : "发送消息失败",
+          error: error instanceof Error ? error.message : t("kefu.sendMessageFailed"),
         })
         throw error
       }
@@ -535,7 +540,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
         return await uploadImImage(conversationId, file)
       } catch (error) {
         set({
-          error: error instanceof Error ? error.message : "上传图片失败",
+          error: error instanceof Error ? error.message : t("kefu.uploadImageFailed"),
         })
         return null
       } finally {
@@ -580,7 +585,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
       } catch (error) {
         set({
           uploadingAsset: false,
-          error: error instanceof Error ? error.message : "发送附件失败",
+          error: error instanceof Error ? error.message : t("kefu.sendAttachmentFailed"),
         })
         throw error
       }
@@ -609,7 +614,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
       } catch (error) {
         set({
           closingConversation: false,
-          error: error instanceof Error ? error.message : "关闭会话失败",
+          error: error instanceof Error ? error.message : t("kefu.closeConversationFailed"),
         })
         throw error
       }
@@ -629,7 +634,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
       } catch (error) {
         set({
           status: "disconnected",
-          error: error instanceof Error ? error.message : "刷新失败",
+          error: error instanceof Error ? error.message : t("kefu.refreshFailed"),
         })
       }
     },

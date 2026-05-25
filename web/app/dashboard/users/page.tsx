@@ -35,6 +35,8 @@ import {
   type UpdateAdminUserPayload,
 } from "@/lib/api/admin"
 import { Status } from "@/lib/generated/enums"
+import { useAppLocale, useI18n } from "@/i18n/provider"
+import { getRoleDisplayName } from "@/lib/role-i18n"
 import { formatDateTime } from "@/lib/utils"
 import { AssignRolesDrawer } from "./_components/assign-roles"
 import { CreateUserDrawer } from "./_components/create"
@@ -61,6 +63,8 @@ import {
 } from "@/components/ui/table"
 
 export default function DashboardUsersPage() {
+  const t = useI18n()
+  const { locale } = useAppLocale()
   const [keywordInput, setKeywordInput] = useState("")
   const [keyword, setKeyword] = useState("")
   const [page, setPage] = useState(1)
@@ -99,11 +103,11 @@ export default function DashboardUsersPage() {
       })
       setResult(data)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载用户失败")
+      toast.error(error instanceof Error ? error.message : t("user.loadFailed"))
     } finally {
       setLoading(false)
     }
-  }, [keyword, limit, page])
+  }, [keyword, limit, page, t])
 
   useEffect(() => {
     void loadUsers()
@@ -140,7 +144,7 @@ export default function DashboardUsersPage() {
       setAssignRoleIds((userDetail.roles || []).map((role) => role.id))
     } catch (error) {
       setAssigningRolesUser(null)
-      toast.error(error instanceof Error ? error.message : "加载角色分配数据失败")
+      toast.error(error instanceof Error ? error.message : t("user.loadRoleAssignFailed"))
     } finally {
       setAssignRolesLoading(false)
       setActionLoadingId(null)
@@ -188,7 +192,7 @@ export default function DashboardUsersPage() {
     setSavingCreate(true)
     try {
       const result = await createUser(payload)
-      toast.success(`已创建用户 ${result.user.username}`)
+      toast.success(t("user.created", { username: result.user.username }))
       setCreatingOpen(false)
       setInitialPassword({
         username: result.user.username,
@@ -196,7 +200,7 @@ export default function DashboardUsersPage() {
       })
       await loadUsers()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "创建用户失败")
+      toast.error(error instanceof Error ? error.message : t("user.createFailed"))
     } finally {
       setSavingCreate(false)
     }
@@ -221,11 +225,11 @@ export default function DashboardUsersPage() {
     setSavingEdit(true)
     try {
       await updateUser(payload)
-      toast.success(`已更新 ${editingUser?.username || "用户"}`)
+      toast.success(t("user.updated", { username: editingUser?.username || t("user.fallbackUser") }))
       setEditingUser(null)
       await loadUsers()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "更新用户失败")
+      toast.error(error instanceof Error ? error.message : t("user.updateFailed"))
     } finally {
       setSavingEdit(false)
     }
@@ -239,13 +243,13 @@ export default function DashboardUsersPage() {
     setSavingRoles(true)
     try {
       await assignUserRoles(assigningRolesUser.id, roleIds)
-      toast.success(`已更新 ${assigningRolesUser.username} 的角色`)
+      toast.success(t("user.rolesUpdated", { username: assigningRolesUser.username }))
       setAssigningRolesUser(null)
       setAssignRoleOptions([])
       setAssignRoleIds([])
       await loadUsers()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "保存角色分配失败")
+      toast.error(error instanceof Error ? error.message : t("user.saveRolesFailed"))
     } finally {
       setSavingRoles(false)
     }
@@ -275,9 +279,9 @@ export default function DashboardUsersPage() {
     try {
       const result = await resetUserPassword(resettingUser.id)
       setResetPasswordResult(result)
-      toast.success(`已重置 ${resettingUser.username} 的密码`)
+      toast.success(t("user.passwordReset", { username: resettingUser.username }))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "重置密码失败")
+      toast.error(error instanceof Error ? error.message : t("user.resetPasswordFailed"))
     } finally {
       setSavingPassword(false)
     }
@@ -288,10 +292,15 @@ export default function DashboardUsersPage() {
     try {
       const nextStatus = user.status === Status.Ok ? Status.Disabled : Status.Ok
       await updateUserStatus(user.id, nextStatus)
-      toast.success(`${user.username} 已${nextStatus === Status.Ok ? "启用" : "禁用"}`)
+      toast.success(
+        t("user.statusUpdated", {
+          username: user.username,
+          status: nextStatus === Status.Ok ? t("user.enabled") : t("user.disabled"),
+        })
+      )
       await loadUsers()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "更新状态失败")
+      toast.error(error instanceof Error ? error.message : t("user.statusUpdateFailed"))
     } finally {
       setActionLoadingId(null)
     }
@@ -304,7 +313,7 @@ export default function DashboardUsersPage() {
           actions={
             <Button onClick={() => setCreatingOpen(true)} disabled={loading}>
               <PlusIcon />
-              添加用户
+              {t("user.addUser")}
             </Button>
           }
         >
@@ -314,12 +323,12 @@ export default function DashboardUsersPage() {
               value={keywordInput}
               onChange={(event) => setKeywordInput(event.target.value)}
               onKeyDown={handleFilterKeyDown}
-              placeholder="按用户名筛选"
+              placeholder={t("user.filterUsername")}
               className="pl-9"
             />
           </div>
           <Button variant="outline" onClick={applyFilters} disabled={loading}>
-            查询
+            {t("user.query")}
           </Button>
         </DashboardToolbar>
         <DashboardTableShell
@@ -337,12 +346,12 @@ export default function DashboardUsersPage() {
             <Table>
               <TableHeader className="bg-muted/40">
                 <TableRow>
-                  <TableHead>用户</TableHead>
-                  <TableHead>角色</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead>最后登录</TableHead>
-                  <TableHead>联系方式</TableHead>
-                  <TableHead className="w-[92px] text-right">操作</TableHead>
+                  <TableHead>{t("user.columnUser")}</TableHead>
+                  <TableHead>{t("user.columnRoles")}</TableHead>
+                  <TableHead>{t("user.columnStatus")}</TableHead>
+                  <TableHead>{t("user.columnLastLogin")}</TableHead>
+                  <TableHead>{t("user.columnContact")}</TableHead>
+                  <TableHead className="w-[92px] text-right">{t("user.columnActions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -365,21 +374,21 @@ export default function DashboardUsersPage() {
                           item.roles?.map((role) => (
                             <Badge key={role.id} variant="outline">
                               <ShieldIcon className="size-3" />
-                              {role.name}
+                              {getRoleDisplayName(role.code, role.name, locale)}
                             </Badge>
                           ))
                         ) : (
-                          <span className="text-sm text-muted-foreground">未分配</span>
+                          <span className="text-sm text-muted-foreground">{t("user.unassigned")}</span>
                         )}
                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant={item.status === Status.Ok ? "secondary" : "outline"}>
-                        {item.status === Status.Ok ? "启用" : "禁用"}
+                        {item.status === Status.Ok ? t("user.enabled") : t("user.disabled")}
                       </Badge>
                       {item.isSystem ? (
                         <Badge variant="outline" className="ml-2">
-                          系统
+                          {t("user.system")}
                         </Badge>
                       ) : null}
                     </TableCell>
@@ -403,12 +412,12 @@ export default function DashboardUsersPage() {
                           onClick={() => openEditDrawer(item)}
                           disabled={actionLoadingId === item.id}
                         >
-                          编辑
+                          {t("user.edit")}
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger
                             render={<Button variant="outline" size="icon-sm" />}
-                            aria-label={`更多操作 ${item.username}`}
+                            aria-label={t("user.moreActions", { username: item.username })}
                           >
                             <MoreHorizontalIcon />
                           </DropdownMenuTrigger>
@@ -419,15 +428,15 @@ export default function DashboardUsersPage() {
                             >
                               <ShieldIcon />
                               {actionLoadingId === item.id
-                                ? "处理中..."
-                                : "分配角色"}
+                                ? t("user.processing")
+                                : t("user.assignRoles")}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => openResetDrawer(item)}
                               disabled={actionLoadingId === item.id}
                             >
                               <KeyRoundIcon />
-                              重置密码
+                              {t("user.resetPassword")}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleToggleStatus(item)}
@@ -435,10 +444,10 @@ export default function DashboardUsersPage() {
                             >
                               <ShieldIcon />
                               {actionLoadingId === item.id
-                                ? "处理中..."
+                                ? t("user.processing")
                                 : item.status === Status.Ok
-                                  ? "禁用"
-                                  : "启用"}
+                                  ? t("user.disabled")
+                                  : t("user.enabled")}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -450,8 +459,8 @@ export default function DashboardUsersPage() {
                   <DashboardTableStateRow
                     colSpan={6}
                     loading={loading}
-                    loadingText="正在加载用户数据..."
-                    emptyText="没有匹配的用户数据"
+                    loadingText={t("user.loadingRows")}
+                    emptyText={t("user.emptyRows")}
                   />
                 ) : null}
               </TableBody>

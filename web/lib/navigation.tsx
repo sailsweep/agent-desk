@@ -17,25 +17,26 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 
-/** 与后端 internal/pkg/constants/auth.go RoleCodeSuperAdmin 一致 */
+/** Keep in sync with backend internal/pkg/constants/auth.go RoleCodeSuperAdmin. */
 export const DASHBOARD_ROLE_SUPER_ADMIN = "super_admin";
 
 export type DashboardNavMenuItem = {
   title: string;
+  titleKey: string;
   url: string;
   icon: ReactNode;
 };
 
-export type DashboardNavItemConfig = DashboardNavMenuItem & {
+export type DashboardNavItemConfig = Omit<DashboardNavMenuItem, "title"> & {
   /**
-   * 与后端 Permission.Code 一致；缺省表示任意已登录管理员可见
-   * （对应控制台接口尚未 RequirePermission 的模块）
+   * Keep in sync with backend Permission.Code. Missing value means any signed-in
+   * admin can see the module.
    */
   requiredPermission?: string;
 };
 
 export type DashboardNavSectionConfig = {
-  title: string;
+  titleKey: string;
   items: DashboardNavItemConfig[];
 };
 
@@ -56,15 +57,15 @@ function navItemVisible(
 export function filterDashboardNavForSession(
   permissions: readonly string[] | undefined,
   roles: readonly string[] | undefined,
-): { title: string; items: DashboardNavMenuItem[] }[] {
+): { titleKey: string; items: DashboardNavMenuItem[] }[] {
   const superAdmin = roles?.includes(DASHBOARD_ROLE_SUPER_ADMIN) ?? false;
   const permissionSet = new Set(permissions ?? []);
   return dashboardNavSections
     .map((section) => ({
-      title: section.title,
+      titleKey: section.titleKey,
       items: section.items
         .filter((item) => navItemVisible(item, superAdmin, permissionSet))
-        .map(({ title, url, icon }) => ({ title, url, icon })),
+        .map(({ titleKey, url, icon }) => ({ title: titleKey, titleKey, url, icon })),
     }))
     .filter((section) => section.items.length > 0);
 }
@@ -77,54 +78,54 @@ export function filterDashboardSecondaryNavForSession(
   const permissionSet = new Set(permissions ?? []);
   return dashboardSecondaryNav
     .filter((item) => navItemVisible(item, superAdmin, permissionSet))
-    .map(({ title, url, icon }) => ({ title, url, icon }));
+    .map(({ titleKey, url, icon }) => ({ title: titleKey, titleKey, url, icon }));
 }
 
 export const dashboardNavSections: DashboardNavSectionConfig[] = [
   // {
-  //   title: "总览",
+  //   title: "Overview",
   //   items: [
   //     {
-  //       title: "总览",
+  //       title: "Overview",
   //       url: "/",
   //       icon: <LayoutDashboardIcon />,
   //     },
   //   ],
   // },
   {
-    title: "接待中心",
+    titleKey: "nav.receptionCenter",
     items: [
       {
-        title: "总览",
+        titleKey: "nav.overview",
         url: "/dashboard",
         icon: <LayoutDashboardIcon />,
       },
       {
-        title: "会话",
+        titleKey: "nav.conversations",
         url: "/dashboard/conversations",
         icon: <BotMessageSquareIcon />,
         requiredPermission: "conversation.view",
       },
       {
-        title: "工单",
+        titleKey: "nav.tickets",
         url: "/dashboard/tickets",
         icon: <FileTextIcon />,
         requiredPermission: "ticket.view",
       },
       {
-        title: "会话监控",
+        titleKey: "nav.conversationMonitor",
         url: "/dashboard/conversation-monitor",
         icon: <BotMessageSquareIcon />,
         requiredPermission: "conversation.view",
       },
       {
-        title: "客户管理",
+        titleKey: "nav.customers",
         url: "/dashboard/customers",
         icon: <UsersIcon />,
         requiredPermission: "customer.view",
       },
       {
-        title: "公司管理",
+        titleKey: "nav.companies",
         url: "/dashboard/companies",
         icon: <Building2Icon />,
         requiredPermission: "company.view",
@@ -132,34 +133,34 @@ export const dashboardNavSections: DashboardNavSectionConfig[] = [
     ],
   },
   {
-    title: "客服配置",
+    titleKey: "nav.agentConfig",
     items: [
       {
-        title: "分类标签",
+        titleKey: "nav.tags",
         url: "/dashboard/tags",
         icon: <TagsIcon />,
         requiredPermission: "tag.view",
       },
       {
-        title: "快捷回复",
+        titleKey: "nav.quickReplies",
         url: "/dashboard/quick-replies",
         icon: <MessageSquareMoreIcon />,
         requiredPermission: "quickReply.view",
       },
       {
-        title: "客服档案",
+        titleKey: "nav.agents",
         url: "/dashboard/agents",
         icon: <UserCogIcon />,
         requiredPermission: "agent.view",
       },
       {
-        title: "客服组排班",
+        titleKey: "nav.agentTeamSchedules",
         url: "/dashboard/agent-team-schedules",
         icon: <CalendarClockIcon />,
         requiredPermission: "agentTeamSchedule.view",
       },
       {
-        title: "接入渠道",
+        titleKey: "nav.channels",
         url: "/dashboard/channels",
         icon: <GlobeIcon />,
         requiredPermission: "channel.view",
@@ -167,40 +168,40 @@ export const dashboardNavSections: DashboardNavSectionConfig[] = [
     ],
   },
   {
-    title: "AI能力",
+    titleKey: "nav.aiCapabilities",
     items: [
       {
-        title: "知识库",
+        titleKey: "nav.knowledge",
         url: "/dashboard/knowledge",
         icon: <FileTextIcon />,
         requiredPermission: "knowledgeBase.view",
       },
       {
-        title: "模型配置",
+        titleKey: "nav.aiConfigs",
         url: "/dashboard/ai-configs",
         icon: <BrainCircuitIcon />,
         requiredPermission: "aiConfig.view",
       },
       {
-        title: "智能客服",
+        titleKey: "nav.aiAgents",
         url: "/dashboard/ai-agents",
         icon: <MessageSquareMoreIcon />,
         requiredPermission: "aiAgent.view",
       },
       {
-        title: "能力编排",
+        titleKey: "nav.skillDefinition",
         url: "/dashboard/skill-definition",
         icon: <MessageSquareCodeIcon />,
         requiredPermission: "skillDefinition.view",
       },
       {
-        title: "工具调试",
+        titleKey: "nav.mcp",
         url: "/dashboard/mcp",
         icon: <MessageSquareCodeIcon />,
         requiredPermission: "mcp.view",
       },
       {
-        title: "运行日志",
+        titleKey: "nav.agentRunLogs",
         url: "/dashboard/agent-run-logs",
         icon: <ActivitySquareIcon />,
         requiredPermission: "conversation.view",
@@ -208,22 +209,22 @@ export const dashboardNavSections: DashboardNavSectionConfig[] = [
     ],
   },
   {
-    title: "系统管理",
+    titleKey: "nav.system",
     items: [
       {
-        title: "用户管理",
+        titleKey: "nav.users",
         url: "/dashboard/users",
         icon: <UsersIcon />,
         requiredPermission: "user.view",
       },
       {
-        title: "角色管理",
+        titleKey: "nav.roles",
         url: "/dashboard/roles",
         icon: <ShieldCheckIcon />,
         requiredPermission: "role.view",
       },
       {
-        title: "权限管理",
+        titleKey: "nav.permissions",
         url: "/dashboard/permissions",
         icon: <KeyRoundIcon />,
         requiredPermission: "permission.view",
@@ -234,12 +235,12 @@ export const dashboardNavSections: DashboardNavSectionConfig[] = [
 
 export const dashboardSecondaryNav: DashboardNavItemConfig[] = [
   // {
-  //   title: "系统设置",
+  //   title: "System Settings",
   //   url: "/settings",
   //   icon: <Settings2Icon />,
   // },
   // {
-  //   title: "帮助中心",
+  //   title: "Help Center",
   //   url: "/help",
   //   icon: <LifeBuoyIcon />,
   // },
@@ -247,21 +248,25 @@ export const dashboardSecondaryNav: DashboardNavItemConfig[] = [
 
 export const dashboardQuickActions = [
   {
-    title: "查看会话",
+    title: "View Conversations",
     icon: <BotMessageSquareIcon />,
   },
   {
-    title: "邀请成员",
+    title: "Invite Members",
     icon: <UserCogIcon />,
   },
   {
-    title: "接入机器人",
+    title: "Connect Bot",
     icon: <MessageSquareCodeIcon />,
   },
 ] as const;
 
 export function getPageTitle(pathname: string): string {
-  let matchedTitle = "后台总览";
+  return getPageTitleKey(pathname);
+}
+
+export function getPageTitleKey(pathname: string): string {
+  let matchedTitle = "nav.dashboardHome";
   let longestMatch = 0;
 
   for (const section of dashboardNavSections) {
@@ -270,7 +275,7 @@ export function getPageTitle(pathname: string): string {
         const matchLength = item.url.length;
         if (matchLength > longestMatch) {
           longestMatch = matchLength;
-          matchedTitle = item.title;
+          matchedTitle = item.titleKey;
         }
       }
     }
@@ -281,7 +286,7 @@ export function getPageTitle(pathname: string): string {
       const matchLength = item.url.length;
       if (matchLength > longestMatch) {
         longestMatch = matchLength;
-        matchedTitle = item.title;
+        matchedTitle = item.titleKey;
       }
     }
   }

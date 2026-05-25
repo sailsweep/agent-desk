@@ -12,6 +12,7 @@ import (
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
+	"cs-agent/internal/pkg/i18nx"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/web"
@@ -39,7 +40,7 @@ func NotificationAnyList(ctx *gin.Context) {
 
 	list, paging := services.NotificationService.FindPageByCnd(cnd)
 	httpx.WriteJSON(ctx, &web.PageResult{
-		Results: builders.BuildNotificationList(list),
+		Results: builders.BuildNotificationListWithLocale(list, i18nx.Locale(ctx)),
 		Page:    paging,
 	})
 }

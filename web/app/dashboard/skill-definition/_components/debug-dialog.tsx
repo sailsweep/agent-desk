@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useEffect, useMemo, useState } from "react"
-import { Resolver, useForm } from "react-hook-form"
+import { type Resolver, useForm } from "react-hook-form"
 import { z } from "zod/v4"
 import { LoaderCircleIcon, PlayIcon } from "lucide-react"
 import { toast } from "sonner"
@@ -29,6 +29,7 @@ import {
   type SkillDebugRunPayload,
   type SkillDebugRunResult,
 } from "@/lib/api/admin"
+import { useI18n } from "@/i18n/provider"
 
 type DebugDialogProps = {
   open: boolean
@@ -37,19 +38,21 @@ type DebugDialogProps = {
   onOpenChange: (open: boolean) => void
 }
 
-const debugFormSchema = z.object({
-  aiAgentId: z.string().trim().min(1, "请选择 AI Agent"),
+type TFunction = (key: string, values?: Record<string, string | number>) => string
+
+function createDebugFormSchema(t: TFunction) {
+  return z.object({
+  aiAgentId: z.string().trim().min(1, t("skillDefinition.agentRequired")),
   conversationId: z.string().trim(),
-  userMessage: z.string().trim().min(1, "请输入用户消息"),
-})
+  userMessage: z.string().trim().min(1, t("skillDefinition.messageRequired")),
+  })
+}
 
-type DebugForm = z.infer<typeof debugFormSchema>
-
-const debugFormResolver = zodResolver(debugFormSchema as never) as Resolver<
-  z.input<typeof debugFormSchema>,
-  undefined,
-  z.output<typeof debugFormSchema>
->
+type DebugForm = {
+  aiAgentId: string
+  conversationId: string
+  userMessage: string
+}
 
 const emptyForm: DebugForm = {
   aiAgentId: "",
@@ -57,15 +60,17 @@ const emptyForm: DebugForm = {
   userMessage: "",
 }
 
-const quickResumeActions = [
-  { label: "确认", value: "确认" },
-  { label: "取消", value: "取消" },
-]
+function getQuickResumeActions(t: TFunction) {
+  return [
+    { label: t("skillDefinition.confirm"), value: t("skillDefinition.confirm") },
+    { label: t("skillDefinition.reject"), value: t("skillDefinition.reject") },
+  ]
+}
 
 function ResultBlock({
   title,
   value,
-  emptyText = "暂无数据",
+  emptyText,
 }: {
   title: string
   value?: string
@@ -116,6 +121,7 @@ function DebugDialogBody({
   skillName,
   onOpenChange,
 }: DebugDialogProps) {
+  const t = useI18n()
   const formId = `skill-debug-form-${skillCode}`
   const [running, setRunning] = useState(false)
   const [resuming, setResuming] = useState(false)
@@ -123,11 +129,12 @@ function DebugDialogBody({
   const [result, setResult] = useState<SkillDebugRunResult | null>(null)
   const [resumeResult, setResumeResult] = useState<SkillDebugRunResult | null>(null)
   const [resumeMessage, setResumeMessage] = useState("")
-  const form = useForm<
-    z.input<typeof debugFormSchema>,
-    undefined,
-    z.output<typeof debugFormSchema>
-  >({
+  const debugFormSchema = useMemo(() => createDebugFormSchema(t), [t])
+  const debugFormResolver = useMemo(
+    () => zodResolver(debugFormSchema) as Resolver<DebugForm>,
+    [debugFormSchema],
+  )
+  const form = useForm<DebugForm>({
     resolver: debugFormResolver,
     defaultValues: emptyForm,
   })
@@ -142,6 +149,7 @@ function DebugDialogBody({
   } = form
 
   const selectedAgentId = watch("aiAgentId")
+  const quickResumeActions = useMemo(() => getQuickResumeActions(t), [t])
 
   useEffect(() => {
     async function loadAIAgents() {
@@ -205,7 +213,7 @@ function DebugDialogBody({
       setResumeResult(null)
       setResumeMessage("")
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Skill 调试失败")
+      toast.error(error instanceof Error ? error.message : t("skillDefinition.debugFailed"))
       setResult(null)
     } finally {
       setRunning(false)
@@ -218,7 +226,7 @@ function DebugDialogBody({
       return
     }
     if (!nextMessage) {
-      toast.error("请输入恢复消息")
+      toast.error(t("skillDefinition.resumeMessageRequired"))
       return
     }
     const payload: SkillDebugResumePayload = {
@@ -237,7 +245,7 @@ function DebugDialogBody({
       setResumeResult(data)
       setResumeMessage(nextMessage)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "恢复调试失败")
+      toast.error(error instanceof Error ? error.message : t("skillDefinition.resumeFailed"))
       setResumeResult(null)
     } finally {
       setResuming(false)
@@ -248,8 +256,8 @@ function DebugDialogBody({
     <ProjectDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={`调试 Skill · ${skillName || skillCode}`}
-      description="强制指定当前 Skill，直接查看 route、tools、graph、HITL 和回复结果。"
+      title={t("skillDefinition.debugTitle", { name: skillName || skillCode })}
+      description={t("skillDefinition.debugDescription")}
       size="xl"
       allowFullscreen
       footer={
@@ -260,11 +268,11 @@ function DebugDialogBody({
             disabled={running}
             onClick={() => onOpenChange(false)}
           >
-            关闭
+            {t("skillDefinition.close")}
           </Button>
           <Button type="submit" form={formId} disabled={running}>
             {running ? <LoaderCircleIcon className="animate-spin" /> : <PlayIcon />}
-            {running ? "调试中..." : "开始调试"}
+            {running ? t("skillDefinition.debugging") : t("skillDefinition.startDebug")}
           </Button>
         </>
       }
@@ -272,7 +280,7 @@ function DebugDialogBody({
       <div className="space-y-6">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">调试输入</CardTitle>
+              <CardTitle className="text-sm">{t("skillDefinition.debugInput")}</CardTitle>
           </CardHeader>
           <CardContent>
             <form id={formId} onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -283,9 +291,9 @@ function DebugDialogBody({
                     <OptionCombobox
                       value={selectedAgentId}
                       options={aiAgentOptions}
-                      placeholder="选择 AI Agent"
-                      searchPlaceholder="搜索 AI Agent"
-                      emptyText="未找到 AI Agent"
+                      placeholder={t("skillDefinition.selectAgent")}
+                      searchPlaceholder={t("skillDefinition.searchAgent")}
+                      emptyText={t("skillDefinition.emptyAgent")}
                       onChange={(value) =>
                         setValue("aiAgentId", value, { shouldValidate: true })
                       }
@@ -302,7 +310,7 @@ function DebugDialogBody({
                       id="skill-debug-conversation-id"
                       type="number"
                       min={0}
-                      placeholder="可选，填已有会话 ID 以复用上下文"
+                      placeholder={t("skillDefinition.conversationPlaceholder")}
                       aria-invalid={!!errors.conversationId}
                       {...register("conversationId")}
                     />
@@ -318,22 +326,22 @@ function DebugDialogBody({
                   </FieldContent>
                 </Field>
                 <Field>
-                  <FieldLabel>命中 Agent</FieldLabel>
+                  <FieldLabel>{t("skillDefinition.matchedAgent")}</FieldLabel>
                   <FieldContent>
                     <Input
-                      value={selectedAgent?.name || "未选择"}
+                      value={selectedAgent?.name || t("skillDefinition.noAgentSelected")}
                       disabled
                     />
                   </FieldContent>
                 </Field>
               </div>
               <Field data-invalid={!!errors.userMessage}>
-                <FieldLabel htmlFor="skill-debug-user-message">用户消息</FieldLabel>
+                <FieldLabel htmlFor="skill-debug-user-message">{t("skillDefinition.userMessage")}</FieldLabel>
                 <FieldContent>
                   <Textarea
                     id="skill-debug-user-message"
                     rows={5}
-                    placeholder="输入一段用户消息，调试当前 Skill 的路由、工具和回复。"
+                    placeholder={t("skillDefinition.userMessagePlaceholder")}
                     aria-invalid={!!errors.userMessage}
                     {...register("userMessage")}
                   />
@@ -347,7 +355,7 @@ function DebugDialogBody({
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">调试摘要</CardTitle>
+              <CardTitle className="text-sm">{t("skillDefinition.debugSummary")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex flex-wrap gap-2">
@@ -359,38 +367,38 @@ function DebugDialogBody({
                   <Badge variant="secondary">{result.interruptType}</Badge>
                 ) : null}
                 {result?.interrupted ? (
-                  <Badge>已中断</Badge>
+                  <Badge>{t("skillDefinition.interrupted")}</Badge>
                 ) : (
-                  <Badge variant="outline">未中断</Badge>
+                  <Badge variant="outline">{t("skillDefinition.notInterrupted")}</Badge>
                 )}
               </div>
               <div className="rounded-lg bg-muted/50 p-3">
-                <div className="text-xs text-muted-foreground">Skill 名称</div>
+                <div className="text-xs text-muted-foreground">{t("skillDefinition.skillName")}</div>
                 <div className="mt-1 font-medium">{result?.skillName || skillName}</div>
               </div>
               <div className="rounded-lg bg-muted/50 p-3">
                 <div className="text-xs text-muted-foreground">Plan Reason</div>
                 <div className="mt-1 whitespace-pre-wrap break-words">
-                  {result?.planReason || "暂无"}
+                  {result?.planReason || t("skillDefinition.none")}
                 </div>
               </div>
               <div className="rounded-lg bg-muted/50 p-3">
                 <div className="text-xs text-muted-foreground">Reply</div>
                 <div className="mt-1 whitespace-pre-wrap break-words">
-                  {result?.replyText || "暂无"}
+                  {result?.replyText || t("skillDefinition.none")}
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="rounded-lg bg-muted/50 p-3">
                   <div className="text-xs text-muted-foreground">Checkpoint</div>
                   <div className="mt-1 break-all">
-                    {result?.checkPointId || "暂无"}
+                    {result?.checkPointId || t("skillDefinition.none")}
                   </div>
                 </div>
                 <div className="rounded-lg bg-muted/50 p-3">
-                  <div className="text-xs text-muted-foreground">错误信息</div>
+                  <div className="text-xs text-muted-foreground">{t("skillDefinition.errorMessage")}</div>
                   <div className="mt-1 whitespace-pre-wrap break-words">
-                    {result?.errorMessage || "暂无"}
+                    {result?.errorMessage || t("skillDefinition.none")}
                   </div>
                 </div>
               </div>
@@ -399,11 +407,11 @@ function DebugDialogBody({
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">工具视图</CardTitle>
+              <CardTitle className="text-sm">{t("skillDefinition.toolView")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="rounded-lg bg-muted/50 p-3">
-                <div className="text-xs text-muted-foreground">技能工具白名单</div>
+                <div className="text-xs text-muted-foreground">{t("skillDefinition.skillToolWhitelist")}</div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {(result?.toolWhitelist ?? []).length > 0 ? (
                     result?.toolWhitelist.map((toolCode) => (
@@ -412,12 +420,12 @@ function DebugDialogBody({
                       </Badge>
                     ))
                   ) : (
-                    <span className="text-muted-foreground">暂无</span>
+                    <span className="text-muted-foreground">{t("skillDefinition.none")}</span>
                   )}
                 </div>
               </div>
               <div className="rounded-lg bg-muted/50 p-3">
-                <div className="text-xs text-muted-foreground">本轮实际暴露工具</div>
+                <div className="text-xs text-muted-foreground">{t("skillDefinition.exposedTools")}</div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {(result?.exposedToolCodes ?? []).length > 0 ? (
                     result?.exposedToolCodes.map((toolCode) => (
@@ -426,12 +434,12 @@ function DebugDialogBody({
                       </Badge>
                     ))
                   ) : (
-                    <span className="text-muted-foreground">暂无</span>
+                    <span className="text-muted-foreground">{t("skillDefinition.none")}</span>
                   )}
                 </div>
               </div>
               <div className="rounded-lg bg-muted/50 p-3">
-                <div className="text-xs text-muted-foreground">本轮实际调用工具</div>
+                <div className="text-xs text-muted-foreground">{t("skillDefinition.invokedTools")}</div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {(result?.invokedToolCodes ?? []).length > 0 ? (
                     result?.invokedToolCodes.map((toolCode) => (
@@ -440,7 +448,7 @@ function DebugDialogBody({
                       </Badge>
                     ))
                   ) : (
-                    <span className="text-muted-foreground">暂无</span>
+                    <span className="text-muted-foreground">{t("skillDefinition.none")}</span>
                   )}
                 </div>
               </div>
@@ -449,29 +457,29 @@ function DebugDialogBody({
         </div>
 
         <div className="grid grid-cols-1 gap-4">
-          <ResultBlock title="Skill Route Trace" value={result?.skillRouteTrace} />
-          <ResultBlock title="Tool Search Trace" value={result?.toolSearchTrace} />
-          <ResultBlock title="Graph Tool Trace" value={result?.graphToolTrace} />
-          <ResultBlock title="Trace Data" value={result?.traceData} />
+          <ResultBlock title="Skill Route Trace" value={result?.skillRouteTrace} emptyText={t("skillDefinition.emptyData")} />
+          <ResultBlock title="Tool Search Trace" value={result?.toolSearchTrace} emptyText={t("skillDefinition.emptyData")} />
+          <ResultBlock title="Graph Tool Trace" value={result?.graphToolTrace} emptyText={t("skillDefinition.emptyData")} />
+          <ResultBlock title="Trace Data" value={result?.traceData} emptyText={t("skillDefinition.emptyData")} />
         </div>
 
         {result?.interrupted && result.checkPointId ? (
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">恢复调试</CardTitle>
+              <CardTitle className="text-sm">{t("skillDefinition.resumeDebug")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-lg bg-muted/50 p-3 text-sm">
-                <div className="text-xs text-muted-foreground">当前 Checkpoint</div>
+                <div className="text-xs text-muted-foreground">{t("skillDefinition.currentCheckpoint")}</div>
                 <div className="mt-1 break-all">{result.checkPointId}</div>
               </div>
               <Field>
-                <FieldLabel htmlFor="skill-debug-resume-message">恢复消息</FieldLabel>
+                <FieldLabel htmlFor="skill-debug-resume-message">{t("skillDefinition.resumeMessage")}</FieldLabel>
                 <FieldContent>
                   <Textarea
                     id="skill-debug-resume-message"
                     rows={3}
-                    placeholder="输入确认、取消或其他恢复消息"
+                    placeholder={t("skillDefinition.resumePlaceholder")}
                     value={resumeMessage}
                     onChange={(event) => setResumeMessage(event.target.value)}
                   />
@@ -499,7 +507,7 @@ function DebugDialogBody({
                   ) : (
                     <PlayIcon />
                   )}
-                  {resuming ? "恢复中..." : "恢复调试"}
+                  {resuming ? t("skillDefinition.resuming") : t("skillDefinition.resumeDebugAction")}
                 </Button>
               </div>
             </CardContent>
@@ -510,7 +518,7 @@ function DebugDialogBody({
           <div className="space-y-4">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm">恢复结果</CardTitle>
+                <CardTitle className="text-sm">{t("skillDefinition.resumeResult")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <div className="flex flex-wrap gap-2">
@@ -522,34 +530,34 @@ function DebugDialogBody({
                     <Badge variant="secondary">{resumeResult.interruptType}</Badge>
                   ) : null}
                   {resumeResult.interrupted ? (
-                    <Badge>仍在等待确认</Badge>
+                    <Badge>{t("skillDefinition.stillWaiting")}</Badge>
                   ) : (
-                    <Badge variant="outline">已恢复完成</Badge>
+                    <Badge variant="outline">{t("skillDefinition.resumeCompleted")}</Badge>
                   )}
                 </div>
                 <div className="rounded-lg bg-muted/50 p-3">
-                  <div className="text-xs text-muted-foreground">恢复消息</div>
+                  <div className="text-xs text-muted-foreground">{t("skillDefinition.resumeMessage")}</div>
                   <div className="mt-1 whitespace-pre-wrap break-words">
-                    {resumeMessage || "暂无"}
+                    {resumeMessage || t("skillDefinition.none")}
                   </div>
                 </div>
                 <div className="rounded-lg bg-muted/50 p-3">
-                  <div className="text-xs text-muted-foreground">恢复回复</div>
+                  <div className="text-xs text-muted-foreground">{t("skillDefinition.resumeReply")}</div>
                   <div className="mt-1 whitespace-pre-wrap break-words">
-                    {resumeResult.replyText || "暂无"}
+                    {resumeResult.replyText || t("skillDefinition.none")}
                   </div>
                 </div>
                 <div className="rounded-lg bg-muted/50 p-3">
-                  <div className="text-xs text-muted-foreground">恢复 Plan Reason</div>
+                  <div className="text-xs text-muted-foreground">Resume Plan Reason</div>
                   <div className="mt-1 whitespace-pre-wrap break-words">
-                    {resumeResult.planReason || "暂无"}
+                    {resumeResult.planReason || t("skillDefinition.none")}
                   </div>
                 </div>
               </CardContent>
             </Card>
-            <ResultBlock title="恢复 Tool Search Trace" value={resumeResult.toolSearchTrace} />
-            <ResultBlock title="恢复 Graph Tool Trace" value={resumeResult.graphToolTrace} />
-            <ResultBlock title="恢复 Trace Data" value={resumeResult.traceData} />
+            <ResultBlock title="Resume Tool Search Trace" value={resumeResult.toolSearchTrace} emptyText={t("skillDefinition.emptyData")} />
+            <ResultBlock title="Resume Graph Tool Trace" value={resumeResult.graphToolTrace} emptyText={t("skillDefinition.emptyData")} />
+            <ResultBlock title="Resume Trace Data" value={resumeResult.traceData} emptyText={t("skillDefinition.emptyData")} />
           </div>
         ) : null}
       </div>

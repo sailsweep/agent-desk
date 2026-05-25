@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useI18n } from "@/i18n/provider"
 
 type ListPaginationProps = {
   page: number
@@ -30,6 +31,7 @@ export function ListPagination({
   onPageChange,
   onLimitChange,
 }: ListPaginationProps) {
+  const t = useI18n()
   const totalPages = Math.max(1, Math.ceil(total / limit))
   const canGoPreviousPage = page > 1
   const canGoNextPage = page < totalPages
@@ -49,9 +51,9 @@ export function ListPagination({
     <div className="flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-3">
         <span>
-          第 {page} 页 / 共 {totalPages} 页
+          {t("pagination.pageSummary", { page, totalPages })}
         </span>
-        <span>共 {total} 条记录</span>
+        <span>{t("pagination.total", { total })}</span>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Select value={String(limit)} onValueChange={handleLimitChange}>
@@ -61,7 +63,7 @@ export function ListPagination({
           <SelectContent>
             {pageSizeOptions.map((pageSize) => (
               <SelectItem key={pageSize} value={String(pageSize)}>
-                每页 {pageSize} 条
+                {t("pagination.pageSize", { pageSize })}
               </SelectItem>
             ))}
           </SelectContent>
@@ -72,14 +74,14 @@ export function ListPagination({
           disabled={loading || !canGoPreviousPage}
         >
           <ChevronLeftIcon />
-          上一页
+          {t("pagination.previous")}
         </Button>
         <Button
           variant="outline"
           onClick={() => onPageChange(page + 1)}
           disabled={loading || !canGoNextPage}
         >
-          下一页
+          {t("pagination.next")}
           <ChevronRightIcon />
         </Button>
       </div>

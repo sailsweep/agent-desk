@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { BellIcon, CheckCheckIcon, RefreshCwIcon } from "lucide-react"
 import { toast } from "sonner"
@@ -23,14 +23,10 @@ import {
 } from "@/lib/api/notification"
 import type { PageResult } from "@/lib/api/admin"
 import { cn, formatDateTime } from "@/lib/utils"
-
-const readStatusOptions: Array<{ value: NotificationReadStatus; label: string }> = [
-  { value: "all", label: "全部" },
-  { value: "unread", label: "未读" },
-  { value: "read", label: "已读" },
-]
+import { useI18n } from "@/i18n/provider"
 
 export default function DashboardNotificationsPage() {
+  const t = useI18n()
   const router = useRouter()
   const { refreshUnreadCount } = useNotifications()
   const [readStatus, setReadStatus] = useState<NotificationReadStatus>("all")
@@ -42,6 +38,14 @@ export default function DashboardNotificationsPage() {
     results: [],
     page: { page: 1, limit: 20, total: 0 },
   })
+  const readStatusOptions = useMemo<Array<{ value: NotificationReadStatus; label: string }>>(
+    () => [
+      { value: "all", label: t("notification.all") },
+      { value: "unread", label: t("notification.unread") },
+      { value: "read", label: t("notification.read") },
+    ],
+    [t]
+  )
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -53,11 +57,11 @@ export default function DashboardNotificationsPage() {
       })
       setResult(data)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载通知失败")
+      toast.error(error instanceof Error ? error.message : t("notification.loadFailed"))
     } finally {
       setLoading(false)
     }
-  }, [limit, page, readStatus])
+  }, [limit, page, readStatus, t])
 
   useEffect(() => {
     void loadData()
@@ -73,7 +77,7 @@ export default function DashboardNotificationsPage() {
         router.push(item.actionUrl)
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "打开通知失败")
+      toast.error(error instanceof Error ? error.message : t("notification.openFailed"))
     }
   }
 
@@ -83,9 +87,9 @@ export default function DashboardNotificationsPage() {
       await markAllNotificationsRead()
       await refreshUnreadCount()
       await loadData()
-      toast.success("已全部标记为已读")
+      toast.success(t("notification.markAllReadSuccess"))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "全部已读失败")
+      toast.error(error instanceof Error ? error.message : t("notification.markAllReadFailed"))
     } finally {
       setActionLoading(false)
     }
@@ -115,7 +119,7 @@ export default function DashboardNotificationsPage() {
           <>
           <Button variant="outline" onClick={() => void loadData()} disabled={loading}>
             <RefreshCwIcon className={cn(loading && "animate-spin")} />
-            刷新
+            {t("notification.refresh")}
           </Button>
           <Button
             variant="outline"
@@ -123,7 +127,7 @@ export default function DashboardNotificationsPage() {
             disabled={actionLoading || result.page.total === 0}
           >
             <CheckCheckIcon />
-            全部已读
+            {t("notification.markAllRead")}
           </Button>
           </>
         }
@@ -164,8 +168,8 @@ export default function DashboardNotificationsPage() {
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <BellIcon className="size-4 text-muted-foreground" />
-                    <span className="font-medium">{item.title || "通知"}</span>
-                    {unread ? <Badge>未读</Badge> : <Badge variant="outline">已读</Badge>}
+                    <span className="font-medium">{item.title || t("notification.fallbackTitle")}</span>
+                    {unread ? <Badge>{t("notification.unread")}</Badge> : <Badge variant="outline">{t("notification.read")}</Badge>}
                     <span className="ml-auto text-xs text-muted-foreground">
                       {formatDateTime(item.createdAt)}
                     </span>
@@ -179,7 +183,7 @@ export default function DashboardNotificationsPage() {
           </div>
         ) : (
           <div className="flex min-h-48 items-center justify-center text-sm text-muted-foreground">
-            {loading ? "正在加载通知" : "暂无通知"}
+            {loading ? t("notification.loading") : t("notification.empty")}
           </div>
         )}
       </DashboardTableShell>

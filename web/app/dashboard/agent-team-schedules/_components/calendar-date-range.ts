@@ -58,7 +58,7 @@ export function formatDateTimeValue(date: Date) {
 }
 
 export function formatMonthTitle(monthStart: Date) {
-  return `${monthStart.getFullYear()}年${String(monthStart.getMonth() + 1).padStart(2, "0")}月`
+  return `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, "0")}`
 }
 
 function formatDate(date: Date) {

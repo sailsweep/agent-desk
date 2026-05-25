@@ -6,6 +6,7 @@ import (
 	"cs-agent/internal/models"
 	"cs-agent/internal/pkg/dto/response"
 	"cs-agent/internal/pkg/enums"
+	"cs-agent/internal/pkg/i18nx"
 	"cs-agent/internal/pkg/utils"
 	"cs-agent/internal/services"
 
@@ -13,6 +14,10 @@ import (
 )
 
 func BuildConversation(item *models.Conversation) response.ConversationResponse {
+	return BuildConversationWithLocale(item, i18nx.LocaleZhCN)
+}
+
+func BuildConversationWithLocale(item *models.Conversation, locale string) response.ConversationResponse {
 	agentReadState, customerReadState := services.ConversationReadStateService.GetConversationReadStates(item.ID)
 	ret := response.ConversationResponse{
 		ID:                        item.ID,
@@ -28,7 +33,7 @@ func BuildConversation(item *models.Conversation) response.ConversationResponse 
 		LastMessageID:             item.LastMessageID,
 		LastMessageAt:             utils.FormatTime(item.LastMessageAt),
 		LastActiveAt:              utils.FormatTime(item.LastActiveAt),
-		LastMessageSummary:        item.LastMessageSummary,
+		LastMessageSummary:        localizeConversationSummary(locale, item.LastMessageSummary),
 		CustomerUnreadCount:       item.CustomerUnreadCount,
 		AgentUnreadCount:          item.AgentUnreadCount,
 		CustomerLastReadMessageID: readStateMessageID(customerReadState),
@@ -68,6 +73,26 @@ func BuildConversation(item *models.Conversation) response.ConversationResponse 
 	return ret
 }
 
+func localizeConversationSummary(locale string, summary string) string {
+	if i18nx.NormalizeLocale(locale) != i18nx.LocaleEnUS {
+		return summary
+	}
+	switch {
+	case summary == "[图片]":
+		return "[Image]"
+	case strings.HasPrefix(summary, "[图片] "):
+		return "[Image] " + strings.TrimPrefix(summary, "[图片] ")
+	case summary == "[附件]":
+		return "[Attachment]"
+	case strings.HasPrefix(summary, "[附件] "):
+		return "[Attachment] " + strings.TrimPrefix(summary, "[附件] ")
+	case summary == "该消息已撤回":
+		return "This message was recalled."
+	default:
+		return summary
+	}
+}
+
 func BuildParticipantResponses(conversationID int64) []response.ConversationParticipantResponse {
 	list := services.ConversationParticipantService.Find(sqls.NewCnd().Eq("conversation_id", conversationID).Asc("id"))
 	if len(list) == 0 {
@@ -89,6 +114,10 @@ func BuildParticipantResponses(conversationID int64) []response.ConversationPart
 }
 
 func BuildMessages(list []models.Message) []response.MessageResponse {
+	return BuildMessagesWithLocale(list, i18nx.LocaleZhCN)
+}
+
+func BuildMessagesWithLocale(list []models.Message, locale string) []response.MessageResponse {
 	if len(list) == 0 {
 		return nil
 	}
@@ -97,17 +126,25 @@ func BuildMessages(list []models.Message) []response.MessageResponse {
 	agentProfiles := collectAgentProfilesByMessages(list)
 	ret := make([]response.MessageResponse, 0, len(list))
 	for i := range list {
-		ret = append(ret, BuildMessageWithReadStates(&list[i], agentReadState, customerReadState, aiSenderNames, userSenderNames, agentProfiles))
+		ret = append(ret, BuildMessageWithReadStatesAndLocale(&list[i], agentReadState, customerReadState, aiSenderNames, userSenderNames, agentProfiles, locale))
 	}
 	return ret
 }
 
 func BuildMessage(item *models.Message) response.MessageResponse {
+	return BuildMessageWithLocale(item, i18nx.LocaleZhCN)
+}
+
+func BuildMessageWithLocale(item *models.Message, locale string) response.MessageResponse {
 	agentReadState, customerReadState := services.ConversationReadStateService.GetConversationReadStates(item.ConversationID)
-	return BuildMessageWithReadStates(item, agentReadState, customerReadState, nil, nil, nil)
+	return BuildMessageWithReadStatesAndLocale(item, agentReadState, customerReadState, nil, nil, nil, locale)
 }
 
 func BuildMessageWithReadStates(item *models.Message, agentReadState, customerReadState *models.ConversationReadState, aiSenderNames, userSenderNames map[int64]string, agentProfiles map[int64]*models.AgentProfile) response.MessageResponse {
+	return BuildMessageWithReadStatesAndLocale(item, agentReadState, customerReadState, aiSenderNames, userSenderNames, agentProfiles, i18nx.LocaleZhCN)
+}
+
+func BuildMessageWithReadStatesAndLocale(item *models.Message, agentReadState, customerReadState *models.ConversationReadState, aiSenderNames, userSenderNames map[int64]string, agentProfiles map[int64]*models.AgentProfile, locale string) response.MessageResponse {
 	content, payload := utils.BuildRenderableMessage(item)
 	ret := response.MessageResponse{
 		ID:              item.ID,
@@ -116,7 +153,7 @@ func BuildMessageWithReadStates(item *models.Message, agentReadState, customerRe
 		SenderType:      item.SenderType,
 		SenderID:        item.SenderID,
 		MessageType:     item.MessageType,
-		Content:         content,
+		Content:         localizeRenderableMessageContent(locale, content),
 		Payload:         payload,
 		SeqNo:           item.SeqNo,
 		SendStatus:      item.SendStatus,
@@ -167,6 +204,16 @@ func BuildMessageWithReadStates(item *models.Message, agentReadState, customerRe
 		}
 	}
 	return ret
+}
+
+func localizeRenderableMessageContent(locale string, content string) string {
+	if i18nx.NormalizeLocale(locale) != i18nx.LocaleEnUS {
+		return content
+	}
+	if content == "该消息已撤回" {
+		return "This message was recalled."
+	}
+	return content
 }
 
 func collectAgentProfilesByMessages(list []models.Message) map[int64]*models.AgentProfile {

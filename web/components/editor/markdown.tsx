@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea"
 
 import { EditorToolbar } from "./toolbar"
 import type { BaseEditorProps } from "./types"
+import { useI18n } from "@/i18n/provider"
 
 export type MarkdownEditorProps = BaseEditorProps & {
   value: string
@@ -31,6 +32,7 @@ export function MarkdownEditor({
   rows = 16,
   className,
 }: MarkdownEditorProps) {
+  const t = useI18n()
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
   const handleWrapSelection = (prefix: string, suffix = prefix) => {
@@ -79,7 +81,7 @@ export function MarkdownEditor({
     }
     const start = textarea.selectionStart ?? 0
     const end = textarea.selectionEnd ?? 0
-    const selected = value.slice(start, end) || "链接文本"
+    const selected = value.slice(start, end) || t("editor.linkText")
     const markdown = `[${selected}](https://)`
     const next = `${value.slice(0, start)}${markdown}${value.slice(end)}`
     onChange(next)
@@ -93,7 +95,7 @@ export function MarkdownEditor({
   const toolbarActions = [
     {
       key: "heading1",
-      label: "一级标题",
+      label: t("editor.heading1"),
       icon: Heading1Icon,
       disabled,
       onClick: () => handleInsertLinePrefix("# "),
@@ -101,21 +103,21 @@ export function MarkdownEditor({
     { key: "separator-1", type: "separator" as const },
     {
       key: "bold",
-      label: "粗体",
+      label: t("editor.bold"),
       icon: BoldIcon,
       disabled,
       onClick: () => handleWrapSelection("**"),
     },
     {
       key: "italic",
-      label: "斜体",
+      label: t("editor.italic"),
       icon: ItalicIcon,
       disabled,
       onClick: () => handleWrapSelection("*"),
     },
     {
       key: "code",
-      label: "行内代码",
+      label: t("editor.inlineCode"),
       icon: CodeIcon,
       disabled,
       onClick: () => handleWrapSelection("`"),
@@ -123,28 +125,28 @@ export function MarkdownEditor({
     { key: "separator-2", type: "separator" as const },
     {
       key: "bulletList",
-      label: "无序列表",
+      label: t("editor.bulletList"),
       icon: ListIcon,
       disabled,
       onClick: () => handleInsertLinePrefix("- "),
     },
     {
       key: "orderedList",
-      label: "有序列表",
+      label: t("editor.orderedList"),
       icon: ListOrderedIcon,
       disabled,
       onClick: () => handleInsertLinePrefix("1. "),
     },
     {
       key: "blockquote",
-      label: "引用",
+      label: t("editor.quote"),
       icon: QuoteIcon,
       disabled,
       onClick: () => handleInsertLinePrefix("> "),
     },
     {
       key: "link",
-      label: "链接",
+      label: t("editor.link"),
       icon: LinkIcon,
       disabled,
       onClick: handleInsertLink,
@@ -168,4 +170,3 @@ export function MarkdownEditor({
     </div>
   )
 }
-

@@ -7,6 +7,7 @@ import { ImageLightboxProvider } from "@/components/image-lightbox"
 import { ThemeProvider } from "@/components/theme-provider"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Toaster } from "@/components/ui/sonner"
+import { AppI18nProvider } from "@/i18n/provider"
 
 import "@/app/globals.css"
 import "md-editor-rt/lib/style.css"
@@ -32,8 +33,8 @@ try {
 `
 
 export const metadata: Metadata = {
-  title: "AI 客服后台管理系统",
-  description: "AI 客服后台管理系统",
+  title: "AI Customer Service Admin",
+  description: "AI Customer Service Admin",
 }
 
 export default function RootLayout({
@@ -47,18 +48,20 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <script dangerouslySetInnerHTML={{ __html: paletteScript }} />
-        <ThemeProvider>
-          <AuthProvider>
-            <ConfirmProvider>
-              <ImageLightboxProvider>
-                <TooltipProvider>
-                  {children}
-                  <Toaster position="top-center" richColors />
-                </TooltipProvider>
-              </ImageLightboxProvider>
-            </ConfirmProvider>
-          </AuthProvider>
-        </ThemeProvider>
+        <AppI18nProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <ConfirmProvider>
+                <ImageLightboxProvider>
+                  <TooltipProvider>
+                    {children}
+                    <Toaster position="top-center" richColors />
+                  </TooltipProvider>
+                </ImageLightboxProvider>
+              </ConfirmProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </AppI18nProvider>
       </body>
     </html>
   )

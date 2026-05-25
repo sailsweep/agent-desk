@@ -5,6 +5,7 @@ import (
 	"cs-agent/internal/pkg/dto/request"
 	"cs-agent/internal/pkg/enums"
 	"cs-agent/internal/pkg/httpx"
+	"cs-agent/internal/pkg/i18nx"
 	"cs-agent/internal/services"
 	"strconv"
 	"strings"
@@ -51,7 +52,7 @@ func MessageAnyList(ctx *gin.Context) {
 	list, nextCursor, hasMore := services.MessageService.FindByConversationIDCursor(
 		conversationID, cursor, limit, senderType, messageType,
 	)
-	results := builders.BuildMessages(list)
+	results := builders.BuildMessagesWithLocale(list, i18nx.Locale(ctx))
 	httpx.WriteJSON(ctx, httpx.CursorData(results, cast.ToString(nextCursor), hasMore))
 }
 
@@ -77,7 +78,7 @@ func MessagePostSend(ctx *gin.Context) {
 		httpx.WriteJSON(ctx, err)
 		return
 	}
-	httpx.WriteJSON(ctx, builders.BuildMessage(item))
+	httpx.WriteJSON(ctx, builders.BuildMessageWithLocale(item, i18nx.Locale(ctx)))
 }
 
 func MessagePostRead(ctx *gin.Context) {

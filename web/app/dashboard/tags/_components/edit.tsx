@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, Resolver, useForm } from "react-hook-form";
 import { z } from "zod/v4";
 
+import { OptionCombobox } from "@/components/option-combobox";
 import { ProjectDialog } from "@/components/project-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +23,7 @@ import {
   type Tag,
   type TagTree,
 } from "@/lib/api/admin";
+import { useI18n } from "@/i18n/provider";
 
 type TagFormDialogProps = {
   open: boolean;
@@ -37,18 +39,11 @@ const emptyForm: EditForm = {
   remark: "",
 };
 
-const tagFormSchema = z.object({
-  parentId: z.string(),
-  name: z.string().trim().min(1, "标签名称不能为空"),
-  remark: z.string(),
-});
-
-type EditForm = z.infer<typeof tagFormSchema>;
-const editFormResolver = zodResolver(tagFormSchema as never) as Resolver<
-  z.input<typeof tagFormSchema>,
-  undefined,
-  z.output<typeof tagFormSchema>
->;
+type EditForm = {
+  parentId: string;
+  name: string;
+  remark: string;
+};
 
 function buildForm(item: Tag | null): EditForm {
   if (!item) {
@@ -142,16 +137,38 @@ function TagFormDialogBody({
   onOpenChange,
   onSubmit,
 }: TagFormDialogBodyProps) {
+  const t = useI18n();
   const formId = "tag-edit-form";
   const [loading, setLoading] = useState(false);
   const [parentTags, setParentTags] = useState<
     { id: number; name: string; depth: number }[]
   >([]);
-  const form = useForm<
-    z.input<typeof tagFormSchema>,
-    undefined,
-    z.output<typeof tagFormSchema>
-  >({
+
+  const tagFormSchema = useMemo(
+    () =>
+      z.object({
+        parentId: z.string(),
+        name: z.string().trim().min(1, t("tag.nameRequired")),
+        remark: z.string(),
+      }),
+    [t],
+  );
+  const editFormResolver = useMemo(
+    () => zodResolver(tagFormSchema as never) as Resolver<EditForm>,
+    [tagFormSchema],
+  );
+  const parentOptions = useMemo(
+    () => [
+      { value: "0", label: t("tag.rootParent") },
+      ...parentTags.map((tag) => ({
+        value: String(tag.id),
+        label: `${"  ".repeat(tag.depth)}${tag.name}`,
+      })),
+    ],
+    [parentTags, t],
+  );
+
+  const form = useForm<EditForm>({
     resolver: editFormResolver,
     defaultValues: emptyForm,
   });
@@ -205,7 +222,7 @@ function TagFormDialogBody({
     <ProjectDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={itemId ? "编辑标签" : "新建标签"}
+      title={itemId ? t("tag.editTitle") : t("tag.createTitle")}
       size="md"
       allowFullscreen
       footer={
@@ -216,17 +233,17 @@ function TagFormDialogBody({
             onClick={() => onOpenChange(false)}
             disabled={saving}
           >
-            取消
+            {t("tag.cancel")}
           </Button>
           <Button type="submit" form={formId} disabled={saving || loading}>
-            {saving ? "保存中..." : itemId ? "保存" : "创建"}
+            {saving ? t("tag.saving") : itemId ? t("tag.save") : t("tag.create")}
           </Button>
         </>
       }
     >
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="text-muted-foreground">加载中...</div>
+          <div className="text-muted-foreground">{t("tag.loadingDetail")}</div>
         </div>
       ) : (
         <form
@@ -235,37 +252,32 @@ function TagFormDialogBody({
           className="space-y-4"
         >
           <Field data-invalid={!!errors.parentId}>
-            <FieldLabel htmlFor="tag-parent-id">父标签</FieldLabel>
+            <FieldLabel htmlFor="tag-parent-id">{t("tag.parent")}</FieldLabel>
             <FieldContent>
               <Controller
                 control={control}
                 name="parentId"
                 render={({ field }) => (
-                  <select
-                    id="tag-parent-id"
+                  <OptionCombobox
                     value={field.value}
-                    onChange={(e) => field.onChange(e.target.value)}
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                  >
-                    <option value="0">无（顶级标签）</option>
-                    {parentTags.map((tag) => (
-                      <option key={tag.id} value={String(tag.id)}>
-                        {"　".repeat(tag.depth)}
-                        {tag.name}
-                      </option>
-                    ))}
-                  </select>
+                    options={parentOptions}
+                    placeholder={t("tag.rootParent")}
+                    searchPlaceholder={t("tag.searchParent")}
+                    emptyText={t("tag.emptyParent")}
+                    disabled={saving}
+                    onChange={field.onChange}
+                  />
                 )}
               />
               <FieldError errors={[errors.parentId]} />
             </FieldContent>
           </Field>
           <Field data-invalid={!!errors.name}>
-            <FieldLabel htmlFor="tag-name">标签名称</FieldLabel>
+            <FieldLabel htmlFor="tag-name">{t("tag.name")}</FieldLabel>
             <FieldContent>
               <Input
                 id="tag-name"
-                placeholder="请输入标签名称"
+                placeholder={t("tag.namePlaceholder")}
                 aria-invalid={!!errors.name}
                 {...register("name")}
               />
@@ -273,11 +285,11 @@ function TagFormDialogBody({
             </FieldContent>
           </Field>
           <Field data-invalid={!!errors.remark}>
-            <FieldLabel htmlFor="tag-remark">备注</FieldLabel>
+            <FieldLabel htmlFor="tag-remark">{t("tag.remark")}</FieldLabel>
             <FieldContent>
               <Textarea
                 id="tag-remark"
-                placeholder="请输入备注（可选）"
+                placeholder={t("tag.remarkPlaceholder")}
                 rows={3}
                 aria-invalid={!!errors.remark}
                 {...register("remark")}

@@ -28,6 +28,7 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@/components/ui/toggle-group"
+import { useI18n } from "@/i18n/provider"
 
 const chartData = [
   { date: "2026-03-01", activeSessions: 18, indexedDocs: 12 },
@@ -46,28 +47,28 @@ const chartData = [
   { date: "2026-03-14", activeSessions: 49, indexedDocs: 50 },
 ]
 
-const chartConfig = {
-  activeSessions: {
-    label: "活跃会话",
-    color: "var(--primary)",
-  },
-  indexedDocs: {
-    label: "知识文档",
-    color: "var(--chart-2)",
-  },
-} satisfies ChartConfig
-
 export function ChartAreaInteractive() {
+  const t = useI18n()
   const [timeRange, setTimeRange] = React.useState("14d")
 
   const filteredData = chartData.slice(timeRange === "7d" ? -7 : -14)
+  const chartConfig = {
+    activeSessions: {
+      label: t("scaffold.activeSessions"),
+      color: "var(--primary)",
+    },
+    indexedDocs: {
+      label: t("scaffold.indexedDocs"),
+      color: "var(--chart-2)",
+    },
+  } satisfies ChartConfig
 
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>近期开发活跃度</CardTitle>
+        <CardTitle>{t("scaffold.recentActivity")}</CardTitle>
         <CardDescription>
-          以演示数据展示会话增长与知识库准备进度
+          {t("scaffold.activityDescription")}
         </CardDescription>
         <CardAction>
           <ToggleGroup
@@ -79,8 +80,8 @@ export function ChartAreaInteractive() {
             variant="outline"
             className="hidden *:data-[slot=toggle-group-item]:px-4! @[767px]/card:flex"
           >
-            <ToggleGroupItem value="14d">近 14 天</ToggleGroupItem>
-            <ToggleGroupItem value="7d">近 7 天</ToggleGroupItem>
+            <ToggleGroupItem value="14d">{t("scaffold.last14Days")}</ToggleGroupItem>
+            <ToggleGroupItem value="7d">{t("scaffold.last7Days")}</ToggleGroupItem>
           </ToggleGroup>
           <Select
             value={timeRange}
@@ -93,16 +94,16 @@ export function ChartAreaInteractive() {
             <SelectTrigger
               className="flex w-32 @[767px]/card:hidden"
               size="sm"
-              aria-label="选择时间范围"
+              aria-label={t("scaffold.selectTimeRange")}
             >
-              <SelectValue placeholder="近 14 天" />
+              <SelectValue placeholder={t("scaffold.last14Days")} />
             </SelectTrigger>
             <SelectContent className="rounded-xl">
               <SelectItem value="14d" className="rounded-lg">
-                近 14 天
+                {t("scaffold.last14Days")}
               </SelectItem>
               <SelectItem value="7d" className="rounded-lg">
-                近 7 天
+                {t("scaffold.last7Days")}
               </SelectItem>
             </SelectContent>
           </Select>

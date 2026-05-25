@@ -7,6 +7,7 @@ import (
 	"cs-agent/internal/pkg/dto/response"
 	"cs-agent/internal/pkg/enums"
 	"cs-agent/internal/pkg/httpx"
+	"cs-agent/internal/pkg/i18nx"
 	"cs-agent/internal/services"
 	"strconv"
 	"strings"
@@ -65,7 +66,7 @@ func ConversationAnyList(ctx *gin.Context) {
 	list, paging := services.ConversationService.FindPageByCnd(cnd)
 	results := make([]response.ConversationResponse, 0, len(list))
 	for _, item := range list {
-		results = append(results, builders.BuildConversation(&item))
+		results = append(results, builders.BuildConversationWithLocale(&item, i18nx.Locale(ctx)))
 	}
 	httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
 }
@@ -94,7 +95,7 @@ func ConversationAnyConversations(ctx *gin.Context) {
 
 	results := make([]response.ConversationResponse, 0, len(list))
 	for _, item := range list {
-		results = append(results, builders.BuildConversation(&item))
+		results = append(results, builders.BuildConversationWithLocale(&item, i18nx.Locale(ctx)))
 	}
 	httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
 }
@@ -116,7 +117,7 @@ func ConversationGetBy(ctx *gin.Context) {
 	}
 
 	detail := response.ConversationDetailResponse{
-		ConversationResponse: builders.BuildConversation(item),
+		ConversationResponse: builders.BuildConversationWithLocale(item, i18nx.Locale(ctx)),
 		Participants:         builders.BuildParticipantResponses(id),
 	}
 	httpx.WriteJSON(ctx, detail)
@@ -143,7 +144,7 @@ func ConversationAnyMessage_list(ctx *gin.Context) {
 	list, nextCursor, hasMore := services.MessageService.FindByConversationIDCursor(
 		conversationID, cursor, limit, senderType, messageType,
 	)
-	results := builders.BuildMessages(list)
+	results := builders.BuildMessagesWithLocale(list, i18nx.Locale(ctx))
 
 	httpx.WriteJSON(ctx, httpx.CursorData(results, cast.ToString(nextCursor), hasMore))
 }
@@ -259,7 +260,7 @@ func ConversationPostSend_message(ctx *gin.Context) {
 		httpx.WriteJSON(ctx, err)
 		return
 	}
-	httpx.WriteJSON(ctx, builders.BuildMessage(item))
+	httpx.WriteJSON(ctx, builders.BuildMessageWithLocale(item, i18nx.Locale(ctx)))
 }
 
 func ConversationPostRecall_message(ctx *gin.Context) {
@@ -279,7 +280,7 @@ func ConversationPostRecall_message(ctx *gin.Context) {
 		httpx.WriteJSON(ctx, err)
 		return
 	}
-	httpx.WriteJSON(ctx, builders.BuildMessage(item))
+	httpx.WriteJSON(ctx, builders.BuildMessageWithLocale(item, i18nx.Locale(ctx)))
 }
 
 func ConversationPostRead(ctx *gin.Context) {

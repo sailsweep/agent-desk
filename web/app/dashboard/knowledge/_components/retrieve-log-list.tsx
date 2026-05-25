@@ -10,13 +10,18 @@ import {
   type PageResult,
 } from "@/lib/api/admin"
 import {
-  KnowledgeAnswerStatusLabels,
-  KnowledgeChunkProviderLabels,
-  KnowledgeRetrieveChannelLabels,
-  KnowledgeRetrieveSceneLabels,
+  KnowledgeAnswerStatus,
+  KnowledgeRetrieveChannel,
+  KnowledgeRetrieveScene,
 } from "@/lib/generated/enums"
-import { getEnumOptions } from "@/lib/enums"
+import {
+  getKnowledgeAnswerStatusLabel,
+  getKnowledgeChunkProviderLabel,
+  getKnowledgeRetrieveChannelLabel,
+  getKnowledgeRetrieveSceneLabel,
+} from "@/lib/knowledge-i18n"
 import { formatDateTime } from "@/lib/utils"
+import { useI18n } from "@/i18n/provider"
 import { ListPagination } from "@/components/list-pagination"
 import { OptionCombobox } from "@/components/option-combobox"
 import { Badge } from "@/components/ui/badge"
@@ -36,43 +41,70 @@ type RetrieveLogListProps = {
   knowledgeBaseId: number | null
 }
 
-const channelOptions = [
-  { value: "all", label: "全部渠道" },
-  ...getEnumOptions(KnowledgeRetrieveChannelLabels).map((item) => ({
-    value: String(item.value),
-    label: item.label,
-  })),
-]
+type TFunction = (key: string, values?: Record<string, string | number>) => string
 
-const sceneOptions = [
-  { value: "all", label: "全部场景" },
-  ...getEnumOptions(KnowledgeRetrieveSceneLabels).map((item) => ({
-    value: String(item.value),
-    label: item.label,
-  })),
-]
+function getChannelOptions(t: TFunction) {
+  return [
+    { value: "all", label: t("knowledge.allChannels") },
+    { value: KnowledgeRetrieveChannel.IM, label: t("knowledge.channelIM") },
+    { value: KnowledgeRetrieveChannel.AgentAssist, label: t("knowledge.channelAgentAssist") },
+    { value: KnowledgeRetrieveChannel.API, label: t("knowledge.channelAPI") },
+    { value: KnowledgeRetrieveChannel.Debug, label: t("knowledge.channelDebug") },
+  ]
+}
 
-const answerStatusOptions = [
-  { value: "all", label: "全部回答状态" },
-  ...getEnumOptions(KnowledgeAnswerStatusLabels).map((item) => ({
-    value: String(item.value),
-    label: item.label,
-  })),
-]
+function getSceneOptions(t: TFunction) {
+  return [
+    { value: "all", label: t("knowledge.allScenes") },
+    { value: KnowledgeRetrieveScene.FirstResponse, label: t("knowledge.sceneFirstResponse") },
+    { value: KnowledgeRetrieveScene.Assist, label: t("knowledge.sceneAssist") },
+    { value: KnowledgeRetrieveScene.QA, label: t("knowledge.sceneQA") },
+  ]
+}
 
-const providerOptions = [
-  { value: "all", label: "全部切分策略" },
-  ...getEnumOptions(KnowledgeChunkProviderLabels).map((item) => ({
-    value: String(item.value),
-    label: item.label,
-  })),
-]
+function getAnswerStatusOptions(t: TFunction) {
+  return [
+    { value: "all", label: t("knowledge.allAnswerStatus") },
+    { value: String(KnowledgeAnswerStatus.Normal), label: t("knowledge.answerNormal") },
+    { value: String(KnowledgeAnswerStatus.NoAnswer), label: t("knowledge.answerNoAnswer") },
+    { value: String(KnowledgeAnswerStatus.Fallback), label: t("knowledge.answerFallback") },
+    { value: String(KnowledgeAnswerStatus.Blocked), label: t("knowledge.answerBlocked") },
+  ]
+}
 
-const rerankOptions = [
-  { value: "all", label: "全部 Rerank" },
-  { value: "1", label: "已启用 Rerank" },
-  { value: "0", label: "未启用 Rerank" },
-]
+function getProviderOptions(t: TFunction) {
+  return [
+    { value: "all", label: t("knowledge.allChunkProviders") },
+    { value: "fixed", label: t("knowledge.chunkFixed") },
+    { value: "structured", label: t("knowledge.chunkStructured") },
+    { value: "faq", label: t("knowledge.chunkFAQ") },
+    { value: "semantic", label: t("knowledge.chunkSemantic") },
+  ]
+}
+
+function getRerankOptions(t: TFunction) {
+  return [
+    { value: "all", label: t("knowledge.allRerank") },
+    { value: "1", label: t("knowledge.rerankEnabled") },
+    { value: "0", label: t("knowledge.rerankDisabled") },
+  ]
+}
+
+function channelLabel(value: string, fallback: string, t: TFunction) {
+  return getKnowledgeRetrieveChannelLabel(value, fallback, t)
+}
+
+function sceneLabel(value: string, fallback: string, t: TFunction) {
+  return getKnowledgeRetrieveSceneLabel(value, fallback, t)
+}
+
+function answerStatusLabel(value: number, fallback: string, t: TFunction) {
+  return getKnowledgeAnswerStatusLabel(value, fallback, t)
+}
+
+function providerLabel(value: string, t: TFunction) {
+  return getKnowledgeChunkProviderLabel(value, t)
+}
 
 function getAnswerStatusVariant(status: number): "default" | "secondary" | "outline" | "destructive" {
   switch (status) {
@@ -92,6 +124,7 @@ function getAnswerStatusVariant(status: number): "default" | "secondary" | "outl
 export function RetrieveLogList({
   knowledgeBaseId,
 }: RetrieveLogListProps) {
+  const t = useI18n()
   const [questionInput, setQuestionInput] = useState("")
   const [question, setQuestion] = useState("")
   const [channel, setChannel] = useState("all")
@@ -108,6 +141,11 @@ export function RetrieveLogList({
     results: [],
     page: { page: 1, limit: 20, total: 0 },
   })
+  const channelOptions = useMemo(() => getChannelOptions(t), [t])
+  const sceneOptions = useMemo(() => getSceneOptions(t), [t])
+  const answerStatusOptions = useMemo(() => getAnswerStatusOptions(t), [t])
+  const providerOptions = useMemo(() => getProviderOptions(t), [t])
+  const rerankOptions = useMemo(() => getRerankOptions(t), [t])
 
   const loadData = useCallback(async () => {
     if (!knowledgeBaseId) {
@@ -131,11 +169,11 @@ export function RetrieveLogList({
       })
       setResult(data)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载检索日志失败")
+      toast.error(error instanceof Error ? error.message : t("knowledge.loadRetrieveLogsFailed"))
     } finally {
       setLoading(false)
     }
-  }, [answerStatus, channel, chunkProvider, knowledgeBaseId, limit, page, question, rerankEnabled, scene])
+  }, [answerStatus, channel, chunkProvider, knowledgeBaseId, limit, page, question, rerankEnabled, scene, t])
 
   useEffect(() => {
     void loadData()
@@ -149,13 +187,13 @@ export function RetrieveLogList({
 
   const emptyStateText = useMemo(() => {
     if (!knowledgeBaseId) {
-      return "请选择一个知识库查看检索日志"
+      return t("knowledge.selectBaseForLogs")
     }
     if (loading) {
-      return "正在加载检索日志..."
+      return t("knowledge.loadingRetrieveLogs")
     }
-    return "当前知识库还没有检索日志"
-  }, [knowledgeBaseId, loading])
+    return t("knowledge.emptyRetrieveLogs")
+  }, [knowledgeBaseId, loading, t])
 
   function applyFilters() {
     setQuestion(questionInput)
@@ -194,16 +232,16 @@ export function RetrieveLogList({
                 value={questionInput}
                 onChange={(event) => setQuestionInput(event.target.value)}
                 onKeyDown={handleQuestionKeyDown}
-                placeholder="按问题关键字筛选"
+                placeholder={t("knowledge.filterQuestion")}
                 className="pl-9"
               />
             </div>
-            <OptionCombobox value={channel} options={channelOptions} placeholder="选择渠道" onChange={setChannel} />
-            <OptionCombobox value={scene} options={sceneOptions} placeholder="选择场景" onChange={setScene} />
-            <OptionCombobox value={answerStatus} options={answerStatusOptions} placeholder="回答状态" onChange={setAnswerStatus} />
-            <OptionCombobox value={chunkProvider} options={providerOptions} placeholder="切分策略" onChange={setChunkProvider} />
+            <OptionCombobox value={channel} options={channelOptions} placeholder={t("knowledge.selectChannel")} onChange={setChannel} />
+            <OptionCombobox value={scene} options={sceneOptions} placeholder={t("knowledge.selectScene")} onChange={setScene} />
+            <OptionCombobox value={answerStatus} options={answerStatusOptions} placeholder={t("knowledge.answerStatus")} onChange={setAnswerStatus} />
+            <OptionCombobox value={chunkProvider} options={providerOptions} placeholder={t("knowledge.chunkStrategy")} onChange={setChunkProvider} />
             <OptionCombobox value={rerankEnabled} options={rerankOptions} placeholder="Rerank" onChange={setRerankEnabled} />
-            <Button onClick={applyFilters}>筛选</Button>
+            <Button onClick={applyFilters}>{t("knowledge.filter")}</Button>
           </div>
         </div>
 
@@ -212,15 +250,15 @@ export function RetrieveLogList({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-42">时间</TableHead>
-                  <TableHead>问题</TableHead>
-                  <TableHead className="w-28">回答状态</TableHead>
-                  <TableHead className="w-24 text-right">命中数</TableHead>
+                  <TableHead className="w-42">{t("knowledge.time")}</TableHead>
+                  <TableHead>{t("knowledge.question")}</TableHead>
+                  <TableHead className="w-28">{t("knowledge.answerStatus")}</TableHead>
+                  <TableHead className="w-24 text-right">{t("knowledge.hitCount")}</TableHead>
                   <TableHead className="w-24 text-right">TopScore</TableHead>
                   <TableHead className="w-28">Provider</TableHead>
                   <TableHead className="w-24">Rerank</TableHead>
-                  <TableHead className="w-24 text-right">引用</TableHead>
-                  <TableHead className="w-28 text-right">耗时</TableHead>
+                  <TableHead className="w-24 text-right">{t("knowledge.citations")}</TableHead>
+                  <TableHead className="w-28 text-right">{t("knowledge.duration")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -242,21 +280,21 @@ export function RetrieveLogList({
                         <div className="space-y-1">
                           <div className="line-clamp-2 font-medium">{item.question || "-"}</div>
                           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                            <span>{item.channelName}</span>
-                            <span>{item.sceneName}</span>
+                            <span>{channelLabel(item.channel, item.channelName, t)}</span>
+                            <span>{sceneLabel(item.scene, item.sceneName, t)}</span>
                             {item.knowledgeBaseName ? <span>{item.knowledgeBaseName}</span> : null}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant={getAnswerStatusVariant(item.answerStatus)}>
-                          {item.answerStatusName}
+                          {answerStatusLabel(item.answerStatus, item.answerStatusName, t)}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">{item.hitCount}</TableCell>
                       <TableCell className="text-right font-mono text-xs">{item.topScore.toFixed(4)}</TableCell>
-                      <TableCell>{item.chunkProvider || "-"}</TableCell>
-                      <TableCell>{item.rerankEnabled ? `是 (${item.rerankLimit})` : "否"}</TableCell>
+                      <TableCell>{item.chunkProvider ? providerLabel(item.chunkProvider, t) : "-"}</TableCell>
+                      <TableCell>{item.rerankEnabled ? `${t("knowledge.yes")} (${item.rerankLimit})` : t("knowledge.no")}</TableCell>
                       <TableCell className="text-right">{item.citationCount}</TableCell>
                       <TableCell className="text-right">{item.latencyMs} ms</TableCell>
                     </TableRow>

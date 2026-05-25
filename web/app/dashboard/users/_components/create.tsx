@@ -11,7 +11,9 @@ import {
   type AdminRole,
   type CreateAdminUserPayload,
 } from "@/lib/api/admin"
+import { useAppLocale, useI18n } from "@/i18n/provider"
 import { Status } from "@/lib/generated/enums"
+import { getRoleDisplayName } from "@/lib/role-i18n"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -39,36 +41,15 @@ type CreateUserDrawerProps = {
   onSubmit: (payload: CreateAdminUserPayload) => Promise<void>
 }
 
-const createFormSchema = z.object({
-  username: z.string().trim().min(1, "用户名不能为空"),
-  nickname: z.string().trim(),
-  avatar: z
-    .string()
-    .trim()
-    .refine(
-      (value) => value.length === 0 || /^https?:\/\/\S+$/i.test(value),
-      "头像地址必须是 http 或 https 链接"
-    ),
-  mobile: z
-    .string()
-    .trim()
-    .refine(
-      (value) => value.length === 0 || /^[0-9+\-\s]{6,20}$/.test(value),
-      "手机号格式不正确"
-    ),
-  email: z
-    .string()
-    .trim()
-    .refine(
-      (value) =>
-        value.length === 0 || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
-      "邮箱格式不正确"
-    ),
-  remark: z.string().trim(),
-  roleIds: z.array(z.number().int().positive()),
-})
-
-type CreateForm = z.infer<typeof createFormSchema>
+type CreateForm = {
+  username: string
+  nickname: string
+  avatar: string
+  mobile: string
+  email: string
+  remark: string
+  roleIds: number[]
+}
 
 const emptyForm: CreateForm = {
   username: "",
@@ -79,12 +60,6 @@ const emptyForm: CreateForm = {
   remark: "",
   roleIds: [],
 }
-
-const createFormResolver = zodResolver(createFormSchema as never) as Resolver<
-  z.input<typeof createFormSchema>,
-  undefined,
-  z.output<typeof createFormSchema>
->
 
 function toNullableString(value: string) {
   const output = value.trim()
@@ -134,14 +109,48 @@ function CreateUserDrawerBody({
   onOpenChange,
   onSubmit,
 }: CreateUserDrawerBodyProps) {
+  const t = useI18n()
+  const { locale } = useAppLocale()
   const [rolesLoading, setRolesLoading] = useState(true)
   const [roles, setRoles] = useState<AdminRole[]>([])
   const [roleKeyword, setRoleKeyword] = useState("")
-  const form = useForm<
-    z.input<typeof createFormSchema>,
-    undefined,
-    z.output<typeof createFormSchema>
-  >({
+  const createFormSchema = useMemo(
+    () =>
+      z.object({
+        username: z.string().trim().min(1, t("user.usernameRequired")),
+        nickname: z.string().trim(),
+        avatar: z
+          .string()
+          .trim()
+          .refine(
+            (value) => value.length === 0 || /^https?:\/\/\S+$/i.test(value),
+            t("user.avatarInvalid")
+          ),
+        mobile: z
+          .string()
+          .trim()
+          .refine(
+            (value) => value.length === 0 || /^[0-9+\-\s]{6,20}$/.test(value),
+            t("user.mobileInvalid")
+          ),
+        email: z
+          .string()
+          .trim()
+          .refine(
+            (value) =>
+              value.length === 0 || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
+            t("user.emailInvalid")
+          ),
+        remark: z.string().trim(),
+        roleIds: z.array(z.number().int().positive()),
+      }),
+    [t]
+  )
+  const createFormResolver = useMemo(
+    () => zodResolver(createFormSchema as never) as Resolver<CreateForm>,
+    [createFormSchema]
+  )
+  const form = useForm<CreateForm>({
     resolver: createFormResolver,
     defaultValues: emptyForm,
   })
@@ -174,9 +183,11 @@ function CreateUserDrawerBody({
       return roles
     }
     return roles.filter((role) =>
-      `${role.name} ${role.code}`.toLowerCase().includes(q)
+      `${role.name} ${getRoleDisplayName(role.code, role.name, locale)} ${role.code}`
+        .toLowerCase()
+        .includes(q)
     )
-  }, [roleKeyword, roles])
+  }, [locale, roleKeyword, roles])
 
   async function onFormSubmit(values: CreateForm) {
     await onSubmit(buildPayload(values))
@@ -187,9 +198,9 @@ function CreateUserDrawerBody({
   return (
     <DrawerContent className="min-w-2xl">
       <DrawerHeader>
-        <DrawerTitle>添加用户</DrawerTitle>
+        <DrawerTitle>{t("user.createTitle")}</DrawerTitle>
         <DrawerDescription>
-          提交后由系统生成初始密码，并仅展示一次，请妥善保存。
+          {t("user.createDescription")}
         </DrawerDescription>
       </DrawerHeader>
       <form
@@ -198,11 +209,11 @@ function CreateUserDrawerBody({
       >
         <div className="space-y-4 overflow-y-auto px-4 pb-4">
           <Field data-invalid={!!errors.username}>
-            <FieldLabel htmlFor="create-username">用户名</FieldLabel>
+            <FieldLabel htmlFor="create-username">{t("user.username")}</FieldLabel>
             <FieldContent>
               <Input
                 id="create-username"
-                placeholder="登录名，必填"
+                placeholder={t("user.usernamePlaceholder")}
                 autoComplete="off"
                 aria-invalid={!!errors.username}
                 {...register("username")}
@@ -211,11 +222,11 @@ function CreateUserDrawerBody({
             </FieldContent>
           </Field>
           <Field data-invalid={!!errors.nickname}>
-            <FieldLabel htmlFor="create-nickname">昵称</FieldLabel>
+            <FieldLabel htmlFor="create-nickname">{t("user.nickname")}</FieldLabel>
             <FieldContent>
               <Input
                 id="create-nickname"
-                placeholder="可选，默认同用户名"
+                placeholder={t("user.nicknameCreatePlaceholder")}
                 aria-invalid={!!errors.nickname}
                 {...register("nickname")}
               />
@@ -223,11 +234,11 @@ function CreateUserDrawerBody({
             </FieldContent>
           </Field>
           <Field data-invalid={!!errors.avatar}>
-            <FieldLabel htmlFor="create-avatar">头像地址</FieldLabel>
+            <FieldLabel htmlFor="create-avatar">{t("user.avatar")}</FieldLabel>
             <FieldContent>
               <Input
                 id="create-avatar"
-                placeholder="可选，http(s) 链接"
+                placeholder={t("user.avatarCreatePlaceholder")}
                 aria-invalid={!!errors.avatar}
                 {...register("avatar")}
               />
@@ -235,11 +246,11 @@ function CreateUserDrawerBody({
             </FieldContent>
           </Field>
           <Field data-invalid={!!errors.mobile}>
-            <FieldLabel htmlFor="create-mobile">手机号</FieldLabel>
+            <FieldLabel htmlFor="create-mobile">{t("user.mobile")}</FieldLabel>
             <FieldContent>
               <Input
                 id="create-mobile"
-                placeholder="可选"
+                placeholder={t("user.optional")}
                 aria-invalid={!!errors.mobile}
                 {...register("mobile")}
               />
@@ -247,11 +258,11 @@ function CreateUserDrawerBody({
             </FieldContent>
           </Field>
           <Field data-invalid={!!errors.email}>
-            <FieldLabel htmlFor="create-email">邮箱</FieldLabel>
+            <FieldLabel htmlFor="create-email">{t("user.email")}</FieldLabel>
             <FieldContent>
               <Input
                 id="create-email"
-                placeholder="可选"
+                placeholder={t("user.optional")}
                 aria-invalid={!!errors.email}
                 {...register("email")}
               />
@@ -259,11 +270,11 @@ function CreateUserDrawerBody({
             </FieldContent>
           </Field>
           <Field data-invalid={!!errors.remark}>
-            <FieldLabel htmlFor="create-remark">备注</FieldLabel>
+            <FieldLabel htmlFor="create-remark">{t("user.remark")}</FieldLabel>
             <FieldContent>
               <Input
                 id="create-remark"
-                placeholder="可选"
+                placeholder={t("user.optional")}
                 aria-invalid={!!errors.remark}
                 {...register("remark")}
               />
@@ -272,14 +283,14 @@ function CreateUserDrawerBody({
           </Field>
 
           <Field data-invalid={!!errors.roleIds}>
-            <FieldLabel>角色（可选）</FieldLabel>
+            <FieldLabel>{t("user.rolesOptional")}</FieldLabel>
             <FieldContent>
               <div className="relative">
                 <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={roleKeyword}
                   onChange={(event) => setRoleKeyword(event.target.value)}
-                  placeholder="搜索角色"
+                  placeholder={t("user.searchRoles")}
                   className="pl-9"
                   disabled={rolesLoading}
                 />
@@ -294,7 +305,7 @@ function CreateUserDrawerBody({
                     <div className="mt-2 max-h-[240px] space-y-1 overflow-y-auto rounded-lg border p-2">
                       {rolesLoading ? (
                         <div className="py-6 text-center text-sm text-muted-foreground">
-                          正在加载角色...
+                          {t("user.loadingRoles")}
                         </div>
                       ) : filteredRoles.length > 0 ? (
                         filteredRoles.map((role) => {
@@ -332,10 +343,12 @@ function CreateUserDrawerBody({
                                 ) : (
                                   <ShieldAlertIcon className="size-3.5 shrink-0 text-muted-foreground" />
                                 )}
-                                <span className="truncate">{role.name}</span>
+                                <span className="truncate">
+                                  {getRoleDisplayName(role.code, role.name, locale)}
+                                </span>
                                 {role.status !== Status.Ok ? (
                                   <Badge variant="outline" className="text-xs">
-                                    已禁用
+                                    {t("user.disabledBadge")}
                                   </Badge>
                                 ) : null}
                               </span>
@@ -344,7 +357,7 @@ function CreateUserDrawerBody({
                         })
                       ) : (
                         <div className="py-6 text-center text-sm text-muted-foreground">
-                          暂无角色
+                          {t("user.emptyRoles")}
                         </div>
                       )}
                     </div>
@@ -357,7 +370,7 @@ function CreateUserDrawerBody({
         </div>
         <DrawerFooter className="border-t">
           <Button type="submit" disabled={saving || rolesLoading}>
-            {saving ? "创建中..." : "创建用户"}
+            {saving ? t("user.creating") : t("user.createUser")}
           </Button>
           <Button
             type="button"
@@ -365,7 +378,7 @@ function CreateUserDrawerBody({
             onClick={() => onOpenChange(false)}
             disabled={saving}
           >
-            取消
+            {t("user.cancel")}
           </Button>
         </DrawerFooter>
       </form>

@@ -14,6 +14,7 @@ import {
   type ContentValue,
   type UploadImageHandler,
 } from "./types"
+import { useI18n } from "@/i18n/provider"
 
 type ContentEditorProps = {
   value: ContentValue
@@ -55,6 +56,7 @@ export function ContentEditor({
   height,
   allowedModes = CONTENT_MODE_OPTIONS,
 }: ContentEditorProps) {
+  const t = useI18n()
   const editorHeight = normalizeHeight(height)
   const [fullscreen, setFullscreen] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -105,7 +107,7 @@ export function ContentEditor({
       }
 
       const confirmed = window.confirm(
-        `切换到 ${getModeLabel(nextMode)} 模式会尝试自动转换内容，复杂格式可能有损。是否继续？`
+        t("editor.modeSwitchConfirm", { mode: getModeLabel(nextMode) })
       )
       if (!confirmed) {
         return
@@ -116,7 +118,7 @@ export function ContentEditor({
         raw: convertContent(activeMode, value.raw),
       })
     },
-    [activeMode, disabled, normalizedAllowedModes, onChange, value.raw]
+    [activeMode, disabled, normalizedAllowedModes, onChange, t, value.raw]
   )
 
   useEffect(() => {

@@ -26,6 +26,7 @@ import {
   type AgentConversationTag,
 } from "@/lib/api/agent"
 import { type TagTree } from "@/lib/api/admin"
+import { useI18n } from "@/i18n/provider"
 import { cn } from "@/lib/utils"
 
 type TagNode = TagTree & {
@@ -73,6 +74,7 @@ export function ConversationTagPicker({
   loading = false,
   onTagsChange,
 }: ConversationTagPickerProps) {
+  const t = useI18n()
   const [pendingTagId, setPendingTagId] = useState<number | null>(null)
 
   const flattenedTags = useMemo(() => flattenTagTree(availableTags), [availableTags])
@@ -106,9 +108,9 @@ export function ConversationTagPicker({
         })
       }
       onTagsChange(nextTags)
-      toast.success(exists ? "已移除会话标签" : "已添加会话标签")
+      toast.success(exists ? t("conversation.tagRemoved") : t("conversation.tagAdded"))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "更新会话标签失败")
+      toast.error(error instanceof Error ? error.message : t("conversation.tagUpdateFailed"))
     } finally {
       setPendingTagId(null)
     }
@@ -123,12 +125,12 @@ export function ConversationTagPicker({
             variant="ghost"
             size="sm"
             className="h-7 shrink-0 gap-1 px-2 text-xs"
-            aria-label="编辑会话标签"
+            aria-label={t("conversation.editTags")}
           />
         }
       >
         <TagIcon className="size-3.5 text-muted-foreground" />
-        编辑
+        {t("conversation.edit")}
       </PopoverTrigger>
       <PopoverContent
         align="end"
@@ -136,14 +138,14 @@ export function ConversationTagPicker({
         onClick={(event) => event.stopPropagation()}
       >
         <Command>
-          <CommandInput placeholder="搜索标签" />
+          <CommandInput placeholder={t("conversation.searchTags")} />
           <CommandList>
-            {loading ? <CommandEmpty>加载标签中...</CommandEmpty> : null}
+            {loading ? <CommandEmpty>{t("conversation.loadingTags")}</CommandEmpty> : null}
             {!loading && flattenedTags.length === 0 ? (
-              <CommandEmpty>暂无可用标签</CommandEmpty>
+              <CommandEmpty>{t("conversation.emptyTags")}</CommandEmpty>
             ) : null}
             {!loading ? (
-              <CommandGroup heading="标签">
+              <CommandGroup heading={t("conversation.tagGroup")}>
                 {flattenedTags.map((tag) => {
                   const checked = selectedTagIds.has(tag.id)
                   const pending = pendingTagId === tag.id

@@ -1,15 +1,20 @@
+"use client"
+
 import { DashboardPlaceholder } from "@/components/dashboard-placeholder"
+import { useI18n } from "@/i18n/provider"
 
 export default function DashboardSettingsPage() {
+  const t = useI18n()
+
   return (
     <DashboardPlaceholder
       eyebrow="Settings"
-      title="系统设置骨架"
-      description="系统设置页将管理认证参数、上传配置、基础信息与运行策略。"
+      title={t("settings.title")}
+      description={t("settings.description")}
       nextSteps={[
-        "补充系统配置读取与保存接口。",
-        "按安全、存储、登录策略拆分设置区块。",
-        "增加敏感配置的脱敏显示和二次确认。",
+        t("settings.step1"),
+        t("settings.step2"),
+        t("settings.step3"),
       ]}
     />
   )

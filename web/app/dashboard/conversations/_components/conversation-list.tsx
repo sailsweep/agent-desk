@@ -4,13 +4,10 @@ import { UserIcon } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { getEnumLabel } from "@/lib/enums";
-import {
-    IMConversationStatus,
-    IMConversationStatusLabels,
-} from "@/lib/generated/enums";
+import { IMConversationStatus } from "@/lib/generated/enums";
 import { useAgentConversationsStore } from "@/lib/stores/agent-conversations";
 import { formatDateTime } from "@/lib/utils";
+import { useI18n } from "@/i18n/provider";
 
 function getStatusVariant(status: number) {
   switch (status) {
@@ -32,6 +29,7 @@ type ConversationListProps = {
 }
 
 export function ConversationList({ onAfterSelect }: ConversationListProps) {
+  const t = useI18n()
   const conversations = useAgentConversationsStore((state) => state.conversations)
   const loading = useAgentConversationsStore((state) => state.conversationsLoading)
   const selectedId = useAgentConversationsStore((state) => state.selectedConversationId)
@@ -41,7 +39,7 @@ export function ConversationList({ onAfterSelect }: ConversationListProps) {
     <ScrollArea className="overflow-auto">
       {loading ? (
         <div className="p-6 text-center text-sm text-muted-foreground">
-          加载中...
+          {t("conversation.loading")}
         </div>
       ) : conversations.length > 0 ? (
         conversations.map((conversation) => {
@@ -72,7 +70,10 @@ export function ConversationList({ onAfterSelect }: ConversationListProps) {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       <span className="min-w-0 flex-1 truncate font-medium text-sm leading-4">
-                        {conversation.customerName || `客户 #${conversation.customerId || conversation.id}`}
+                        {conversation.customerName ||
+                          t("conversation.customerFallback", {
+                            id: conversation.customerId || conversation.id,
+                          })}
                       </span>
                       {conversation.agentUnreadCount > 0 ? (
                         <div className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
@@ -85,12 +86,12 @@ export function ConversationList({ onAfterSelect }: ConversationListProps) {
                     <div className="mt-0.5 text-[11px] text-muted-foreground">
                       {conversation.lastMessageAt
                         ? formatDateTime(conversation.lastMessageAt)
-                        : "暂无时间"}
+                        : t("conversation.noTime")}
                     </div>
                   </div>
                 </div>
                 <div className="mt-0.5 truncate text-xs leading-4 text-muted-foreground">
-                  {conversation.lastMessageSummary || "暂无最新消息"}
+                  {conversation.lastMessageSummary || t("conversation.noLatestMessage")}
                 </div>
                 <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
                   <span
@@ -98,12 +99,14 @@ export function ConversationList({ onAfterSelect }: ConversationListProps) {
                       conversation.status
                     )}`}
                   >
-                    {getEnumLabel(IMConversationStatusLabels, conversation.status)}
+                    {getConversationStatusLabel(conversation.status, t)}
                   </span>
                   {conversation.status === IMConversationStatus.Pending &&
                   conversation.currentTeamName ? (
                     <span className="rounded-md bg-muted px-1.5 py-0.5">
-                      值班组：{conversation.currentTeamName}
+                      {t("conversation.teamOnDuty", {
+                        name: conversation.currentTeamName,
+                      })}
                     </span>
                   ) : null}
                 </div>
@@ -113,9 +116,27 @@ export function ConversationList({ onAfterSelect }: ConversationListProps) {
         })
       ) : (
         <div className="p-6 text-center text-sm text-muted-foreground">
-          暂无会话
+          {t("conversation.empty")}
         </div>
       )}
     </ScrollArea>
   )
+}
+
+function getConversationStatusLabel(
+  status: number,
+  t: (key: string, values?: Record<string, string | number>) => string
+) {
+  switch (status) {
+    case IMConversationStatus.AIServing:
+      return t("conversation.filterAiServing")
+    case IMConversationStatus.Pending:
+      return t("conversation.filterPending")
+    case IMConversationStatus.Active:
+      return t("conversation.filterActive")
+    case IMConversationStatus.Closed:
+      return t("conversation.filterClosed")
+    default:
+      return "-"
+  }
 }

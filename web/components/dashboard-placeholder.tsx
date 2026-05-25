@@ -1,3 +1,5 @@
+"use client"
+
 import { ArrowUpRightIcon, Clock3Icon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -8,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { useI18n } from "@/i18n/provider"
 
 type DashboardPlaceholderProps = {
   eyebrow: string
@@ -22,6 +25,8 @@ export function DashboardPlaceholder({
   description,
   nextSteps,
 }: DashboardPlaceholderProps) {
+  const t = useI18n()
+
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 pt-4 lg:p-6 lg:pt-6">
       <Card className="border-dashed">
@@ -36,7 +41,7 @@ export function DashboardPlaceholder({
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
           <div className="rounded-2xl border bg-muted/40 p-5">
-            <p className="text-sm font-medium">建议下一步</p>
+            <p className="text-sm font-medium">{t("placeholder.nextSteps")}</p>
             <div className="mt-4 grid gap-3">
               {nextSteps.map((item) => (
                 <div
@@ -51,13 +56,13 @@ export function DashboardPlaceholder({
           </div>
           <div className="flex flex-col justify-between rounded-2xl border bg-background p-5">
             <div>
-              <p className="text-sm font-medium">状态</p>
+              <p className="text-sm font-medium">{t("placeholder.status")}</p>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                当前模块已完成页面骨架，可直接接入真实 API、表单弹窗与列表查询。
+                {t("placeholder.statusDescription")}
               </p>
             </div>
             <Button variant="outline" className="mt-6 justify-between">
-              进入下一阶段开发
+              {t("placeholder.nextPhase")}
               <ArrowUpRightIcon />
             </Button>
           </div>

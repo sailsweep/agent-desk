@@ -5,6 +5,7 @@ import { ArrowRightIcon, ShieldAlertIcon } from "lucide-react"
 
 import type { DashboardAlert } from "@/lib/api/dashboard"
 import { Badge } from "@/components/ui/badge"
+import { useI18n } from "@/i18n/provider"
 import {
   Card,
   CardContent,
@@ -28,19 +29,21 @@ function getAlertBadgeVariant(level: DashboardAlert["level"]) {
 }
 
 export function AlertList({ alerts }: AlertListProps) {
+  const t = useI18n()
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>风险提醒</CardTitle>
-        <CardDescription>优先处理会直接影响接待效率和 AI 稳定性的项目</CardDescription>
+        <CardTitle>{t("dashboardHome.riskAlerts")}</CardTitle>
+        <CardDescription>{t("dashboardHome.riskAlertsDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {alerts.length === 0 ? (
           <div className="rounded-2xl border border-dashed px-4 py-10 text-center">
             <ShieldAlertIcon className="mx-auto mb-3 size-8 text-muted-foreground" />
-            <div className="text-sm font-medium">当前没有需要优先处理的风险项</div>
+            <div className="text-sm font-medium">{t("dashboardHome.noRiskTitle")}</div>
             <div className="mt-1 text-sm text-muted-foreground">
-              首页将持续监控会话堆积、客服排班与 AI 配置异常
+              {t("dashboardHome.noRiskDescription")}
             </div>
           </div>
         ) : (

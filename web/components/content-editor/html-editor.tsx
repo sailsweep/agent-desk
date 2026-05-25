@@ -37,6 +37,7 @@ import {
 import { EditorModeSwitch } from "./editor-mode-switch"
 import { EditorToolbar } from "./toolbar"
 import type { ContentMode, EditorToolbarAction, UploadImageHandler } from "./types"
+import { useI18n } from "@/i18n/provider"
 
 export type HtmlEditorRef = {
   focus: () => void
@@ -73,6 +74,7 @@ export const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(
     },
     ref
   ) {
+    const t = useI18n()
     const imageInputRef = useRef<HTMLInputElement>(null)
     const [previewOnly, setPreviewOnly] = useState(false)
     const proseClassName =
@@ -143,7 +145,7 @@ export const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(
         return
       }
       const previousUrl = editor.getAttributes("link").href as string | undefined
-      const url = window.prompt("输入链接地址", previousUrl || "https://")
+      const url = window.prompt(t("editor.promptLinkUrl"), previousUrl || "https://")
       if (url === null) {
         return
       }
@@ -190,7 +192,7 @@ export const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(
       },
       {
         key: "bold",
-        label: "粗体",
+        label: t("editor.bold"),
         icon: BoldIcon,
         disabled,
         pressed: !!editor?.isActive("bold"),
@@ -198,7 +200,7 @@ export const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(
       },
       {
         key: "underline",
-        label: "下划线",
+        label: t("editor.underline"),
         icon: UnderlineIcon,
         disabled,
         pressed: !!editor?.isActive("underline"),
@@ -206,7 +208,7 @@ export const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(
       },
       {
         key: "italic",
-        label: "斜体",
+        label: t("editor.italic"),
         icon: ItalicIcon,
         disabled,
         pressed: !!editor?.isActive("italic"),
@@ -214,7 +216,7 @@ export const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(
       },
       {
         key: "strike",
-        label: "删除线",
+        label: t("editor.strike"),
         icon: StrikethroughIcon,
         disabled,
         pressed: !!editor?.isActive("strike"),
@@ -223,7 +225,7 @@ export const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(
       { key: "separator-1", type: "separator" },
       {
         key: "h1",
-        label: "一级标题",
+        label: t("editor.heading1"),
         icon: Heading1Icon,
         disabled,
         pressed: !!editor?.isActive("heading", { level: 1 }),
@@ -231,7 +233,7 @@ export const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(
       },
       {
         key: "h2",
-        label: "二级标题",
+        label: t("editor.heading2"),
         icon: Heading2Icon,
         disabled,
         pressed: !!editor?.isActive("heading", { level: 2 }),
@@ -239,7 +241,7 @@ export const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(
       },
       {
         key: "quote",
-        label: "引用",
+        label: t("editor.quote"),
         icon: QuoteIcon,
         disabled,
         pressed: !!editor?.isActive("blockquote"),
@@ -247,7 +249,7 @@ export const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(
       },
       {
         key: "bullet-list",
-        label: "无序列表",
+        label: t("editor.bulletList"),
         icon: ListIcon,
         disabled,
         pressed: !!editor?.isActive("bulletList"),
@@ -255,7 +257,7 @@ export const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(
       },
       {
         key: "ordered-list",
-        label: "有序列表",
+        label: t("editor.orderedList"),
         icon: ListOrderedIcon,
         disabled,
         pressed: !!editor?.isActive("orderedList"),
@@ -264,7 +266,7 @@ export const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(
       { key: "separator-2", type: "separator" },
       {
         key: "code",
-        label: "行内代码",
+        label: t("editor.inlineCode"),
         icon: Code2Icon,
         disabled,
         pressed: !!editor?.isActive("code"),
@@ -272,7 +274,7 @@ export const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(
       },
       {
         key: "code-block",
-        label: "代码块",
+        label: t("editor.codeBlock"),
         icon: Code2Icon,
         disabled,
         pressed: !!editor?.isActive("codeBlock"),
@@ -281,7 +283,7 @@ export const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(
       { key: "separator-3", type: "separator" },
       {
         key: "link",
-        label: "链接",
+        label: t("editor.link"),
         icon: LinkIcon,
         disabled,
         pressed: !!editor?.isActive("link"),
@@ -289,7 +291,7 @@ export const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(
       },
       {
         key: "image",
-        label: "图片",
+        label: t("editor.image"),
         icon: ImageIcon,
         disabled: disabled || !onUploadImage,
         onClick: () => imageInputRef.current?.click(),
@@ -297,14 +299,14 @@ export const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(
       { key: "separator-4", type: "separator" },
       {
         key: "undo-tail",
-        label: "撤销",
+        label: t("editor.undo"),
         icon: RotateCcwIcon,
         disabled: disabled || !editor?.can().undo(),
         onClick: () => editor?.chain().focus().undo().run(),
       },
       {
         key: "redo-tail",
-        label: "重做",
+        label: t("editor.redo"),
         icon: RedoIcon,
         disabled: disabled || !editor?.can().redo(),
         onClick: () => editor?.chain().focus().redo().run(),
@@ -312,7 +314,7 @@ export const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(
       { key: "separator-fullscreen", type: "separator" },
       {
         key: "fullscreen",
-        label: fullscreen ? "退出全屏" : "全屏",
+        label: fullscreen ? t("editor.exitFullscreen") : t("editor.fullscreen"),
         icon: fullscreen ? Minimize2Icon : Maximize2Icon,
         disabled,
         pressed: fullscreen,
@@ -321,7 +323,7 @@ export const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(
       { key: "separator-preview", type: "separator" },
       {
         key: "preview-only",
-        label: "仅预览",
+        label: t("editor.previewOnly"),
         icon: EyeIcon,
         disabled,
         pressed: previewOnly,

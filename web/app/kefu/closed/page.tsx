@@ -1,6 +1,12 @@
+"use client"
+
 import { CheckCircle2Icon } from "lucide-react"
 
+import { useI18n } from "@/i18n/provider"
+
 export default function Page() {
+  const t = useI18n()
+
   return (
     <main className="flex min-h-svh items-center justify-center bg-muted px-6 text-foreground">
       <section className="grid max-w-sm justify-items-center gap-4 text-center">
@@ -8,9 +14,9 @@ export default function Page() {
           <CheckCircle2Icon className="size-7" />
         </div>
         <div className="grid gap-2">
-          <h1 className="text-lg font-semibold text-foreground">会话已结束</h1>
+          <h1 className="text-lg font-semibold text-foreground">{t("kefu.closedTitle")}</h1>
           <p className="text-sm leading-6 text-muted-foreground">
-            当前客服会话已关闭，感谢您的使用。
+            {t("kefu.closedDescription")}
           </p>
         </div>
       </section>

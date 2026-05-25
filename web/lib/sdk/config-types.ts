@@ -3,11 +3,11 @@ export type CSAgentConfig = {
   baseUrl?: string
   apiBaseUrl?: string
   widgetBaseUrl?: string
-  /** 外部访客稳定标识；未传时使用浏览器本地访客 ID */
+  /** Stable external visitor ID. Uses the browser-local visitor ID when omitted. */
   externalId?: string
-  /** 访客展示名，仅用于首次换取客服会话 token */
+  /** Visitor display name, only used when first exchanging for a chat token. */
   externalName?: string
-  /** 打开客服前按需获取业务系统签发的前台用户 JWT */
+  /** Gets the user JWT issued by the host system before opening support. */
   getUserToken?: () => string | Promise<string>
   title?: string
   subtitle?: string
@@ -17,7 +17,7 @@ export type CSAgentConfig = {
 }
 
 export type KefuChatRuntimeConfig = Omit<CSAgentConfig, "getUserToken"> & {
-  /** 仅用于 /kefu/chat 运行时换取客服会话 token，不属于 CSAgentConfig 接入参数 */
+  /** Used only by /kefu/chat to exchange for a chat token; not part of CSAgentConfig. */
   userToken?: string
 }
 

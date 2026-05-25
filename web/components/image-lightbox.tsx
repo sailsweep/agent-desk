@@ -35,6 +35,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { translateCurrentMessage } from "@/i18n/messages";
+import { useI18n } from "@/i18n/provider";
 
 type ImageLightboxItem = {
   src: string;
@@ -53,12 +55,12 @@ const ImageLightboxContext = createContext<ImageLightboxContextValue | null>(
 export function useImageLightbox(): ImageLightboxContextValue {
   const ctx = useContext(ImageLightboxContext);
   if (!ctx) {
-    throw new Error("useImageLightbox 必须在 ImageLightboxProvider 内使用");
+    throw new Error(translateCurrentMessage("lightbox.providerError"));
   }
   return ctx;
 }
 
-/** 未包裹 Provider 时返回 null，便于渐进接入 */
+/** Returns null when no provider is mounted, which keeps adoption incremental. */
 export function useImageLightboxOptional(): ImageLightboxContextValue | null {
   return useContext(ImageLightboxContext);
 }
@@ -100,6 +102,7 @@ function LightboxImageBody({
   pinchRef: React.RefObject<ReactZoomPanPinchContentRef | null>;
   rotationDeg: number;
 }) {
+  const t = useI18n();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const showOpenTab = canOpenInNewTab(src);
@@ -122,7 +125,7 @@ function LightboxImageBody({
       ) : null}
       {error ? (
         <div className="flex min-h-[min(50vh,320px)] flex-col items-center justify-center gap-4 px-6 py-12 text-center text-sm text-white/90">
-          <p>图片加载失败</p>
+          <p>{t("lightbox.loadFailed")}</p>
           {showOpenTab ? (
             <a
               href={src}
@@ -130,7 +133,7 @@ function LightboxImageBody({
               rel="noopener noreferrer"
               className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
             >
-              在新标签页打开
+              {t("lightbox.openInNewTab")}
             </a>
           ) : null}
         </div>
@@ -152,10 +155,10 @@ function LightboxImageBody({
             wrapperClass="!h-full !w-full !max-h-full !max-w-full"
             contentClass="!flex !h-full !min-h-0 !w-full !min-w-0 !items-center !justify-center !p-4 sm:!p-6"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element -- 外链与任意尺寸大图预览 */}
+            {/* eslint-disable-next-line @next/next/no-img-element -- External URLs and arbitrary image sizes need native preview. */}
             <img
               src={src}
-              alt={alt || "预览图片"}
+              alt={alt || t("lightbox.previewImage")}
               draggable={false}
               style={{ transform: `rotate(${rotationDeg}deg)` }}
               className={cn(
@@ -181,7 +184,7 @@ function LightboxImageBody({
   );
 }
 
-/** 按 src 作为 key 挂载，切换图片时旋转角自动回到 0 */
+/** Mounted by src key so rotation resets when switching images. */
 function ImageLightboxDialogContent({
   src,
   alt,
@@ -189,10 +192,11 @@ function ImageLightboxDialogContent({
   src: string;
   alt?: string;
 }) {
+  const t = useI18n();
   const pinchRef = useRef<ReactZoomPanPinchContentRef | null>(null);
   const [rotationDeg, setRotationDeg] = useState(0);
   const showOpenTab = canOpenInNewTab(src);
-  const titleText = alt?.trim() || "图片预览";
+  const titleText = alt?.trim() || t("lightbox.imagePreview");
 
   const rotateLeft = useCallback(() => {
     setRotationDeg((d) => (d - 90 + 360) % 360);
@@ -222,7 +226,7 @@ function ImageLightboxDialogContent({
               variant="ghost"
               size="icon-sm"
               className="text-white hover:bg-white/10"
-              aria-label="放大"
+              aria-label={t("lightbox.zoomIn")}
               onClick={() => pinchRef.current?.zoomIn(0.25)}
             >
               <ZoomInIcon className="size-4" />
@@ -232,7 +236,7 @@ function ImageLightboxDialogContent({
               variant="ghost"
               size="icon-sm"
               className="text-white hover:bg-white/10"
-              aria-label="缩小"
+              aria-label={t("lightbox.zoomOut")}
               onClick={() => pinchRef.current?.zoomOut(0.25)}
             >
               <ZoomOutIcon className="size-4" />
@@ -242,7 +246,7 @@ function ImageLightboxDialogContent({
               variant="ghost"
               size="icon-sm"
               className="text-white hover:bg-white/10"
-              aria-label="向左旋转"
+              aria-label={t("lightbox.rotateLeft")}
               onClick={rotateLeft}
             >
               <RotateCcwIcon className="size-4" />
@@ -252,7 +256,7 @@ function ImageLightboxDialogContent({
               variant="ghost"
               size="icon-sm"
               className="text-white hover:bg-white/10"
-              aria-label="向右旋转"
+              aria-label={t("lightbox.rotateRight")}
               onClick={rotateRight}
             >
               <RotateCwIcon className="size-4" />
@@ -262,7 +266,7 @@ function ImageLightboxDialogContent({
               variant="ghost"
               size="icon-sm"
               className="text-white hover:bg-white/10"
-              aria-label="重置缩放、位置与旋转"
+              aria-label={t("lightbox.reset")}
               onClick={() => {
                 setRotationDeg(0);
                 pinchRef.current?.resetTransform(200);
@@ -276,7 +280,7 @@ function ImageLightboxDialogContent({
                 variant="ghost"
                 size="icon-sm"
                 className="text-white hover:bg-white/10"
-                aria-label="在新标签页打开"
+                aria-label={t("lightbox.openInNewTab")}
                 onClick={() => {
                   window.open(src, "_blank", "noopener,noreferrer");
                 }}
@@ -291,12 +295,12 @@ function ImageLightboxDialogContent({
                   variant="ghost"
                   size="icon-sm"
                   className="text-white hover:bg-white/10"
-                  aria-label="关闭"
+                  aria-label={t("lightbox.close")}
                 />
               }
             >
               <XIcon className="size-4" />
-              <span className="sr-only">关闭</span>
+              <span className="sr-only">{t("lightbox.close")}</span>
             </DialogClose>
           </div>
         </div>
@@ -309,7 +313,7 @@ function ImageLightboxDialogContent({
           />
         </div>
         <p className="sr-only">
-          使用滚轮或双指缩放，按住拖拽可平移图片；工具栏可向左或向右旋转。
+          {t("lightbox.help")}
         </p>
       </DialogPrimitive.Popup>
     </DialogPortal>

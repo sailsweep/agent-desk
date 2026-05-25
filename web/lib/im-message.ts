@@ -1,5 +1,7 @@
 import MarkdownIt from "markdown-it"
 
+import { translateCurrentMessage } from "@/i18n/messages"
+
 export type MessageAssetPayload = {
   assetId: string
   filename?: string
@@ -13,6 +15,10 @@ const messageMarkdown = new MarkdownIt({
   linkify: true,
   breaks: true,
 })
+
+function t(key: string) {
+  return translateCurrentMessage(key)
+}
 
 export function parseMessageAssetPayload(payload?: string): MessageAssetPayload | null {
   if (!payload?.trim()) {
@@ -45,12 +51,12 @@ export function renderIMMessageHTML(message: {
         asset.filename || "image"
       )}"></p>`
     }
-    return "<p>[图片]</p>"
+    return `<p>${escapeHTML(t("kefu.imageSummary"))}</p>`
   }
 
   if (message.messageType === "attachment") {
     if (asset?.url) {
-      const title = escapeHTML(asset.filename || message.content || "附件")
+      const title = escapeHTML(asset.filename || message.content || t("kefu.attachmentSummary"))
       const meta = formatFileSize(asset.fileSize ?? 0)
       const metaHTML = meta ? `<div class="im-attachment-meta">${escapeHTML(meta)}</div>` : ""
       return `<div class="im-attachment"><a href="${escapeHTMLAttr(
@@ -59,7 +65,7 @@ export function renderIMMessageHTML(message: {
         asset.filename || ""
       )}" class="im-attachment-link"><span class="im-attachment-icon" aria-hidden="true">${getAttachmentIconSVG()}</span><span class="im-attachment-content"><span class="im-attachment-title">${title}</span>${metaHTML}</span></a></div>`
     }
-    return `<p>${escapeHTML(message.content || "[附件]")}</p>`
+    return `<p>${escapeHTML(message.content || t("kefu.attachmentSummary"))}</p>`
   }
 
   return renderTextMessageHTML(message.content || "")
@@ -71,11 +77,13 @@ export function summarizeIMMessage(message: {
   payload?: string
 }) {
   if (message.messageType === "image") {
-    return "[图片]"
+    return t("kefu.imageSummary")
   }
   if (message.messageType === "attachment") {
     const asset = parseMessageAssetPayload(message.payload)
-    return asset?.filename?.trim() ? `[附件] ${asset.filename.trim()}` : "[附件]"
+    return asset?.filename?.trim()
+      ? `${t("kefu.attachmentSummary")} ${asset.filename.trim()}`
+      : t("kefu.attachmentSummary")
   }
   if (message.messageType === "html") {
     const text = extractTextFromHTML(message.content)
@@ -83,11 +91,11 @@ export function summarizeIMMessage(message: {
       return text.substring(0, 100)
     }
     if (message.content.includes("<img")) {
-      return "[图片]"
+      return t("kefu.imageSummary")
     }
-    return "[消息]"
+    return t("kefu.messageSummary")
   }
-  return message.content?.substring(0, 100) || "[消息]"
+  return message.content?.substring(0, 100) || t("kefu.messageSummary")
 }
 
 export function formatFileSize(size: number) {

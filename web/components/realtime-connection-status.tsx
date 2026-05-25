@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/provider";
 
 export type RealtimeConnectionStatusValue =
   | "connecting"
@@ -12,22 +13,23 @@ type RealtimeConnectionStatusProps = {
   compact?: boolean;
 };
 
-const statusText: Record<RealtimeConnectionStatusValue, string> = {
-  connecting: "实时通道连接中",
-  connected: "实时通道已连接",
-  disconnected: "实时通道已断开",
+const statusTextKey: Record<RealtimeConnectionStatusValue, string> = {
+  connecting: "realtime.connecting",
+  connected: "realtime.connected",
+  disconnected: "realtime.disconnected",
 };
 
-const compactStatusText: Record<RealtimeConnectionStatusValue, string> = {
-  connecting: "平台实时：连接中",
-  connected: "平台实时：在线",
-  disconnected: "平台实时：已断开",
+const compactStatusTextKey: Record<RealtimeConnectionStatusValue, string> = {
+  connecting: "realtime.compactConnecting",
+  connected: "realtime.compactConnected",
+  disconnected: "realtime.compactDisconnected",
 };
 
 export function RealtimeConnectionStatus({
   status,
   compact = false,
 }: RealtimeConnectionStatusProps) {
+  const t = useI18n();
   const toneClass =
     status === "connected"
       ? "border-emerald-200/80 bg-emerald-50 text-emerald-700"
@@ -55,9 +57,7 @@ export function RealtimeConnectionStatus({
         )}
       />
       <span>
-        {compact
-          ? compactStatusText[status]
-          : statusText[status]}
+        {t(compact ? compactStatusTextKey[status] : statusTextKey[status])}
       </span>
     </div>
   );

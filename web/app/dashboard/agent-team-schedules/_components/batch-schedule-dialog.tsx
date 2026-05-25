@@ -34,6 +34,7 @@ import {
   type AdminAgentTeamScheduleBatchPreview,
   type BatchAdminAgentTeamSchedulePayload,
 } from "@/lib/api/admin"
+import { useI18n } from "@/i18n/provider"
 import { cn } from "@/lib/utils"
 
 type BatchScheduleDialogProps = {
@@ -42,15 +43,24 @@ type BatchScheduleDialogProps = {
   onSuccess: (created: number) => void | Promise<void>
 }
 
-const weekdayOptions = [
-  { value: 1, label: "周一" },
-  { value: 2, label: "周二" },
-  { value: 3, label: "周三" },
-  { value: 4, label: "周四" },
-  { value: 5, label: "周五" },
-  { value: 6, label: "周六" },
-  { value: 7, label: "周日" },
-]
+type TFunction = (key: string, values?: Record<string, string | number>) => string
+
+const weekdayKeys = [
+  "weekdayMon",
+  "weekdayTue",
+  "weekdayWed",
+  "weekdayThu",
+  "weekdayFri",
+  "weekdaySat",
+  "weekdaySun",
+] as const
+
+function getWeekdayOptions(t: TFunction) {
+  return weekdayKeys.map((key, index) => ({
+    value: index + 1,
+    label: t(`agentTeamSchedule.${key}`),
+  }))
+}
 
 function todayDateValue() {
   const today = new Date()
@@ -88,32 +98,33 @@ function buildPayload(form: BatchFormState): BatchAdminAgentTeamSchedulePayload 
   }
 }
 
-function getWeekdayLabel(value: number) {
-  return weekdayOptions.find((option) => option.value === value)?.label ?? `周${value}`
+function getWeekdayLabel(value: number, t: TFunction) {
+  const weekdayOptions = getWeekdayOptions(t)
+  return weekdayOptions.find((option) => option.value === value)?.label ?? String(value)
 }
 
-function validateForm(form: BatchFormState) {
+function validateForm(form: BatchFormState, t: TFunction) {
   const today = todayDateValue()
   if (form.selectedTeamIds.length === 0) {
-    return "请选择至少一个客服组"
+    return t("agentTeamSchedule.selectAtLeastOneTeam")
   }
   if (!form.startDate || !form.endDate) {
-    return "请选择日期范围"
+    return t("agentTeamSchedule.selectDateRange")
   }
   if (form.startDate < today) {
-    return "开始日期不能早于今天"
+    return t("agentTeamSchedule.startBeforeToday")
   }
   if (form.endDate < form.startDate) {
-    return "结束日期不能早于开始日期"
+    return t("agentTeamSchedule.endBeforeStart")
   }
   if (form.weekdays.length === 0) {
-    return "请选择至少一个星期"
+    return t("agentTeamSchedule.selectAtLeastOneWeekday")
   }
   if (!form.startTime || !form.endTime) {
-    return "请选择开始和结束时间"
+    return t("agentTeamSchedule.selectStartEndTime")
   }
   if (form.endTime <= form.startTime) {
-    return "结束时间必须晚于开始时间"
+    return t("agentTeamSchedule.endAfterStart")
   }
   return ""
 }
@@ -123,6 +134,7 @@ export function BatchScheduleDialog({
   onOpenChange,
   onSuccess,
 }: BatchScheduleDialogProps) {
+  const t = useI18n()
   const [teams, setTeams] = useState<AdminAgentTeam[]>([])
   const [form, setForm] = useState(defaultFormState)
   const [step, setStep] = useState<DialogStep>("form")
@@ -134,6 +146,7 @@ export function BatchScheduleDialog({
   const openRef = useRef(open)
   const previewRequestIdRef = useRef(0)
   const busy = loadingTeams || previewing || submitting
+  const weekdayOptions = useMemo(() => getWeekdayOptions(t), [t])
 
   const teamOptions = useMemo(
     () =>
@@ -181,7 +194,7 @@ export function BatchScheduleDialog({
         }
       } catch (error) {
         if (!ignore) {
-          toast.error(error instanceof Error ? error.message : "加载客服组选项失败")
+          toast.error(error instanceof Error ? error.message : t("agentTeamSchedule.loadTeamsFailed"))
         }
       } finally {
         if (!ignore) {
@@ -194,7 +207,7 @@ export function BatchScheduleDialog({
     return () => {
       ignore = true
     }
-  }, [open])
+  }, [open, t])
 
   function updateForm(values: Partial<BatchFormState>) {
     previewRequestIdRef.current += 1
@@ -234,7 +247,7 @@ export function BatchScheduleDialog({
   }
 
   async function handlePreview() {
-    const validationMessage = validateForm(form)
+    const validationMessage = validateForm(form, t)
     if (validationMessage) {
       toast.error(validationMessage)
       return
@@ -254,7 +267,7 @@ export function BatchScheduleDialog({
       setStep("preview")
     } catch (error) {
       if (openRef.current && previewRequestIdRef.current === requestId) {
-        toast.error(error instanceof Error ? error.message : "预览批量排班失败")
+        toast.error(error instanceof Error ? error.message : t("agentTeamSchedule.previewFailed"))
       }
     } finally {
       if (openRef.current && previewRequestIdRef.current === requestId) {
@@ -265,11 +278,11 @@ export function BatchScheduleDialog({
 
   async function handleSubmit() {
     if (!preview || !previewPayload) {
-      toast.error("请先预览批量排班")
+      toast.error(t("agentTeamSchedule.previewFirst"))
       return
     }
     if (preview.conflict) {
-      toast.error("存在冲突排班，不能提交")
+      toast.error(t("agentTeamSchedule.conflictCannotSubmit"))
       return
     }
 
@@ -277,17 +290,17 @@ export function BatchScheduleDialog({
     setSubmitting(true)
     try {
       const data = await generateAgentTeamScheduleBatch(payload)
-      toast.success(`已创建 ${data.created} 条客服组排班`)
+      toast.success(t("agentTeamSchedule.batchCreated", { count: data.created }))
       setPreview(null)
       setPreviewPayload(null)
       onOpenChange(false)
       try {
         await onSuccess(data.created)
       } catch (error) {
-        toast.error(error instanceof Error ? `排班已生成，但刷新列表失败：${error.message}` : "排班已生成，但刷新列表失败")
+        toast.error(error instanceof Error ? t("agentTeamSchedule.batchRefreshFailed", { message: error.message }) : t("agentTeamSchedule.batchRefreshFailedFallback"))
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "生成批量排班失败")
+      toast.error(error instanceof Error ? error.message : t("agentTeamSchedule.generateFailed"))
     } finally {
       setSubmitting(false)
     }
@@ -297,9 +310,9 @@ export function BatchScheduleDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="flex max-h-[calc(100vh-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl">
         <DialogHeader className="shrink-0 px-6 pt-6">
-          <DialogTitle>批量排班</DialogTitle>
+          <DialogTitle>{t("agentTeamSchedule.batch")}</DialogTitle>
           <DialogDescription>
-            选择客服组、日期范围和工作时间，先预览后生成排班。
+            {t("agentTeamSchedule.batchDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -307,15 +320,15 @@ export function BatchScheduleDialog({
           {step === "form" ? (
             <div className="space-y-5">
               <div className="space-y-2">
-                <Label>客服组</Label>
+                <Label>{t("agentTeamSchedule.team")}</Label>
                 <div className="flex gap-2">
                   <div className="min-w-0 flex-1">
                     <OptionCombobox
                       value=""
                       options={teamOptions}
-                      placeholder={loadingTeams ? "加载客服组中..." : "添加客服组"}
-                      searchPlaceholder="搜索客服组"
-                      emptyText={teams.length === 0 ? "暂无客服组" : "已选择全部客服组"}
+                      placeholder={loadingTeams ? t("agentTeamSchedule.loadingTeams") : t("agentTeamSchedule.addTeam")}
+                      searchPlaceholder={t("agentTeamSchedule.searchTeam")}
+                      emptyText={teams.length === 0 ? t("agentTeamSchedule.noTeams") : t("agentTeamSchedule.allTeamsSelected")}
                       disabled={loadingTeams}
                       onChange={handleTeamSelect}
                     />
@@ -332,7 +345,7 @@ export function BatchScheduleDialog({
                           size="icon-sm"
                           className="size-5 rounded-sm"
                           onClick={() => removeTeam(team.id)}
-                          aria-label={`移除${team.name}`}
+                          aria-label={t("agentTeamSchedule.removeTeam", { name: team.name })}
                         >
                           <XIcon className="size-3" />
                         </Button>
@@ -340,13 +353,13 @@ export function BatchScheduleDialog({
                     ))}
                   </div>
                 ) : (
-                  <div className="text-sm text-muted-foreground">尚未选择客服组</div>
+                  <div className="text-sm text-muted-foreground">{t("agentTeamSchedule.noSelectedTeams")}</div>
                 )}
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="batch-schedule-start-date">开始日期</Label>
+                  <Label htmlFor="batch-schedule-start-date">{t("agentTeamSchedule.startDate")}</Label>
                   <Input
                     id="batch-schedule-start-date"
                     type="date"
@@ -356,7 +369,7 @@ export function BatchScheduleDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="batch-schedule-end-date">结束日期</Label>
+                  <Label htmlFor="batch-schedule-end-date">{t("agentTeamSchedule.endDate")}</Label>
                   <Input
                     id="batch-schedule-end-date"
                     type="date"
@@ -368,7 +381,7 @@ export function BatchScheduleDialog({
               </div>
 
               <div className="space-y-2">
-                <Label>星期</Label>
+                <Label>{t("agentTeamSchedule.weekday")}</Label>
                 <div className="flex flex-wrap gap-2">
                   {weekdayOptions.map((option) => {
                     const selected = selectedWeekdays.has(option.value)
@@ -391,7 +404,7 @@ export function BatchScheduleDialog({
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="batch-schedule-start-time">开始时间</Label>
+                  <Label htmlFor="batch-schedule-start-time">{t("agentTeamSchedule.startTime")}</Label>
                   <Input
                     id="batch-schedule-start-time"
                     type="time"
@@ -400,7 +413,7 @@ export function BatchScheduleDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="batch-schedule-end-time">结束时间</Label>
+                  <Label htmlFor="batch-schedule-end-time">{t("agentTeamSchedule.endTime")}</Label>
                   <Input
                     id="batch-schedule-end-time"
                     type="time"
@@ -411,11 +424,11 @@ export function BatchScheduleDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="batch-schedule-remark">备注</Label>
+                <Label htmlFor="batch-schedule-remark">{t("agentTeamSchedule.remark")}</Label>
                 <Textarea
                   id="batch-schedule-remark"
                   rows={4}
-                  placeholder="请输入备注"
+                  placeholder={t("agentTeamSchedule.remarkPlaceholder")}
                   value={form.remark}
                   onChange={(event) => updateForm({ remark: event.target.value })}
                 />
@@ -425,13 +438,14 @@ export function BatchScheduleDialog({
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-sm text-muted-foreground">
-                  共 {preview?.total ?? 0} 条排班
-                  {hasConflict ? "，存在冲突，请返回调整" : "，确认无冲突后可生成"}
+                  {hasConflict
+                    ? t("agentTeamSchedule.previewSummaryConflict", { total: preview?.total ?? 0 })
+                    : t("agentTeamSchedule.previewSummaryReady", { total: preview?.total ?? 0 })}
                 </div>
                 {hasConflict ? (
-                  <Badge variant="destructive">存在冲突</Badge>
+                  <Badge variant="destructive">{t("agentTeamSchedule.hasConflict")}</Badge>
                 ) : (
-                  <Badge variant="secondary">无冲突</Badge>
+                  <Badge variant="secondary">{t("agentTeamSchedule.noConflict")}</Badge>
                 )}
               </div>
               <div className="overflow-x-auto rounded-lg border">
@@ -439,12 +453,12 @@ export function BatchScheduleDialog({
                   <Table>
                     <TableHeader className="bg-muted/40">
                       <TableRow>
-                        <TableHead>客服组</TableHead>
-                        <TableHead>日期</TableHead>
-                        <TableHead>星期</TableHead>
-                        <TableHead>时间</TableHead>
-                        <TableHead>备注</TableHead>
-                        <TableHead>状态</TableHead>
+                        <TableHead>{t("agentTeamSchedule.team")}</TableHead>
+                        <TableHead>{t("agentTeamSchedule.date")}</TableHead>
+                        <TableHead>{t("agentTeamSchedule.weekday")}</TableHead>
+                        <TableHead>{t("agentTeamSchedule.time")}</TableHead>
+                        <TableHead>{t("agentTeamSchedule.remark")}</TableHead>
+                        <TableHead>{t("agentTeamSchedule.status")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -456,11 +470,11 @@ export function BatchScheduleDialog({
                           )}
                         >
                           <TableCell>
-                            <div className="font-medium">{item.teamName || `客服组#${item.teamId}`}</div>
-                            <div className="text-xs text-muted-foreground">组ID：{item.teamId}</div>
+                            <div className="font-medium">{item.teamName || t("agentTeamSchedule.teamFallback", { id: item.teamId })}</div>
+                            <div className="text-xs text-muted-foreground">{t("agentTeamSchedule.teamId", { id: item.teamId })}</div>
                           </TableCell>
                           <TableCell>{item.date}</TableCell>
-                          <TableCell>{getWeekdayLabel(item.weekday)}</TableCell>
+                          <TableCell>{getWeekdayLabel(item.weekday, t)}</TableCell>
                           <TableCell>
                             {item.startAt.slice(11, 16)} - {item.endAt.slice(11, 16)}
                           </TableCell>
@@ -468,10 +482,10 @@ export function BatchScheduleDialog({
                           <TableCell>
                             {item.conflict ? (
                               <span className="font-medium">
-                                {item.conflictReason || "排班冲突"}
+                                {item.conflictReason || t("agentTeamSchedule.conflictFallback")}
                               </span>
                             ) : (
-                              <span className="text-muted-foreground">可生成</span>
+                              <span className="text-muted-foreground">{t("agentTeamSchedule.canGenerate")}</span>
                             )}
                           </TableCell>
                         </TableRow>
@@ -479,7 +493,7 @@ export function BatchScheduleDialog({
                       {preview && preview.items.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                            没有可生成的排班
+                            {t("agentTeamSchedule.emptyPreview")}
                           </TableCell>
                         </TableRow>
                       ) : null}
@@ -500,7 +514,7 @@ export function BatchScheduleDialog({
               disabled={submitting}
             >
               <ArrowLeftIcon />
-              返回修改
+              {t("agentTeamSchedule.backToEdit")}
             </Button>
           ) : null}
           <Button
@@ -509,12 +523,12 @@ export function BatchScheduleDialog({
             onClick={() => handleOpenChange(false)}
             disabled={busy}
           >
-            取消
+            {t("agentTeamSchedule.cancel")}
           </Button>
           {step === "form" ? (
             <Button type="button" onClick={() => void handlePreview()} disabled={busy}>
               {previewing ? <Loader2Icon className="animate-spin" /> : <CheckIcon />}
-              预览
+              {t("agentTeamSchedule.preview")}
             </Button>
           ) : (
             <Button
@@ -523,7 +537,7 @@ export function BatchScheduleDialog({
               disabled={submitting || hasConflict || !preview || !previewPayload || preview.items.length === 0}
             >
               {submitting ? <Loader2Icon className="animate-spin" /> : <CheckIcon />}
-              生成排班
+              {t("agentTeamSchedule.generate")}
             </Button>
           )}
         </DialogFooter>

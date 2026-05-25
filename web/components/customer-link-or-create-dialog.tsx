@@ -10,15 +10,16 @@ import { Input } from "@/components/ui/input"
 import { linkConversationToCustomer } from "@/lib/api/agent"
 import { fetchCustomers, saveCustomerProfile, type AdminCustomer } from "@/lib/api/customer"
 import { linkTicketToCustomer } from "@/lib/api/ticket"
+import { useI18n } from "@/i18n/provider"
 
 export type CustomerLinkOrCreateDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** 传入时会话侧：关联已有或新建后绑定该会话 */
+  /** When present, links an existing or newly created customer to this conversation. */
   conversationId?: number | null
-  /** 传入时工单侧：关联已有或新建后绑定该工单 */
+  /** When present, links an existing or newly created customer to this ticket. */
   ticketId?: number | null
-  /** 绑定成功或仅新建成功后的回调 */
+  /** Called after linking succeeds, or after creating without a linked context. */
   onSuccess?: () => void | Promise<void>
 }
 
@@ -31,6 +32,7 @@ export function CustomerLinkOrCreateDialog({
   ticketId,
   onSuccess,
 }: CustomerLinkOrCreateDialogProps) {
+  const t = useI18n()
   const [searchText, setSearchText] = useState("")
   const [searching, setSearching] = useState(false)
   const [results, setResults] = useState<AdminCustomer[]>([])
@@ -51,7 +53,7 @@ export function CustomerLinkOrCreateDialog({
   const runSearch = async () => {
     const q = searchText.trim()
     if (!q) {
-      toast.error("请输入关键词（姓名、手机、邮箱、公司、联系方式等）")
+      toast.error(t("customerLink.keywordRequired"))
       return
     }
     setSearching(true)
@@ -64,18 +66,19 @@ export function CustomerLinkOrCreateDialog({
       })
       setResults(data.results)
       if (data.results.length === 0) {
-        toast.message("未找到匹配客户，可点击下方填写新客户")
+        toast.message(t("customerLink.noMatch"))
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "搜索失败")
+      toast.error(e instanceof Error ? e.message : t("customerLink.searchFailed"))
     } finally {
       setSearching(false)
     }
   }
 
   const handleLinkExisting = async (customer: AdminCustomer) => {
+    const customerName = customer.name || t("customerLink.fallbackName", { id: customer.id })
     if (!conversationId && !ticketId) {
-      toast.success(`已选择客户：${customer.name || `#${customer.id}`}`)
+      toast.success(t("customerLink.selected", { name: customerName }))
       onOpenChange(false)
       await onSuccess?.()
       return
@@ -94,11 +97,11 @@ export function CustomerLinkOrCreateDialog({
           customerId: customer.id,
         })
       }
-      toast.success("已关联客户")
+      toast.success(t("customerLink.linked"))
       onOpenChange(false)
       await onSuccess?.()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "关联失败")
+      toast.error(e instanceof Error ? e.message : t("customerLink.linkFailed"))
     } finally {
       setLinkingId(null)
     }
@@ -121,14 +124,18 @@ export function CustomerLinkOrCreateDialog({
         })
       }
       if (conversationId || ticketId) {
-        toast.success(conversationId ? "已创建客户并关联当前会话" : "已创建客户并关联当前工单")
+        toast.success(
+          conversationId
+            ? t("customerLink.createdAndLinkedConversation")
+            : t("customerLink.createdAndLinkedTicket")
+        )
       } else {
-        toast.success("已创建客户")
+        toast.success(t("customerLink.created"))
       }
       onOpenChange(false)
       await onSuccess?.()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "保存失败")
+      toast.error(e instanceof Error ? e.message : t("customerLink.saveFailed"))
     } finally {
       setSaving(false)
     }
@@ -136,14 +143,18 @@ export function CustomerLinkOrCreateDialog({
 
   const description = (
     <>
-      先搜索已有客户；
+      {t("customerLink.descriptionPrefix")}
       {conversationId || ticketId
-        ? `选中即可关联当前${conversationId ? "会话" : "工单"}。`
-        : "未接入上下文时仅创建或定位客户。"}
-      若无结果，可填写下方新客户
+        ? conversationId
+          ? t("customerLink.descriptionLinkConversation")
+          : t("customerLink.descriptionLinkTicket")
+        : t("customerLink.descriptionNoContext")}
+      {t("customerLink.descriptionCreatePrefix")}
       {conversationId || ticketId
-        ? `，保存后将自动关联${conversationId ? "会话" : "工单"}。`
-        : "。"}
+        ? conversationId
+          ? t("customerLink.descriptionCreateConversation")
+          : t("customerLink.descriptionCreateTicket")
+        : t("customerLink.descriptionCreateNoContext")}
     </>
   )
 
@@ -151,7 +162,7 @@ export function CustomerLinkOrCreateDialog({
     <ProjectDialog
       open={open}
       onOpenChange={(nextOpen) => onOpenChange(nextOpen)}
-      title="关联或创建客户"
+      title={t("customerLink.title")}
       description={description}
       allowFullscreen
       size="xl"
@@ -162,15 +173,17 @@ export function CustomerLinkOrCreateDialog({
             variant="outline"
             onClick={() => onOpenChange(false)}
           >
-            关闭
+            {t("customerLink.close")}
           </Button>
           {showCreate ? (
             <Button type="submit" form={createFormId} disabled={saving}>
               {saving
-                ? "提交中…"
+                ? t("customerLink.submitting")
                 : conversationId
-                  ? "创建并关联会话"
-                  : "创建客户"}
+                  ? t("customerLink.createAndLinkConversation")
+                  : ticketId
+                    ? t("customerLink.createAndLinkTicket")
+                    : t("customerLink.createCustomer")}
             </Button>
           ) : null}
         </div>
@@ -179,7 +192,7 @@ export function CustomerLinkOrCreateDialog({
       <div className="flex flex-col gap-4">
         <div className="flex gap-2">
           <Input
-            placeholder="姓名 / 手机 / 邮箱 / 公司 / 联系方式"
+            placeholder={t("customerLink.searchPlaceholder")}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             onKeyDown={(e) => {
@@ -195,7 +208,7 @@ export function CustomerLinkOrCreateDialog({
             disabled={searching}
             onClick={() => void runSearch()}
           >
-            {searching ? "搜索中…" : "搜索"}
+            {searching ? t("customerLink.searching") : t("customerLink.search")}
           </Button>
         </div>
 
@@ -208,7 +221,7 @@ export function CustomerLinkOrCreateDialog({
               >
                 <div className="min-w-0">
                   <div className="truncate font-medium flex items-center gap-2">
-                    <span>{row.name || `客户 #${row.id}`}</span>
+                    <span>{row.name || t("customerLink.fallbackName", { id: row.id })}</span>
                     <span className="text-muted-foreground">
                       {row.primaryMobile}
                     </span>
@@ -231,10 +244,10 @@ export function CustomerLinkOrCreateDialog({
                   onClick={() => void handleLinkExisting(row)}
                 >
                   {linkingId === row.id
-                    ? "处理中…"
+                    ? t("customerLink.processing")
                     : conversationId
-                      ? "关联"
-                      : "选用"}
+                      ? t("customerLink.link")
+                      : t("customerLink.select")}
                 </Button>
               </li>
             ))}
@@ -247,7 +260,7 @@ export function CustomerLinkOrCreateDialog({
             className="text-sm text-primary underline-offset-4 hover:underline"
             onClick={() => setShowCreate((v) => !v)}
           >
-            {showCreate ? "收起新建表单" : "未找到？填写新客户"}
+            {showCreate ? t("customerLink.collapseCreate") : t("customerLink.showCreate")}
           </button>
         </div>
 

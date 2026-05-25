@@ -62,6 +62,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Status } from "@/lib/generated/enums"
+import { useAppLocale, useI18n } from "@/i18n/provider"
+import { getRoleDisplayName } from "@/lib/role-i18n"
 
 type SortableRoleRowProps = {
   item: AdminRole
@@ -76,6 +78,9 @@ function SortableRoleRow({
   actionLoading,
   onAssignPermissions,
 }: SortableRoleRowProps) {
+  const t = useI18n()
+  const { locale } = useAppLocale()
+  const displayName = getRoleDisplayName(item.code, item.name, locale)
   const {
     attributes,
     listeners,
@@ -109,7 +114,7 @@ function SortableRoleRow({
           size="icon"
           className="size-8 cursor-grab active:cursor-grabbing"
           disabled={disabled}
-          aria-label={`拖拽排序 ${item.name}`}
+          aria-label={t("role.dragSort", { name: displayName })}
           {...attributes}
           {...listeners}
         >
@@ -121,7 +126,7 @@ function SortableRoleRow({
           <div className="flex size-10 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
             <ShieldCheckIcon className="size-4" />
           </div>
-          <div className="font-medium">{item.name}</div>
+          <div className="font-medium">{displayName}</div>
         </div>
       </TableCell>
       <TableCell>
@@ -132,11 +137,11 @@ function SortableRoleRow({
       </TableCell>
       <TableCell>
         <Badge variant={item.status === Status.Ok ? "secondary" : "outline"}>
-          {item.status === Status.Ok ? "启用" : "禁用"}
+          {item.status === Status.Ok ? t("status.ok") : t("status.disabled")}
         </Badge>
         {item.isSystem ? (
           <Badge variant="outline" className="ml-2">
-            系统
+            {t("role.system")}
           </Badge>
         ) : null}
       </TableCell>
@@ -149,7 +154,7 @@ function SortableRoleRow({
           onClick={() => onAssignPermissions(item)}
           disabled={disabled || actionLoading}
         >
-          {actionLoading ? "处理中..." : "分配权限"}
+          {actionLoading ? t("role.processing") : t("role.assignPermissions")}
         </Button>
       </TableCell>
     </TableRow>
@@ -157,6 +162,7 @@ function SortableRoleRow({
 }
 
 export default function DashboardRolesPage() {
+  const t = useI18n()
   const [loading, setLoading] = useState(true)
   const [sorting, setSorting] = useState(false)
   const [creatingOpen, setCreatingOpen] = useState(false)
@@ -191,7 +197,7 @@ export default function DashboardRolesPage() {
     try {
       setResult(await fetchRoles({ limit: 200 }))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载角色失败")
+      toast.error(error instanceof Error ? error.message : t("role.loadFailed"))
     } finally {
       setLoading(false)
     }
@@ -212,11 +218,11 @@ export default function DashboardRolesPage() {
     setSavingCreate(true)
     try {
       const role = await createRole(payload)
-      toast.success(`已创建角色 ${role.name}`)
+      toast.success(t("role.created", { name: role.name }))
       setCreatingOpen(false)
       await loadRoles()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "创建角色失败")
+      toast.error(error instanceof Error ? error.message : t("role.createFailed"))
     } finally {
       setSavingCreate(false)
     }
@@ -240,7 +246,7 @@ export default function DashboardRolesPage() {
       )
     } catch (error) {
       setAssigningRole(null)
-      toast.error(error instanceof Error ? error.message : "加载权限分配数据失败")
+      toast.error(error instanceof Error ? error.message : t("role.loadAssignFailed"))
     } finally {
       setAssignPermissionsLoading(false)
       setActionLoadingId(null)
@@ -269,14 +275,14 @@ export default function DashboardRolesPage() {
 
     try {
       await updateRoleSort(nextResults.map((item) => item.id))
-      toast.success("角色排序已更新")
+      toast.success(t("role.sortUpdated"))
       await loadRoles()
     } catch (error) {
       setResult((current) => ({
         ...current,
         results: previousResults,
       }))
-      toast.error(error instanceof Error ? error.message : "更新角色排序失败")
+      toast.error(error instanceof Error ? error.message : t("role.sortUpdateFailed"))
     } finally {
       setSorting(false)
     }
@@ -301,13 +307,13 @@ export default function DashboardRolesPage() {
     setSavingPermissions(true)
     try {
       await assignRolePermissions(assigningRole.id, permissionIds)
-      toast.success(`已更新角色 ${assigningRole.name} 的权限`)
+      toast.success(t("role.permissionsUpdated", { name: assigningRole.name }))
       setAssigningRole(null)
       setAssignPermissionOptions([])
       setAssignPermissionIds([])
       await loadRoles()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "保存权限分配失败")
+      toast.error(error instanceof Error ? error.message : t("role.savePermissionsFailed"))
     } finally {
       setSavingPermissions(false)
     }
@@ -328,7 +334,7 @@ export default function DashboardRolesPage() {
               disabled={loading || sorting}
             >
               <PlusIcon className="size-4" />
-              添加角色
+              {t("role.add")}
             </Button>
             <Button
               variant="outline"
@@ -336,22 +342,22 @@ export default function DashboardRolesPage() {
               disabled={loading || sorting}
             >
               <RefreshCwIcon className={cn((loading || sorting) && "animate-spin")} />
-              刷新
+              {t("role.refresh")}
             </Button>
           </>
         }
       >
         <div className="text-sm text-muted-foreground">
-          拖拽行可调整角色顺序
+          {t("role.dragHint")}
         </div>
       </DashboardToolbar>
       <DashboardTableShell
         pagination={
           <DashboardTableSummary>
             <span>
-              第 {result.page.page} 页 / 每页 {result.page.limit} 条
+              {t("role.pageSummary", { page: result.page.page, limit: result.page.limit })}
             </span>
-            <span>共 {result.page.total} 条记录</span>
+            <span>{t("pagination.total", { total: result.page.total })}</span>
           </DashboardTableSummary>
         }
       >
@@ -364,11 +370,11 @@ export default function DashboardRolesPage() {
               <TableHeader className="bg-muted/40">
                 <TableRow>
                   <TableHead className="w-14"></TableHead>
-                  <TableHead>角色</TableHead>
-                  <TableHead>编码</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead>排序</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
+                  <TableHead>{t("role.columnRole")}</TableHead>
+                  <TableHead>{t("role.columnCode")}</TableHead>
+                  <TableHead>{t("role.columnStatus")}</TableHead>
+                  <TableHead>{t("role.columnSort")}</TableHead>
+                  <TableHead className="text-right">{t("role.columnActions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -392,8 +398,8 @@ export default function DashboardRolesPage() {
                   <DashboardTableStateRow
                     colSpan={6}
                     loading={loading}
-                    loadingText="正在加载角色数据..."
-                    emptyText="暂无角色数据"
+                    loadingText={t("role.loading")}
+                    emptyText={t("role.empty")}
                   />
                 ) : null}
               </TableBody>

@@ -5,6 +5,7 @@ import (
 	"cs-agent/internal/pkg/dto/request"
 	"cs-agent/internal/pkg/dto/response"
 	"cs-agent/internal/pkg/httpx"
+	"cs-agent/internal/pkg/i18nx"
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
@@ -39,7 +40,7 @@ func ConversationGetBy(ctx *gin.Context) {
 	}
 
 	detail := response.ConversationDetailResponse{
-		ConversationResponse: builders.BuildConversation(item),
+		ConversationResponse: builders.BuildConversationWithLocale(item, i18nx.Locale(ctx)),
 		Participants:         builders.BuildParticipantResponses(id),
 	}
 	httpx.WriteJSON(ctx, detail)
@@ -62,7 +63,7 @@ func ConversationPostCreate_or_match(ctx *gin.Context) {
 		httpx.WriteJSON(ctx, err)
 		return
 	}
-	httpx.WriteJSON(ctx, builders.BuildConversation(item))
+	httpx.WriteJSON(ctx, builders.BuildConversationWithLocale(item, i18nx.Locale(ctx)))
 }
 
 func ConversationPostClose(ctx *gin.Context) {

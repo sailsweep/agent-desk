@@ -31,11 +31,10 @@ import { summarizeIMMessage } from "@/lib/im-message"
 import { generateUUID } from "@/lib/utils"
 
 export const agentConversationFilterOptions = [
-  // { value: "mine", label: "我的" },
-  { value: "active", label: "处理中" },
-  { value: "pending", label: "待接入" },
-  { value: "ai_serving", label: "AI接待中" },
-  { value: "closed", label: "已关闭" },
+  { value: "active", labelKey: "conversation.filterActive" },
+  { value: "pending", labelKey: "conversation.filterPending" },
+  { value: "ai_serving", labelKey: "conversation.filterAiServing" },
+  { value: "closed", labelKey: "conversation.filterClosed" },
 ] as const
 
 export type AgentConversationFilterKey =
@@ -346,7 +345,7 @@ export const useAgentConversationsStore = create<AgentConversationsStore>((set, 
         }
       })
     } catch {
-      // 实时同步失败不抛给 WS 回调
+      // Keep realtime callback errors contained in the store.
     }
   },
 

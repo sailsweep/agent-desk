@@ -1,6 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import { useI18n } from "@/i18n/provider"
 
 type JsonViewerProps = {
   value: unknown
@@ -48,9 +49,10 @@ function highlightJson(value: string) {
 
 export function JsonViewer({
   value,
-  emptyText = "暂无数据",
+  emptyText,
   className,
 }: JsonViewerProps) {
+  const t = useI18n()
   const formatted = formatJson(value)
   if (!formatted) {
     return (
@@ -60,7 +62,7 @@ export function JsonViewer({
           className
         )}
       >
-        {emptyText}
+        {emptyText ?? t("json.empty")}
       </div>
     )
   }

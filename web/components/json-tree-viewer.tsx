@@ -4,6 +4,7 @@ import type { CSSProperties } from "react"
 import JsonView from "@uiw/react-json-view"
 
 import { cn } from "@/lib/utils"
+import { useI18n } from "@/i18n/provider"
 
 type JsonTreeViewerProps = {
   value: unknown
@@ -34,10 +35,12 @@ const viewerTheme = {
 
 export function JsonTreeViewer({
   value,
-  emptyText = "暂无数据",
+  emptyText,
   className,
   collapsed = 2,
 }: JsonTreeViewerProps) {
+  const t = useI18n()
+
   if (value == null || value === "") {
     return (
       <div
@@ -46,7 +49,7 @@ export function JsonTreeViewer({
           className
         )}
       >
-        {emptyText}
+        {emptyText ?? t("json.empty")}
       </div>
     )
   }

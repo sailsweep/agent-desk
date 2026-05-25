@@ -27,6 +27,7 @@ import {
   type AdminCompany,
   type CreateAdminCompanyPayload,
 } from "@/lib/api/company"
+import { useI18n } from "@/i18n/provider"
 import { cn } from "@/lib/utils"
 
 type CompanyPickerProps = {
@@ -40,8 +41,10 @@ export function CompanyPicker({
   value,
   onChange,
   disabled = false,
-  placeholder = "请选择公司",
+  placeholder,
 }: CompanyPickerProps) {
+  const t = useI18n()
+  const resolvedPlaceholder = placeholder ?? t("companyPicker.placeholder")
   const [open, setOpen] = useState(false)
   const [keyword, setKeyword] = useState("")
   const [loading, setLoading] = useState(false)
@@ -74,7 +77,7 @@ export function CompanyPicker({
       } catch (error) {
         if (!cancelled) {
           setOptions([])
-          toast.error(error instanceof Error ? error.message : "加载公司列表失败")
+          toast.error(error instanceof Error ? error.message : t("companyPicker.loadFailed"))
         }
       } finally {
         if (!cancelled) {
@@ -86,7 +89,7 @@ export function CompanyPicker({
     return () => {
       cancelled = true
     }
-  }, [open, trimmedKeyword])
+  }, [open, trimmedKeyword, t])
 
   useEffect(() => {
     let cancelled = false
@@ -123,7 +126,7 @@ export function CompanyPicker({
   }, [normalizedKeyword, options, trimmedKeyword])
 
   const buttonLabel =
-    Number(value) > 0 ? selectedCompany?.name || `公司 #${value}` : placeholder
+    Number(value) > 0 ? selectedCompany?.name || t("companyPicker.fallback", { id: value }) : resolvedPlaceholder
 
   function handleSelectCompany(company: AdminCompany) {
     setSelectedCompany(company)
@@ -148,9 +151,9 @@ export function CompanyPicker({
       setCreateOpen(false)
       setOpen(false)
       setKeyword("")
-      toast.success(`已创建公司：${created.name}`)
+      toast.success(t("companyPicker.created", { name: created.name }))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "创建公司失败")
+      toast.error(error instanceof Error ? error.message : t("companyPicker.createFailed"))
       throw error
     } finally {
       setCreateSaving(false)
@@ -180,19 +183,19 @@ export function CompanyPicker({
             <CommandInput
               value={keyword}
               onValueChange={setKeyword}
-              placeholder="搜索公司名称"
+              placeholder={t("companyPicker.searchPlaceholder")}
             />
             <CommandList>
-              {loading ? <CommandEmpty>加载中...</CommandEmpty> : null}
-              {!loading && options.length === 0 ? <CommandEmpty>未找到匹配公司</CommandEmpty> : null}
+              {loading ? <CommandEmpty>{t("companyPicker.loading")}</CommandEmpty> : null}
+              {!loading && options.length === 0 ? <CommandEmpty>{t("companyPicker.empty")}</CommandEmpty> : null}
               {!loading ? (
-                <CommandGroup heading="搜索结果">
+                <CommandGroup heading={t("companyPicker.results")}>
                   <CommandItem
                     value="none"
                     data-checked={Number(value) <= 0}
                     onSelect={handleClear}
                   >
-                    <span>不关联公司</span>
+                    <span>{t("companyPicker.none")}</span>
                   </CommandItem>
                   {options.map((item) => (
                     <CommandItem
@@ -214,13 +217,13 @@ export function CompanyPicker({
               {canCreate ? (
                 <>
                   <CommandSeparator />
-                  <CommandGroup heading="操作">
+                  <CommandGroup heading={t("companyPicker.actions")}>
                     <CommandItem
                       value={`create ${trimmedKeyword}`}
                       onSelect={() => setCreateOpen(true)}
                     >
                       <PlusIcon className="size-4" />
-                      <span className="truncate">新建公司“{trimmedKeyword}”</span>
+                      <span className="truncate">{t("companyPicker.create", { name: trimmedKeyword })}</span>
                     </CommandItem>
                   </CommandGroup>
                 </>

@@ -25,6 +25,9 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import type { AdminPermission, AdminRole } from "@/lib/api/admin";
+import { useAppLocale, useI18n } from "@/i18n/provider";
+import { getPermissionDisplayName, getPermissionGroupName } from "@/lib/permission-i18n";
+import { getRoleDisplayName } from "@/lib/role-i18n";
 
 type AssignPermissionsDrawerProps = {
   open: boolean;
@@ -104,6 +107,8 @@ function AssignPermissionsDrawerBody({
   onOpenChange,
   onSubmit,
 }: AssignPermissionsDrawerBodyProps) {
+  const t = useI18n();
+  const { locale } = useAppLocale();
   const [keyword, setKeyword] = useState("");
   const form = useForm<
     z.input<typeof assignPermissionsSchema>,
@@ -128,7 +133,7 @@ function AssignPermissionsDrawerBody({
     const output = keyword.trim().toLowerCase();
     const filtered = output
       ? permissions.filter((permission) =>
-          `${permission.name} ${permission.code} ${permission.groupName} ${permission.apiPath}`
+          `${permission.name} ${getPermissionDisplayName(permission.code, permission.name, locale)} ${permission.code} ${permission.groupName} ${getPermissionGroupName(permission.groupName, locale)} ${permission.apiPath}`
             .toLowerCase()
             .includes(output),
         )
@@ -142,9 +147,9 @@ function AssignPermissionsDrawerBody({
       groups.set(groupName, list);
     });
     return Array.from(groups.entries()).sort(([left], [right]) =>
-      left.localeCompare(right, "zh-CN"),
+      getPermissionGroupName(left, locale).localeCompare(getPermissionGroupName(right, locale)),
     );
-  }, [keyword, permissions]);
+  }, [keyword, locale, permissions]);
 
   async function onFormSubmit(values: AssignPermissionsForm) {
     await onSubmit(values.permissionIds);
@@ -153,9 +158,12 @@ function AssignPermissionsDrawerBody({
   return (
     <DrawerContent className="min-w-3xl">
       <DrawerHeader>
-        <DrawerTitle>分配权限</DrawerTitle>
+        <DrawerTitle>{t("role.assignTitle")}</DrawerTitle>
         <DrawerDescription>
-          当前角色：{item?.name || "-"} {item?.code ? `(${item.code})` : ""}
+          {t("role.currentRole", {
+            name: item ? getRoleDisplayName(item.code, item.name, locale) : "-",
+            code: item?.code ? `(${item.code})` : "",
+          })}
         </DrawerDescription>
       </DrawerHeader>
       <form
@@ -164,14 +172,14 @@ function AssignPermissionsDrawerBody({
       >
         <div className="flex-1 flex flex-col min-h-0 space-y-4 px-4 pb-4">
           <Field data-invalid={!!errors.permissionIds} className="flex-1 flex flex-col min-h-0">
-            <FieldLabel>权限列表</FieldLabel>
+            <FieldLabel>{t("role.permissionList")}</FieldLabel>
             <FieldContent className="flex-1 min-h-0 flex flex-col">
               <div className="relative mb-2">
                 <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={keyword}
                   onChange={(event) => setKeyword(event.target.value)}
-                  placeholder="搜索权限名称、编码、分组或接口"
+                  placeholder={t("role.searchPermission")}
                   className="pl-9"
                   disabled={loading}
                 />
@@ -186,15 +194,15 @@ function AssignPermissionsDrawerBody({
                     <div className="flex-1 min-h-0 space-y-4 overflow-y-auto rounded-xl border p-3">
                       {loading ? (
                         <div className="py-8 text-center text-sm text-muted-foreground">
-                          正在加载权限列表...
+                          {t("role.loadingPermissions")}
                         </div>
                       ) : groupedPermissions.length > 0 ? (
                         groupedPermissions.map(([groupName, list]) => (
                           <section key={groupName} className="space-y-2">
                             <div className="flex items-center gap-2">
-                              <Badge variant="outline">{groupName}</Badge>
+                              <Badge variant="outline">{getPermissionGroupName(groupName, locale)}</Badge>
                               <span className="text-xs text-muted-foreground">
-                                {list.length} 项
+                                {t("role.permissionCount", { count: list.length })}
                               </span>
                             </div>
                             <div className="space-y-1">
@@ -225,7 +233,7 @@ function AssignPermissionsDrawerBody({
                                     />
                                     <div className="min-w-0 flex-1">
                                       <div className="font-medium">
-                                        {permission.name}
+                                        {getPermissionDisplayName(permission.code, permission.name, locale)}
                                       </div>
                                       <div className="text-sm text-muted-foreground">
                                         {permission.code}
@@ -243,8 +251,8 @@ function AssignPermissionsDrawerBody({
                                       }
                                     >
                                       {permission.status === 1
-                                        ? "禁用"
-                                        : "启用"}
+                                        ? t("status.disabled")
+                                        : t("status.ok")}
                                     </Badge>
                                   </label>
                                 );
@@ -254,7 +262,7 @@ function AssignPermissionsDrawerBody({
                         ))
                       ) : (
                         <div className="py-8 text-center text-sm text-muted-foreground">
-                          没有匹配的权限
+                          {t("role.noPermissions")}
                         </div>
                       )}
                     </div>
@@ -267,7 +275,7 @@ function AssignPermissionsDrawerBody({
         </div>
         <DrawerFooter className="border-t">
           <Button type="submit" disabled={saving || loading || !item}>
-            {saving ? "保存中..." : "保存权限"}
+            {saving ? t("role.saving") : t("role.savePermissions")}
           </Button>
           <Button
             type="button"
@@ -275,7 +283,7 @@ function AssignPermissionsDrawerBody({
             onClick={() => onOpenChange(false)}
             disabled={saving}
           >
-            取消
+            {t("role.cancel")}
           </Button>
         </DrawerFooter>
       </form>

@@ -16,6 +16,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { useI18n } from "@/i18n/provider"
 import { cn } from "@/lib/utils"
 
 export type ComboboxOption = {
@@ -37,11 +38,12 @@ export function OptionCombobox({
   value,
   options,
   placeholder,
-  searchPlaceholder = "请输入关键字搜索",
-  emptyText = "没有可选项",
+  searchPlaceholder,
+  emptyText,
   disabled = false,
   onChange,
 }: OptionComboboxProps) {
+  const t = useI18n()
   const selectedLabel =
     options.find((option) => option.value === value)?.label ?? placeholder
 
@@ -62,9 +64,9 @@ export function OptionCombobox({
       </PopoverTrigger>
       <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
         <Command>
-          <CommandInput placeholder={searchPlaceholder} />
+          <CommandInput placeholder={searchPlaceholder ?? t("common.searchKeyword")} />
           <CommandList>
-            <CommandEmpty>{emptyText}</CommandEmpty>
+            <CommandEmpty>{emptyText ?? t("common.emptyOptions")}</CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem

@@ -1,8 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
-import { Controller, Resolver, useForm } from "react-hook-form";
+import { useEffect, useMemo, useState } from "react";
+import { Controller, type Resolver, useForm } from "react-hook-form";
 import { z } from "zod/v4";
 
 import { OptionCombobox } from "@/components/option-combobox";
@@ -15,27 +15,17 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   fetchKnowledgeBase,
   type CreateKnowledgeBasePayload,
   type KnowledgeBase,
 } from "@/lib/api/admin";
-import { getEnumLabel, getEnumOptions } from "@/lib/enums";
+import { useI18n } from "@/i18n/provider";
 import {
   KnowledgeAnswerMode,
-  KnowledgeAnswerModeLabels,
   KnowledgeBaseType,
-  KnowledgeBaseTypeLabels,
   KnowledgeChunkProvider,
-  KnowledgeChunkProviderLabels,
 } from "@/lib/generated/enums";
 
 type KnowledgeBaseEditDialogProps = {
@@ -61,29 +51,61 @@ const emptyForm: EditForm = {
   remark: "",
 };
 
-const knowledgeBaseFormSchema = z.object({
-  name: z.string().trim().min(1, "名称不能为空").max(100, "名称最多100个字符"),
-  description: z.string().trim().max(500, "描述最多500个字符"),
-  knowledgeType: z.string().trim().min(1, "请选择知识库类型"),
-  defaultTopK: z.string().trim().min(1, "请输入TopK值"),
-  defaultScoreThreshold: z.string().trim().min(1, "请输入分数阈值"),
-  defaultRerankLimit: z.string().trim().min(1, "请输入重排序限制"),
-  chunkProvider: z.string().trim().min(1, "请选择分块策略"),
-  chunkTargetTokens: z.string().trim().min(1, "请输入目标 token 数"),
-  chunkMaxTokens: z.string().trim().min(1, "请输入最大 token 数"),
-  chunkOverlapTokens: z.string().trim().min(1, "请输入重叠 token 数"),
-  answerMode: z.string().trim().min(1, "请选择回答模式"),
-  remark: z.string().trim().max(500, "备注最多500个字符"),
-});
+type TFunction = (key: string, values?: Record<string, string | number>) => string;
 
-type EditForm = z.infer<typeof knowledgeBaseFormSchema>;
-const editFormResolver = zodResolver(
-  knowledgeBaseFormSchema as never,
-) as Resolver<
-  z.input<typeof knowledgeBaseFormSchema>,
-  undefined,
-  z.output<typeof knowledgeBaseFormSchema>
->;
+function createKnowledgeBaseFormSchema(t: TFunction) {
+  return z.object({
+  name: z.string().trim().min(1, t("knowledge.nameRequired")).max(100, t("knowledge.nameMax")),
+  description: z.string().trim().max(500, t("knowledge.descriptionMax")),
+  knowledgeType: z.string().trim().min(1, t("knowledge.typeRequired")),
+  defaultTopK: z.string().trim().min(1, t("knowledge.topKRequired")),
+  defaultScoreThreshold: z.string().trim().min(1, t("knowledge.scoreRequired")),
+  defaultRerankLimit: z.string().trim().min(1, t("knowledge.rerankRequired")),
+  chunkProvider: z.string().trim().min(1, t("knowledge.chunkProviderRequired")),
+  chunkTargetTokens: z.string().trim().min(1, t("knowledge.targetTokensRequired")),
+  chunkMaxTokens: z.string().trim().min(1, t("knowledge.maxTokensRequired")),
+  chunkOverlapTokens: z.string().trim().min(1, t("knowledge.overlapTokensRequired")),
+  answerMode: z.string().trim().min(1, t("knowledge.answerModeRequired")),
+  remark: z.string().trim().max(500, t("knowledge.remarkMax")),
+  });
+}
+
+type EditForm = {
+  name: string;
+  description: string;
+  knowledgeType: string;
+  defaultTopK: string;
+  defaultScoreThreshold: string;
+  defaultRerankLimit: string;
+  chunkProvider: string;
+  chunkTargetTokens: string;
+  chunkMaxTokens: string;
+  chunkOverlapTokens: string;
+  answerMode: string;
+  remark: string;
+};
+
+function getKnowledgeTypeOptions(t: TFunction) {
+  return [
+    { value: KnowledgeBaseType.Document, label: t("knowledge.typeDocument") },
+    { value: KnowledgeBaseType.FAQ, label: t("knowledge.typeFAQ") },
+  ];
+}
+
+function getChunkProviderOptions(t: TFunction) {
+  return [
+    { value: KnowledgeChunkProvider.Fixed, label: t("knowledge.chunkFixed") },
+    { value: KnowledgeChunkProvider.Structured, label: t("knowledge.chunkStructured") },
+    { value: KnowledgeChunkProvider.Semantic, label: t("knowledge.chunkSemantic") },
+  ];
+}
+
+function getAnswerModeOptions(t: TFunction) {
+  return [
+    { value: String(KnowledgeAnswerMode.Strict), label: t("knowledge.answerStrict") },
+    { value: String(KnowledgeAnswerMode.Assist), label: t("knowledge.answerAssist") },
+  ];
+}
 
 function buildForm(item: KnowledgeBase | null): EditForm {
   if (!item) {
@@ -161,13 +183,18 @@ function KnowledgeBaseFormDialogBody({
   onOpenChange,
   onSubmit,
 }: KnowledgeBaseFormDialogBodyProps) {
+  const t = useI18n();
   const formId = "knowledge-base-edit-form";
   const [loading, setLoading] = useState(false);
-  const form = useForm<
-    z.input<typeof knowledgeBaseFormSchema>,
-    undefined,
-    z.output<typeof knowledgeBaseFormSchema>
-  >({
+  const knowledgeBaseFormSchema = useMemo(() => createKnowledgeBaseFormSchema(t), [t]);
+  const editFormResolver = useMemo(
+    () => zodResolver(knowledgeBaseFormSchema) as Resolver<EditForm>,
+    [knowledgeBaseFormSchema],
+  );
+  const knowledgeTypeOptions = useMemo(() => getKnowledgeTypeOptions(t), [t]);
+  const chunkProviderOptions = useMemo(() => getChunkProviderOptions(t), [t]);
+  const answerModeOptions = useMemo(() => getAnswerModeOptions(t), [t]);
+  const form = useForm<EditForm>({
     resolver: editFormResolver,
     defaultValues: buildForm(null),
   });
@@ -228,7 +255,7 @@ function KnowledgeBaseFormDialogBody({
     <ProjectDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={itemId ? "编辑知识库" : "新建知识库"}
+      title={itemId ? t("knowledge.editBaseTitle") : t("knowledge.createBaseTitle")}
       size="lg"
       footer={
         <>
@@ -238,17 +265,17 @@ function KnowledgeBaseFormDialogBody({
             onClick={() => onOpenChange(false)}
             disabled={saving || loading}
           >
-            取消
+            {t("knowledge.cancel")}
           </Button>
           <Button type="submit" form={formId} disabled={saving || loading}>
-            {saving ? "保存中..." : itemId ? "保存" : "创建"}
+            {saving ? t("knowledge.saving") : itemId ? t("knowledge.save") : t("knowledge.create")}
           </Button>
         </>
       }
     >
       {loading ? (
         <div className="flex items-center justify-center py-8">
-          <div className="text-sm text-muted-foreground">加载中...</div>
+          <div className="text-sm text-muted-foreground">{t("knowledge.loading")}</div>
         </div>
       ) : (
         <form
@@ -257,7 +284,7 @@ function KnowledgeBaseFormDialogBody({
           className="space-y-4"
         >
           <Field data-invalid={!!errors.knowledgeType}>
-            <FieldLabel htmlFor="kb-knowledge-type">知识库类型</FieldLabel>
+            <FieldLabel htmlFor="kb-knowledge-type">{t("knowledge.knowledgeType")}</FieldLabel>
             <FieldContent>
               <Controller
                 control={control}
@@ -265,13 +292,10 @@ function KnowledgeBaseFormDialogBody({
                 render={({ field }) => (
                   <OptionCombobox
                     value={field.value}
-                    options={getEnumOptions(KnowledgeBaseTypeLabels).map((option) => ({
-                      value: String(option.value),
-                      label: option.label,
-                    }))}
-                    placeholder="选择知识库类型"
-                    searchPlaceholder="搜索知识库类型"
-                    emptyText="没有匹配的知识库类型"
+                    options={knowledgeTypeOptions}
+                    placeholder={t("knowledge.selectKnowledgeType")}
+                    searchPlaceholder={t("knowledge.searchKnowledgeType")}
+                    emptyText={t("knowledge.emptyKnowledgeType")}
                     onChange={field.onChange}
                   />
                 )}
@@ -281,11 +305,11 @@ function KnowledgeBaseFormDialogBody({
           </Field>
 
           <Field data-invalid={!!errors.name}>
-            <FieldLabel htmlFor="kb-name">名称</FieldLabel>
+            <FieldLabel htmlFor="kb-name">{t("knowledge.name")}</FieldLabel>
             <FieldContent>
               <Input
                 id="kb-name"
-                placeholder="知识库名称"
+                placeholder={t("knowledge.namePlaceholder")}
                 aria-invalid={!!errors.name}
                 {...register("name")}
               />
@@ -294,11 +318,11 @@ function KnowledgeBaseFormDialogBody({
           </Field>
 
           <Field data-invalid={!!errors.description}>
-            <FieldLabel htmlFor="kb-description">描述</FieldLabel>
+            <FieldLabel htmlFor="kb-description">{t("knowledge.description")}</FieldLabel>
             <FieldContent>
               <Textarea
                 id="kb-description"
-                placeholder="知识库描述"
+                placeholder={t("knowledge.descriptionPlaceholder")}
                 rows={3}
                 aria-invalid={!!errors.description}
                 {...register("description")}
@@ -310,7 +334,7 @@ function KnowledgeBaseFormDialogBody({
           {!isFAQKnowledgeBase ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
             <Field data-invalid={!!errors.chunkProvider}>
-              <FieldLabel htmlFor="kb-chunk-provider">分块策略</FieldLabel>
+              <FieldLabel htmlFor="kb-chunk-provider">{t("knowledge.chunkProvider")}</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
@@ -318,15 +342,10 @@ function KnowledgeBaseFormDialogBody({
                   render={({ field }) => (
                     <OptionCombobox
                       value={field.value}
-                      options={getEnumOptions(KnowledgeChunkProviderLabels)
-                        .filter((option) => option.value !== KnowledgeChunkProvider.FAQ)
-                        .map((option) => ({
-                          value: String(option.value),
-                          label: option.label,
-                        }))}
-                      placeholder="选择分块策略"
-                      searchPlaceholder="搜索分块策略"
-                      emptyText="没有匹配的分块策略"
+                      options={chunkProviderOptions}
+                      placeholder={t("knowledge.selectChunkProvider")}
+                      searchPlaceholder={t("knowledge.searchChunkProvider")}
+                      emptyText={t("knowledge.emptyChunkProvider")}
                       onChange={field.onChange}
                     />
                   )}
@@ -336,7 +355,7 @@ function KnowledgeBaseFormDialogBody({
             </Field>
             <Field data-invalid={!!errors.chunkTargetTokens}>
               <FieldLabel htmlFor="kb-chunk-target-tokens">
-                目标 Token
+                {t("knowledge.targetToken")}
               </FieldLabel>
               <FieldContent>
                 <Input
@@ -351,7 +370,7 @@ function KnowledgeBaseFormDialogBody({
               </FieldContent>
             </Field>
             <Field data-invalid={!!errors.chunkMaxTokens}>
-              <FieldLabel htmlFor="kb-chunk-max-tokens">最大 Token</FieldLabel>
+              <FieldLabel htmlFor="kb-chunk-max-tokens">{t("knowledge.maxToken")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="kb-chunk-max-tokens"
@@ -366,7 +385,7 @@ function KnowledgeBaseFormDialogBody({
             </Field>
             <Field data-invalid={!!errors.chunkOverlapTokens}>
               <FieldLabel htmlFor="kb-chunk-overlap-tokens">
-                重叠 Token
+                {t("knowledge.overlapToken")}
               </FieldLabel>
               <FieldContent>
                 <Input
@@ -385,7 +404,7 @@ function KnowledgeBaseFormDialogBody({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
             <Field data-invalid={!!errors.defaultTopK}>
-              <FieldLabel htmlFor="kb-default-top-k">默认TopK</FieldLabel>
+              <FieldLabel htmlFor="kb-default-top-k">{t("knowledge.defaultTopK")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="kb-default-top-k"
@@ -400,7 +419,7 @@ function KnowledgeBaseFormDialogBody({
             </Field>
             <Field data-invalid={!!errors.defaultScoreThreshold}>
               <FieldLabel htmlFor="kb-default-score-threshold">
-                默认分数阈值
+                {t("knowledge.defaultScoreThreshold")}
               </FieldLabel>
               <FieldContent>
                 <Input
@@ -417,7 +436,7 @@ function KnowledgeBaseFormDialogBody({
             </Field>
             <Field data-invalid={!!errors.defaultRerankLimit}>
               <FieldLabel htmlFor="kb-default-rerank-limit">
-                默认重排序限制
+                {t("knowledge.defaultRerankLimit")}
               </FieldLabel>
               <FieldContent>
                 <Input
@@ -432,37 +451,20 @@ function KnowledgeBaseFormDialogBody({
               </FieldContent>
             </Field>
             <Field data-invalid={!!errors.answerMode}>
-              <FieldLabel htmlFor="kb-answer-mode">回答模式</FieldLabel>
+              <FieldLabel htmlFor="kb-answer-mode">{t("knowledge.answerMode")}</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
                   name="answerMode"
                   render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger
-                        id="kb-answer-mode"
-                        aria-invalid={!!errors.answerMode}
-                      >
-                        <SelectValue placeholder="选择回答模式">
-                          {field.value
-                            ? getEnumLabel(
-                                KnowledgeAnswerModeLabels,
-                                Number(field.value),
-                              )
-                            : undefined}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {getEnumOptions(KnowledgeAnswerModeLabels).map((option) => (
-                          <SelectItem
-                            key={option.value}
-                            value={String(option.value)}
-                          >
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <OptionCombobox
+                      value={field.value}
+                      options={answerModeOptions}
+                      placeholder={t("knowledge.selectAnswerMode")}
+                      searchPlaceholder={t("knowledge.searchAnswerMode")}
+                      emptyText={t("knowledge.emptyAnswerMode")}
+                      onChange={field.onChange}
+                    />
                   )}
                 />
                 <FieldError errors={[errors.answerMode]} />
@@ -471,11 +473,11 @@ function KnowledgeBaseFormDialogBody({
           </div>
 
           <Field data-invalid={!!errors.remark}>
-            <FieldLabel htmlFor="kb-remark">备注</FieldLabel>
+            <FieldLabel htmlFor="kb-remark">{t("knowledge.remark")}</FieldLabel>
             <FieldContent>
               <Textarea
                 id="kb-remark"
-                placeholder="备注信息"
+                placeholder={t("knowledge.remarkPlaceholder")}
                 rows={2}
                 aria-invalid={!!errors.remark}
                 {...register("remark")}

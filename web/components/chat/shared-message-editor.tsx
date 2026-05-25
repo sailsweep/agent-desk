@@ -34,6 +34,7 @@ import {
   type UploadedEditorImage,
 } from "@/lib/im-editor-image"
 import { generateUUID } from "@/lib/utils"
+import { useI18n } from "@/i18n/provider"
 
 export type UploadedMessageEditorImage = UploadedEditorImage & {
   url: string
@@ -74,6 +75,7 @@ export function SharedMessageEditor({
   onUploadImage,
   onSendAttachment,
 }: SharedMessageEditorProps) {
+  const t = useI18n()
   const [localUploading, setLocalUploading] = useState(false)
   const imageInputRef = useRef<HTMLInputElement | null>(null)
   const attachmentInputRef = useRef<HTMLInputElement | null>(null)
@@ -83,8 +85,11 @@ export function SharedMessageEditor({
   const shouldRestoreFocusRef = useRef(false)
   const objectUrlsRef = useRef<Set<string>>(new Set())
   const uploadedImagesRef = useRef(new Map<string, UploadedMessageEditorImage>())
+  const placeholderRef = useRef(t("conversation.editorPlaceholder"))
   const isCustomer = variant === "customer"
   const isUploading = uploadingAsset || (manageLocalUploading && localUploading)
+
+  placeholderRef.current = t("conversation.editorPlaceholder")
 
   useEffect(() => {
     const objectUrls = objectUrlsRef.current
@@ -118,7 +123,7 @@ export function SharedMessageEditor({
       }),
       MessageImageExtension,
       Placeholder.configure({
-        placeholder: "输入消息，Enter 发送，Shift + Enter 换行",
+        placeholder: () => placeholderRef.current,
       }),
     ],
     content: "",
@@ -320,8 +325,8 @@ export function SharedMessageEditor({
               imageInputRef.current?.click()
             }}
             disabled={disabled || isUploading}
-            aria-label={isUploading ? "图片上传中" : "发送图片"}
-            title={isUploading ? "图片上传中" : "发送图片"}
+            aria-label={isUploading ? t("conversation.imageUploading") : t("conversation.sendImage")}
+            title={isUploading ? t("conversation.imageUploading") : t("conversation.sendImage")}
           >
             <ImageIcon className={isCustomer ? undefined : "size-4"} />
           </Button>
@@ -336,8 +341,8 @@ export function SharedMessageEditor({
               attachmentInputRef.current?.click()
             }}
             disabled={disabled || isUploading}
-            aria-label={isUploading ? "附件上传中" : "发送附件"}
-            title={isUploading ? "附件上传中" : "发送附件"}
+            aria-label={isUploading ? t("conversation.attachmentUploading") : t("conversation.sendAttachment")}
+            title={isUploading ? t("conversation.attachmentUploading") : t("conversation.sendAttachment")}
           >
             <PaperclipIcon className={isCustomer ? undefined : "size-4"} />
           </Button>
@@ -359,9 +364,9 @@ export function SharedMessageEditor({
               </PopoverTrigger>
               <PopoverContent className="w-[30rem] p-0" align="start">
                 <Command>
-                  <CommandInput placeholder="搜索快捷回复" />
+                  <CommandInput placeholder={t("conversation.searchQuickReplies")} />
                   <CommandList>
-                    <CommandEmpty>暂无快捷回复</CommandEmpty>
+                    <CommandEmpty>{t("conversation.emptyQuickReplies")}</CommandEmpty>
                     <CommandGroup>
                       {quickReplies.items.map((item) => (
                         <CommandItem
@@ -390,7 +395,7 @@ export function SharedMessageEditor({
         </div>
         <div className="flex items-center gap-2">
           <p className={isCustomer ? "hidden text-[10px] text-muted-foreground sm:block" : "text-xs text-muted-foreground"}>
-            Enter 发送
+            {t("conversation.enterToSend")}
           </p>
           {isCustomer ? (
             <Button
@@ -398,8 +403,8 @@ export function SharedMessageEditor({
               size="icon"
               onClick={() => void handleSend()}
               disabled={disabled || isUploading}
-              aria-label="发送"
-              title="发送"
+              aria-label={t("conversation.send")}
+              title={t("conversation.send")}
               className="bg-primary text-white shadow-[0_10px_20px_color-mix(in_srgb,var(--primary)_24%,transparent)] hover:bg-primary hover:brightness-105"
             >
               <SendHorizonalIcon />
@@ -412,7 +417,7 @@ export function SharedMessageEditor({
               disabled={disabled || isUploading}
             >
               <SendIcon className="mr-1 size-4" />
-              {isUploading ? "上传中..." : "发送"}
+              {isUploading ? t("conversation.uploading") : t("conversation.send")}
             </Button>
           )}
         </div>

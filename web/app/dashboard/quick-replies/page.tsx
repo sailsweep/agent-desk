@@ -46,21 +46,23 @@ import {
   type CreateAdminQuickReplyPayload,
   type PageResult,
 } from "@/lib/api/admin"
-import { getEnumLabel, getEnumOptions } from "@/lib/enums"
+import { getEnumOptions } from "@/lib/enums"
 import { Status, StatusLabels } from "@/lib/generated/enums"
+import { useI18n } from "@/i18n/provider"
 import { EditDialog } from "./_components/edit"
 
-const listStatusOptions = [
-  { value: "all", label: "全部状态" },
-  ...getEnumOptions(StatusLabels)
-    .filter((item) => Number(item.value) !== Status.Deleted)
-    .map((item) => ({
-      value: String(item.value),
-      label: item.label,
-    })),
-] as const
+function getStatusLabel(status: Status, t: (key: string) => string) {
+  if (status === Status.Disabled) {
+    return t("status.disabled")
+  }
+  if (status === Status.Deleted) {
+    return t("status.deleted")
+  }
+  return t("status.ok")
+}
 
 export default function DashboardQuickRepliesPage() {
+  const t = useI18n()
   const [keywordInput, setKeywordInput] = useState("")
   const [groupNameInput, setGroupNameInput] = useState("")
   const [statusFilterInput, setStatusFilterInput] = useState("all")
@@ -91,11 +93,21 @@ export default function DashboardQuickRepliesPage() {
       })
       setResult(data)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载快捷回复失败")
+      toast.error(error instanceof Error ? error.message : t("quickReply.loadFailed"))
     } finally {
       setLoading(false)
     }
-  }, [groupName, keyword, limit, page, statusFilter])
+  }, [groupName, keyword, limit, page, statusFilter, t])
+
+  const listStatusOptions = [
+    { value: "all", label: t("status.all") },
+    ...getEnumOptions(StatusLabels)
+      .filter((item) => Number(item.value) !== Status.Deleted)
+      .map((item) => ({
+        value: String(item.value),
+        label: getStatusLabel(item.value as Status, t),
+      })),
+  ]
 
   useEffect(() => {
     void loadData()
@@ -156,16 +168,16 @@ export default function DashboardQuickRepliesPage() {
           id: editingItem.id,
           ...payload,
         })
-        toast.success(`已更新快捷回复：${editingItem.title}`)
+        toast.success(t("quickReply.updated", { title: editingItem.title }))
       } else {
         await createQuickReply(payload)
-        toast.success(`已创建快捷回复：${payload.title}`)
+        toast.success(t("quickReply.created", { title: payload.title }))
       }
       setDialogOpen(false)
       setEditingItem(null)
       await loadData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "保存快捷回复失败")
+      toast.error(error instanceof Error ? error.message : t("quickReply.saveFailed"))
     } finally {
       setSaving(false)
     }
@@ -185,11 +197,11 @@ export default function DashboardQuickRepliesPage() {
         status: nextStatus,
       })
       toast.success(
-        `已${nextStatus === Status.Ok ? "启用" : "禁用"}：${item.title}`
+        t(nextStatus === Status.Ok ? "quickReply.enabled" : "quickReply.disabled", { title: item.title })
       )
       await loadData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "更新状态失败")
+      toast.error(error instanceof Error ? error.message : t("quickReply.statusUpdateFailed"))
     } finally {
       setActionLoadingId(null)
     }
@@ -199,10 +211,10 @@ export default function DashboardQuickRepliesPage() {
     setActionLoadingId(item.id)
     try {
       await deleteQuickReply(item.id)
-      toast.success(`已删除快捷回复：${item.title}`)
+      toast.success(t("quickReply.deleted", { title: item.title }))
       await loadData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "删除快捷回复失败")
+      toast.error(error instanceof Error ? error.message : t("quickReply.deleteFailed"))
     } finally {
       setActionLoadingId(null)
     }
@@ -216,11 +228,11 @@ export default function DashboardQuickRepliesPage() {
             <>
               <Button variant="outline" onClick={() => void loadData()} disabled={loading}>
                 <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
-                刷新
+                {t("quickReply.refresh")}
               </Button>
               <Button onClick={openCreateDialog}>
                 <PlusIcon />
-                新建快捷回复
+                {t("quickReply.new")}
               </Button>
             </>
           }
@@ -231,7 +243,7 @@ export default function DashboardQuickRepliesPage() {
               value={keywordInput}
               onChange={(event) => setKeywordInput(event.target.value)}
               onKeyDown={handleFilterKeyDown}
-              placeholder="按标题筛选"
+              placeholder={t("quickReply.filterTitle")}
               className="pl-9"
             />
           </div>
@@ -239,20 +251,20 @@ export default function DashboardQuickRepliesPage() {
             value={groupNameInput}
             onChange={(event) => setGroupNameInput(event.target.value)}
             onKeyDown={handleFilterKeyDown}
-            placeholder="按分组筛选"
+            placeholder={t("quickReply.filterGroup")}
             className="w-full sm:w-44"
           />
           <div className="w-full sm:w-36">
             <OptionCombobox
               value={statusFilterInput}
               onChange={setStatusFilterInput}
-              placeholder="全部状态"
+              placeholder={t("status.all")}
               options={[...listStatusOptions]}
             />
           </div>
           <Button variant="outline" onClick={applyFilters} disabled={loading}>
             <SearchIcon />
-            查询
+            {t("quickReply.query")}
           </Button>
         </DashboardToolbar>
         <DashboardTableShell
@@ -273,12 +285,12 @@ export default function DashboardQuickRepliesPage() {
             <Table>
               <TableHeader className="bg-muted/40">
                 <TableRow>
-                  <TableHead>快捷回复</TableHead>
-                  <TableHead>分组</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead>排序</TableHead>
-                  <TableHead>创建人</TableHead>
-                  <TableHead className="w-[92px] text-right">操作</TableHead>
+                  <TableHead>{t("quickReply.columnQuickReply")}</TableHead>
+                  <TableHead>{t("quickReply.columnGroup")}</TableHead>
+                  <TableHead>{t("quickReply.columnStatus")}</TableHead>
+                  <TableHead>{t("quickReply.columnSort")}</TableHead>
+                  <TableHead>{t("quickReply.columnCreator")}</TableHead>
+                  <TableHead className="w-[92px] text-right">{t("quickReply.columnActions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -306,7 +318,7 @@ export default function DashboardQuickRepliesPage() {
                           item.status === Status.Ok ? "default" : "outline"
                         }
                       >
-                        {getEnumLabel(StatusLabels, item.status as Status)}
+                        {getStatusLabel(item.status as Status, t)}
                       </Badge>
                     </TableCell>
                     <TableCell>{item.sortNo}</TableCell>
@@ -318,12 +330,12 @@ export default function DashboardQuickRepliesPage() {
                           size="sm"
                           onClick={() => openEditDialog(item)}
                         >
-                          编辑
+                          {t("quickReply.edit")}
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger
                             render={<Button variant="outline" size="icon-sm" />}
-                            aria-label={`更多操作 ${item.title}`}
+                            aria-label={t("quickReply.moreActions", { title: item.title })}
                           >
                             <MoreHorizontalIcon />
                           </DropdownMenuTrigger>
@@ -331,17 +343,17 @@ export default function DashboardQuickRepliesPage() {
                             <DropdownMenuItem onClick={() => void handleToggleStatus(item)}>
                               <RefreshCwIcon />
                               {actionLoadingId === item.id
-                                ? "处理中..."
+                                ? t("quickReply.processing")
                                 : item.status === Status.Ok
-                                  ? "禁用"
-                                  : "启用"}
+                                  ? t("quickReply.disable")
+                                  : t("quickReply.enable")}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => void handleDelete(item)}
                               className="text-destructive focus:text-destructive"
                             >
                               <Trash2Icon />
-                              {actionLoadingId === item.id ? "删除中..." : "删除"}
+                              {actionLoadingId === item.id ? t("quickReply.deleting") : t("quickReply.delete")}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -353,8 +365,8 @@ export default function DashboardQuickRepliesPage() {
                   <DashboardTableStateRow
                     colSpan={6}
                     loading={loading}
-                    loadingText="正在加载快捷回复..."
-                    emptyText="没有匹配的快捷回复"
+                    loadingText={t("quickReply.loading")}
+                    emptyText={t("quickReply.empty")}
                   />
                 ) : null}
               </TableBody>

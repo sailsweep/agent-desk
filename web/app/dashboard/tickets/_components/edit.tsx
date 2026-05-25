@@ -42,6 +42,9 @@ import {
   type TicketItem,
   type UpdateTicketPayload,
 } from "@/lib/api/ticket"
+import { useI18n } from "@/i18n/provider"
+
+type TFunction = (key: string, values?: Record<string, string | number>) => string
 
 type EditDialogProps = {
   open: boolean
@@ -56,20 +59,21 @@ type EditDialogProps = {
   onSubmit: (payload: CreateTicketPayload | UpdateTicketPayload) => Promise<void>
 }
 
-const schema = z.object({
-  title: z.string().trim().min(1, "请输入工单标题"),
-  description: z.string().refine((value) => !isRichTextEmpty(value), "请输入问题描述"),
+function createSchema(t: TFunction) {
+  return z.object({
+  title: z.string().trim().min(1, t("ticket.titleRequired")),
+  description: z.string().refine((value) => !isRichTextEmpty(value), t("ticket.descriptionRequired")),
   currentAssigneeId: z.coerce.number().int().min(0).optional(),
   tagIds: z.array(z.number().int().positive()).default([]),
-})
+  })
+}
 
-type EditForm = z.infer<typeof schema>
-
-const editFormResolver = zodResolver(schema as never) as Resolver<
-  z.input<typeof schema>,
-  undefined,
-  z.output<typeof schema>
->
+type EditForm = {
+  title: string
+  description: string
+  currentAssigneeId?: number
+  tagIds: number[]
+}
 
 const emptyForm: EditForm = {
   title: "",
@@ -130,9 +134,10 @@ type TicketTagSelectorProps = {
   value?: number[]
   onChange: (value: number[]) => void
   availableTags: TagTree[]
+  t: TFunction
 }
 
-function TicketTagSelector({ value, onChange, availableTags }: TicketTagSelectorProps) {
+function TicketTagSelector({ value, onChange, availableTags, t }: TicketTagSelectorProps) {
   const selectedValues = useMemo(() => value ?? [], [value])
   const flatTags = useMemo(() => flattenTagTree(availableTags), [availableTags])
   const selectedTagIDs = useMemo(() => new Set(selectedValues), [selectedValues])
@@ -158,14 +163,14 @@ function TicketTagSelector({ value, onChange, availableTags }: TicketTagSelector
           }
         >
           <TagIcon className="size-4" />
-          {selectedTags.length > 0 ? `已选择 ${selectedTags.length} 个标签` : "请选择工单标签"}
+          {selectedTags.length > 0 ? t("ticket.selectedTags", { count: selectedTags.length }) : t("ticket.selectTags")}
         </PopoverTrigger>
         <PopoverContent align="start" className="w-[320px] p-0">
           <Command>
-            <CommandInput placeholder="搜索标签" />
+            <CommandInput placeholder={t("ticket.searchTags")} />
             <CommandList>
-              <CommandEmpty>暂无可用标签</CommandEmpty>
-              <CommandGroup heading="标签">
+              <CommandEmpty>{t("ticket.emptyTags")}</CommandEmpty>
+              <CommandGroup heading={t("ticket.tags")}>
                 {flatTags.map((tag) => {
                   const checked = selectedTagIDs.has(tag.id)
                   return (
@@ -245,15 +250,17 @@ function TicketEditDialogBody({
   onOpenChange,
   onSubmit,
 }: TicketEditDialogBodyProps) {
+  const t = useI18n()
   const formId = "ticket-edit-form"
   const [loading, setLoading] = useState(false)
   const [tags, setTags] = useState<TagTree[]>([])
   const [agents, setAgents] = useState<AdminAgentProfile[]>([])
-  const form = useForm<
-    z.input<typeof schema>,
-    undefined,
-    z.output<typeof schema>
-  >({
+  const schema = useMemo(() => createSchema(t), [t])
+  const editFormResolver = useMemo(
+    () => zodResolver(schema) as Resolver<EditForm>,
+    [schema],
+  )
+  const form = useForm<EditForm>({
     resolver: editFormResolver,
     defaultValues: emptyForm,
   })
@@ -296,14 +303,14 @@ function TicketEditDialogBody({
     })()
   }, [open])
 
-  const agentOptions = [{ value: "0", label: "不指定处理人" }].concat(
+  const agentOptions = [{ value: "0", label: t("ticket.noAssignee") }].concat(
     agents.map((agent) => ({
       value: String(agent.userId),
       label:
         agent.displayName ||
         agent.nickname ||
         agent.username ||
-        `客服#${agent.userId}`,
+        t("ticket.agentFallback", { id: agent.userId }),
     })),
   )
 
@@ -328,8 +335,8 @@ function TicketEditDialogBody({
     <ProjectDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={titleOverride || (itemId ? "编辑工单" : "新建工单")}
-      description={descriptionOverride || "填写工单基础信息"}
+      title={titleOverride || (itemId ? t("ticket.editTitle") : t("ticket.createTitle"))}
+      description={descriptionOverride || t("ticket.dialogDescription")}
       size="lg"
       allowFullscreen
       footer={
@@ -340,27 +347,27 @@ function TicketEditDialogBody({
             onClick={() => onOpenChange(false)}
             disabled={saving}
           >
-            取消
+            {t("ticket.cancel")}
           </Button>
           <Button type="submit" form={formId} disabled={saving || loading}>
-            {saving ? "保存中..." : itemId ? "保存" : "创建"}
+            {saving ? t("ticket.saving") : itemId ? t("ticket.save") : t("ticket.create")}
           </Button>
         </>
       }
     >
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="text-muted-foreground">加载中...</div>
+          <div className="text-muted-foreground">{t("ticket.loading")}</div>
         </div>
       ) : (
         <form id={formId} onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
           <FieldGroup>
             <Field data-invalid={!!errors.title}>
-              <FieldLabel htmlFor="ticket-title">标题</FieldLabel>
+              <FieldLabel htmlFor="ticket-title">{t("ticket.title")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="ticket-title"
-                  placeholder="请输入工单标题"
+                  placeholder={t("ticket.titlePlaceholder")}
                   aria-invalid={!!errors.title}
                   {...register("title")}
                 />
@@ -369,7 +376,7 @@ function TicketEditDialogBody({
             </Field>
 
             <Field data-invalid={!!errors.description}>
-              <FieldLabel>描述</FieldLabel>
+              <FieldLabel>{t("ticket.description")}</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
@@ -378,7 +385,7 @@ function TicketEditDialogBody({
                     <ContentEditor
                       value={{ mode: "html", raw: field.value ?? "" }}
                       onChange={(next) => field.onChange(next.raw)}
-                      placeholder="请输入问题描述"
+                      placeholder={t("ticket.descriptionRequired")}
                       disabled={saving || loading}
                       allowedModes={["html"]}
                       height={260}
@@ -390,7 +397,7 @@ function TicketEditDialogBody({
             </Field>
 
             <Field>
-              <FieldLabel>处理人</FieldLabel>
+              <FieldLabel>{t("ticket.assignee")}</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
@@ -399,7 +406,7 @@ function TicketEditDialogBody({
                     <OptionCombobox
                       value={String(field.value ?? 0)}
                       onChange={(value) => field.onChange(Number(value))}
-                      placeholder="请选择处理人"
+                      placeholder={t("ticket.selectAssignee")}
                       options={agentOptions}
                     />
                   )}
@@ -408,7 +415,7 @@ function TicketEditDialogBody({
             </Field>
 
             <Field>
-              <FieldLabel>工单标签</FieldLabel>
+              <FieldLabel>{t("ticket.ticketTags")}</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
@@ -418,6 +425,7 @@ function TicketEditDialogBody({
                       value={field.value}
                       onChange={field.onChange}
                       availableTags={tags}
+                      t={t}
                     />
                   )}
                 />

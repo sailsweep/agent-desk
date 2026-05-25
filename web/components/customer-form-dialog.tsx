@@ -8,6 +8,7 @@ import {
 } from "@/components/customer-form"
 import { ProjectDialog } from "@/components/project-dialog"
 import { Button } from "@/components/ui/button"
+import { useI18n } from "@/i18n/provider"
 
 export type CustomerFormDialogProps = {
   open: boolean
@@ -17,7 +18,7 @@ export type CustomerFormDialogProps = {
   onSave: (payload: CustomerFormSavePayload) => Promise<void>
 }
 
-/** 客户新建/编辑表单弹窗（ProjectDialog + CustomerForm），供客户管理页与会话工作台等复用。 */
+/** Customer create/edit dialog shared by customer management and conversation workflows. */
 export function CustomerFormDialog({
   open,
   saving,
@@ -45,6 +46,7 @@ function CustomerFormDialogBody({
   onOpenChange,
   onSave,
 }: CustomerFormDialogBodyProps) {
+  const t = useI18n()
   const formId = "customer-form-dialog"
   const [loadingDetail, setLoadingDetail] = useState(() => Boolean(itemId))
 
@@ -52,7 +54,7 @@ function CustomerFormDialogBody({
     <ProjectDialog
       open
       onOpenChange={(next) => onOpenChange(next)}
-      title={itemId ? "编辑客户" : "新建客户"}
+      title={itemId ? t("customerForm.editTitle") : t("customerForm.createTitle")}
       allowFullscreen
       size="xl"
       footer={
@@ -63,14 +65,14 @@ function CustomerFormDialogBody({
             onClick={() => onOpenChange(false)}
             disabled={saving}
           >
-            取消
+            {t("customerForm.cancel")}
           </Button>
           <Button
             type="submit"
             form={formId}
             disabled={saving || loadingDetail}
           >
-            {saving ? "保存中..." : itemId ? "保存" : "创建"}
+            {saving ? t("customerForm.saving") : itemId ? t("customerForm.save") : t("customerForm.create")}
           </Button>
         </>
       }

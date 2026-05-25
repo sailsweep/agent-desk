@@ -1,7 +1,7 @@
 "use client"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useCallback, useEffect, useState } from "react"
-import { Controller, Resolver, useForm } from "react-hook-form"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { Controller, type Resolver, useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod/v4"
 
@@ -27,8 +27,11 @@ import {
   type AdminAgentTeamSchedule,
   type CreateAdminAgentTeamSchedulePayload,
   fetchAgentTeamSchedule,
-  fetchAgentTeamsAll
+  fetchAgentTeamsAll,
 } from "@/lib/api/admin"
+import { useI18n } from "@/i18n/provider"
+
+type TFunction = (key: string, values?: Record<string, string | number>) => string
 
 type ScheduleEditDialogProps = {
   open: boolean
@@ -47,10 +50,18 @@ const emptyForm: EditForm = {
   remark: "",
 }
 
-const editFormSchema = z.object({
-  teamId: z.string().trim().regex(/^\d+$/, "请选择客服组"),
-  startAt: z.string().trim().min(1, "开始时间不能为空"),
-  endAt: z.string().trim().min(1, "结束时间不能为空"),
+type EditForm = {
+  teamId: string
+  startAt: string
+  endAt: string
+  remark: string
+}
+
+function createEditFormSchema(t: TFunction) {
+  return z.object({
+  teamId: z.string().trim().regex(/^\d+$/, t("agentTeamSchedule.teamRequired")),
+  startAt: z.string().trim().min(1, t("agentTeamSchedule.startRequired")),
+  endAt: z.string().trim().min(1, t("agentTeamSchedule.endRequired")),
   remark: z.string().trim(),
 }).superRefine((value, ctx) => {
   const startAt = parseDateTimeLocal(value.startAt)
@@ -62,7 +73,7 @@ const editFormSchema = z.object({
     ctx.addIssue({
       code: "custom",
       path: ["endAt"],
-      message: "结束时间必须晚于开始时间",
+      message: t("agentTeamSchedule.endAfterStart"),
     })
     return
   }
@@ -70,24 +81,18 @@ const editFormSchema = z.object({
     ctx.addIssue({
       code: "custom",
       path: ["endAt"],
-      message: "单条排班记录不能跨天",
+      message: t("agentTeamSchedule.singleDayOnly"),
     })
   }
   if (startAt < startOfLocalDay(new Date())) {
     ctx.addIssue({
       code: "custom",
       path: ["startAt"],
-      message: "不能添加或修改历史日期的排班",
+      message: t("agentTeamSchedule.historyReadonly"),
     })
   }
 })
-
-type EditForm = z.infer<typeof editFormSchema>
-const editFormResolver = zodResolver(editFormSchema as never) as Resolver<
-  z.input<typeof editFormSchema>,
-  undefined,
-  z.output<typeof editFormSchema>
->
+}
 
 function toDateTimeLocal(value?: string) {
   if (!value) {
@@ -180,6 +185,7 @@ function ScheduleEditDialogBody({
   onSubmit,
   onDelete,
 }: ScheduleEditDialogBodyProps) {
+  const t = useI18n()
   const [teams, setTeams] = useState<AdminAgentTeam[]>([])
   const [loading, setLoading] = useState(false)
   const loadOptions = useCallback(async () => {
@@ -187,14 +193,15 @@ function ScheduleEditDialogBody({
       const teamsData = await fetchAgentTeamsAll()
       setTeams(teamsData)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载选项失败")
+      toast.error(error instanceof Error ? error.message : t("agentTeamSchedule.loadOptionsFailed"))
     }
-  }, [])
-  const form = useForm<
-    z.input<typeof editFormSchema>,
-    undefined,
-    z.output<typeof editFormSchema>
-  >({
+  }, [t])
+  const editFormSchema = useMemo(() => createEditFormSchema(t), [t])
+  const editFormResolver = useMemo(
+    () => zodResolver(editFormSchema) as Resolver<EditForm>,
+    [editFormSchema],
+  )
+  const form = useForm<EditForm>({
     resolver: editFormResolver,
     defaultValues: emptyForm,
   })
@@ -218,13 +225,13 @@ function ScheduleEditDialogBody({
         const data = await fetchAgentTeamSchedule(itemId)
         reset(buildForm(data))
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "加载客服组排班详情失败")
+        toast.error(error instanceof Error ? error.message : t("agentTeamSchedule.loadDetailFailed"))
       } finally {
         setLoading(false)
       }
     }
     void loadDetail()
-  }, [defaultValues, itemId, reset])
+  }, [defaultValues, itemId, reset, t])
 
   useEffect(() => {
     void loadOptions()
@@ -237,18 +244,18 @@ function ScheduleEditDialogBody({
   return (
     <DialogContent className="max-w-xl gap-0 p-0 sm:max-w-xl">
       <DialogHeader className="px-6 pt-6">
-        <DialogTitle>{itemId ? "编辑客服组排班" : "新建客服组排班"}</DialogTitle>
+        <DialogTitle>{itemId ? t("agentTeamSchedule.editTitle") : t("agentTeamSchedule.createTitle")}</DialogTitle>
       </DialogHeader>
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="text-muted-foreground">加载中...</div>
+          <div className="text-muted-foreground">{t("agentTeamSchedule.loading")}</div>
         </div>
       ) : (
         <form onSubmit={handleSubmit(onFormSubmit)}>
           <div className="space-y-4 p-6">
             <div className="grid grid-cols-1 gap-4">
               <Field data-invalid={!!errors.teamId}>
-                <FieldLabel>客服组</FieldLabel>
+                <FieldLabel>{t("agentTeamSchedule.team")}</FieldLabel>
                 <FieldContent>
                   <Controller
                     control={control}
@@ -260,8 +267,9 @@ function ScheduleEditDialogBody({
                           value: String(team.id),
                           label: team.name,
                         }))}
-                        placeholder="请选择客服组"
-                        searchPlaceholder="搜索客服组"
+                        placeholder={t("agentTeamSchedule.teamRequired")}
+                        searchPlaceholder={t("agentTeamSchedule.searchTeam")}
+                        emptyText={t("agentTeamSchedule.emptyTeam")}
                         onChange={field.onChange}
                       />
                     )}
@@ -272,14 +280,14 @@ function ScheduleEditDialogBody({
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field data-invalid={!!errors.startAt}>
-                <FieldLabel htmlFor="agent-team-schedule-start-at">开始时间</FieldLabel>
+                <FieldLabel htmlFor="agent-team-schedule-start-at">{t("agentTeamSchedule.startTime")}</FieldLabel>
                 <FieldContent>
                   <Input id="agent-team-schedule-start-at" type="datetime-local" min={minDateTime} {...register("startAt")} />
                   <FieldError errors={[errors.startAt]} />
                 </FieldContent>
               </Field>
               <Field data-invalid={!!errors.endAt}>
-                <FieldLabel htmlFor="agent-team-schedule-end-at">结束时间</FieldLabel>
+                <FieldLabel htmlFor="agent-team-schedule-end-at">{t("agentTeamSchedule.endTime")}</FieldLabel>
                 <FieldContent>
                   <Input id="agent-team-schedule-end-at" type="datetime-local" min={minDateTime} {...register("endAt")} />
                   <FieldError errors={[errors.endAt]} />
@@ -287,23 +295,23 @@ function ScheduleEditDialogBody({
               </Field>
             </div>
             <Field>
-              <FieldLabel htmlFor="agent-team-schedule-remark">备注</FieldLabel>
+              <FieldLabel htmlFor="agent-team-schedule-remark">{t("agentTeamSchedule.remark")}</FieldLabel>
               <FieldContent>
-                <Textarea id="agent-team-schedule-remark" rows={4} placeholder="请输入备注" {...register("remark")} />
+                <Textarea id="agent-team-schedule-remark" rows={4} placeholder={t("agentTeamSchedule.remarkPlaceholder")} {...register("remark")} />
               </FieldContent>
             </Field>
           </div>
           <DialogFooter className="mx-0 mb-0 px-6 py-4">
             {itemId && onDelete ? (
               <Button type="button" variant="destructive" onClick={() => void onDelete(itemId)} disabled={saving}>
-                删除
+                {t("agentTeamSchedule.delete")}
               </Button>
             ) : null}
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-              取消
+              {t("agentTeamSchedule.cancel")}
             </Button>
             <Button type="submit" disabled={saving || loading}>
-              {saving ? "保存中..." : "保存"}
+              {saving ? t("agentTeamSchedule.saving") : t("agentTeamSchedule.save")}
             </Button>
           </DialogFooter>
         </form>

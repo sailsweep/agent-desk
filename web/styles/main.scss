@@ -1,5 +1,5 @@
-// 与 widget 对齐的原生细滚动条（会话消息列表等）
-// 在 app/layout.tsx 中随其它样式一并引入
+// Native thin scrollbar aligned with the widget, used by chat message lists.
+// Imported from app/layout.tsx with the rest of the global styles.
 
 $thumb: #cbd5e1;
 $thumb-hover: #94a3b8;

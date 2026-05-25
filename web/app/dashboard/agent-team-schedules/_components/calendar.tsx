@@ -13,7 +13,17 @@ import { cn, formatDateTime } from "@/lib/utils"
 import { isSameLocalDay } from "./calendar-date-range"
 import { buildDayTimeLayout } from "./calendar-time-layout"
 
-const weekDayNames = ["一", "二", "三", "四", "五", "六", "日"]
+type TFunction = (key: string, values?: Record<string, string | number>) => string
+
+const weekDayKeys = [
+  "weekdayShortMon",
+  "weekdayShortTue",
+  "weekdayShortWed",
+  "weekdayShortThu",
+  "weekdayShortFri",
+  "weekdayShortSat",
+  "weekdayShortSun",
+] as const
 const dayMs = 24 * 60 * 60 * 1000
 const minuteMs = 60 * 1000
 const minDurationMs = 15 * minuteMs
@@ -31,6 +41,7 @@ type ScheduleCalendarProps = {
   onEdit: (item: AdminAgentTeamSchedule) => void
   onMove: (payload: UpdateAdminAgentTeamSchedulePayload) => Promise<void>
   onResize: (payload: UpdateAdminAgentTeamSchedulePayload) => Promise<void>
+  t: TFunction
 }
 
 type DragState =
@@ -226,6 +237,7 @@ export function ScheduleCalendar({
   onEdit,
   onMove,
   onResize,
+  t,
 }: ScheduleCalendarProps) {
   const days = buildCalendarDays(calendarStart, calendarEnd)
   const defaultTeamID = teams[0]?.id ?? 0
@@ -250,7 +262,7 @@ export function ScheduleCalendar({
       return {
         itemId: state.item.id,
         date: null,
-        label: "拖到日历日期格内",
+        label: t("agentTeamSchedule.dropInsideCalendar"),
         invalid: true,
         x: pointerEvent.clientX,
         y: pointerEvent.clientY,
@@ -265,7 +277,7 @@ export function ScheduleCalendar({
       return {
         itemId: state.item.id,
         date,
-        label: "不能修改历史日期",
+        label: t("agentTeamSchedule.historyReadonly"),
         invalid: true,
         x: pointerEvent.clientX,
         y: pointerEvent.clientY,
@@ -274,11 +286,11 @@ export function ScheduleCalendar({
 
     const point = { x: pointerEvent.clientX, y: pointerEvent.clientY }
     if (state.type === "move") {
-      return buildPreviewFromPayload(state.item.id, date, buildMovePayload(state.item, date), point, "无法移动到这里")
+      return buildPreviewFromPayload(state.item.id, date, buildMovePayload(state.item, date), point, t("agentTeamSchedule.cannotMoveHere"))
     }
 
     const payload = buildResizePayload(state.item, state.edge, getPointerDateInCell(pointerEvent, cell))
-    return buildPreviewFromPayload(state.item.id, date, payload, point, "不能跨天或少于 15 分钟")
+    return buildPreviewFromPayload(state.item.id, date, payload, point, t("agentTeamSchedule.resizeInvalid"))
   }
 
   function cleanupPointerInteraction(
@@ -365,7 +377,7 @@ export function ScheduleCalendar({
   if (teams.length === 0 && !loading) {
     return (
       <div className="flex min-h-64 items-center justify-center rounded-lg border bg-background text-sm text-muted-foreground">
-        暂无客服组，无法展示排班日历
+        {t("agentTeamSchedule.noTeamsCalendar")}
       </div>
     )
   }
@@ -426,7 +438,7 @@ export function ScheduleCalendar({
           <div className="flex shrink-0 items-center gap-1">
             {today ? (
               <span className="rounded-sm bg-primary px-1.5 py-0.5 text-[10px] font-medium leading-none text-primary-foreground">
-                今天
+                {t("agentTeamSchedule.today")}
               </span>
             ) : null}
             {historical ? null : <CalendarPlusIcon className="size-3.5 text-muted-foreground" />}
@@ -434,7 +446,7 @@ export function ScheduleCalendar({
         </div>
         <div className="space-y-1">
           {daySchedules.slice(0, 5).map((item) => {
-            const teamName = item.teamName || teams.find((team) => team.id === item.teamId)?.name || `客服组#${item.teamId}`
+            const teamName = item.teamName || teams.find((team) => team.id === item.teamId)?.name || t("agentTeamSchedule.teamFallback", { id: item.teamId })
             const busy = savingId === item.id
             const active = interactionPreview?.itemId === item.id
             const timeLayout = dayTimeLayout.items.get(item.id)
@@ -512,7 +524,7 @@ export function ScheduleCalendar({
             )
           })}
           {daySchedules.length > 5 ? (
-            <div className="text-xs text-muted-foreground">还有 {daySchedules.length - 5} 条</div>
+            <div className="text-xs text-muted-foreground">{t("agentTeamSchedule.moreItems", { count: daySchedules.length - 5 })}</div>
           ) : null}
         </div>
       </div>
@@ -528,7 +540,7 @@ export function ScheduleCalendar({
             return (
               <div key={date} className="grid grid-cols-[112px_minmax(0,1fr)]">
                 <div className="border-r bg-muted/40 px-3 py-3 text-sm font-medium">
-                  <div>周{weekDayNames[dayIndex] ?? ""}</div>
+                  <div>{t(`agentTeamSchedule.${weekDayKeys[dayIndex] ?? "weekdayShortMon"}`)}</div>
                   <div className="mt-1 text-xs font-normal text-muted-foreground">{date.slice(5)}</div>
                 </div>
                 {renderDayCell(day, dayIndex, {
@@ -562,9 +574,9 @@ export function ScheduleCalendar({
   return (
     <div className="min-w-[960px] overflow-hidden rounded-lg border bg-background">
       <div className="grid grid-cols-7 border-b bg-muted/40">
-        {weekDayNames.map((name) => (
-          <div key={name} className="flex h-10 items-center justify-center border-l first:border-l-0 text-sm font-medium">
-            周{name}
+        {weekDayKeys.map((key) => (
+          <div key={key} className="flex h-10 items-center justify-center border-l first:border-l-0 text-sm font-medium">
+            {t(`agentTeamSchedule.${key}`)}
           </div>
         ))}
       </div>

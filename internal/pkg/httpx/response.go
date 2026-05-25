@@ -1,6 +1,7 @@
 package httpx
 
 import (
+	"cs-agent/internal/pkg/i18nx"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -28,11 +29,19 @@ func PageData(results any, paging *sqls.Paging) any {
 }
 
 func WriteJSON(ctx *gin.Context, result any) {
-	ctx.JSON(http.StatusOK, buildJSONResult(result))
+	ctx.JSON(http.StatusOK, localizeJSONResult(ctx, buildJSONResult(result)))
 }
 
 func WriteHttpStatusJSON(ctx *gin.Context, statusCode int, result any) {
-	ctx.JSON(statusCode, buildJSONResult(result))
+	ctx.JSON(statusCode, localizeJSONResult(ctx, buildJSONResult(result)))
+}
+
+func localizeJSONResult(ctx *gin.Context, result *web.JsonResult) *web.JsonResult {
+	if result == nil || result.Success || result.Message == "" {
+		return result
+	}
+	result.Message = i18nx.TranslateKnownMessage(i18nx.Locale(ctx), result.Message)
+	return result
 }
 
 func buildJSONResult(result any) *web.JsonResult {

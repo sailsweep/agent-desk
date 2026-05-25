@@ -54,15 +54,12 @@ import {
   type MCPToolSourceType,
   type SkillDefinition,
 } from "@/lib/api/admin";
-import { getEnumOptions } from "@/lib/enums";
+import { useI18n } from "@/i18n/provider";
 import {
   AIAgentFallbackMode,
-  AIAgentFallbackModeLabels,
   AIAgentHandoffMode,
-  AIAgentHandoffModeLabels,
   AIModelType,
   IMConversationServiceMode,
-  IMConversationServiceModeLabels,
   Status,
 } from "@/lib/generated/enums";
 
@@ -90,49 +87,43 @@ type EditDialogProps = {
   onSubmit: (payload: CreateAIAgentPayload) => Promise<void>;
 };
 
-const schema = z.object({
-  name: z.string().trim().min(1, "名称不能为空"),
-  description: z.string().trim(),
-  aiConfigId: z.string().trim().regex(/^\d+$/, "请选择 AI 配置"),
-  serviceMode: z.string().trim().min(1, "请选择服务模式"),
-  systemPrompt: z.string().trim(),
-  welcomeMessage: z.string().trim(),
-  replyTimeoutSeconds: z
-    .number()
-    .min(0, "回复超时秒数必须是大于等于 0 的整数"),
-  handoffMode: z.string().trim().min(1, "请选择转人工模式"),
-  fallbackMode: z.string().trim().min(1, "请选择兜底策略"),
-  fallbackMessage: z.string().trim(),
-});
+type TFunction = (key: string, values?: Record<string, string | number>) => string;
 
-type EditForm = z.infer<typeof schema>;
+type EditForm = {
+  name: string;
+  description: string;
+  aiConfigId: string;
+  serviceMode: string;
+  systemPrompt: string;
+  welcomeMessage: string;
+  replyTimeoutSeconds: number;
+  handoffMode: string;
+  fallbackMode: string;
+  fallbackMessage: string;
+};
 
-const resolver = zodResolver(schema as never) as Resolver<
-  z.input<typeof schema>,
-  undefined,
-  z.output<typeof schema>
->;
+function getServiceModeOptions(t: TFunction) {
+  return [
+    { value: String(IMConversationServiceMode.AIOnly), label: t("aiAgent.serviceAiOnly") },
+    { value: String(IMConversationServiceMode.HumanOnly), label: t("aiAgent.serviceHumanOnly") },
+    { value: String(IMConversationServiceMode.AIFirst), label: t("aiAgent.serviceAiFirst") },
+  ];
+}
 
-const serviceModeOptions = getEnumOptions(IMConversationServiceModeLabels).map(
-  (option) => ({
-    value: String(option.value),
-    label: option.label,
-  }),
-);
+function getHandoffModeOptions(t: TFunction) {
+  return [
+    { value: String(AIAgentHandoffMode.WaitPool), label: t("aiAgent.handoffWaitPool") },
+    { value: String(AIAgentHandoffMode.DefaultTeamPool), label: t("aiAgent.handoffDefaultTeamPool") },
+    { value: String(AIAgentHandoffMode.AIHoldAndNotify), label: t("aiAgent.handoffAiHoldAndNotify") },
+  ];
+}
 
-const handoffModeOptions = getEnumOptions(AIAgentHandoffModeLabels).map(
-  (option) => ({
-    value: String(option.value),
-    label: option.label,
-  }),
-);
-
-const fallbackModeOptions = getEnumOptions(AIAgentFallbackModeLabels).map(
-  (option) => ({
-    value: String(option.value),
-    label: option.label,
-  }),
-);
+function getFallbackModeOptions(t: TFunction) {
+  return [
+    { value: String(AIAgentFallbackMode.NoAnswer), label: t("aiAgent.fallbackNoAnswer") },
+    { value: String(AIAgentFallbackMode.SuggestRetry), label: t("aiAgent.fallbackSuggestRetry") },
+  ];
+}
 
 function buildForm(item: AIAgent | null): EditForm {
   if (!item) {
@@ -220,12 +211,34 @@ function EditDialogBody({
   onSubmit,
 }: EditDialogProps) {
   const formId = "ai-agent-edit-form";
+  const t = useI18n();
   const [loading, setLoading] = useState(false);
-  const form = useForm<
-    z.input<typeof schema>,
-    undefined,
-    z.output<typeof schema>
-  >({
+  const schema = useMemo(
+    () =>
+      z.object({
+        name: z.string().trim().min(1, t("aiAgent.nameRequired")),
+        description: z.string().trim(),
+        aiConfigId: z.string().trim().regex(/^\d+$/, t("aiAgent.aiConfigRequired")),
+        serviceMode: z.string().trim().min(1, t("aiAgent.serviceModeRequired")),
+        systemPrompt: z.string().trim(),
+        welcomeMessage: z.string().trim(),
+        replyTimeoutSeconds: z
+          .number()
+          .min(0, t("aiAgent.replyTimeoutInvalid")),
+        handoffMode: z.string().trim().min(1, t("aiAgent.handoffModeRequired")),
+        fallbackMode: z.string().trim().min(1, t("aiAgent.fallbackModeRequired")),
+        fallbackMessage: z.string().trim(),
+      }),
+    [t],
+  );
+  const resolver = useMemo(
+    () => zodResolver(schema as never) as Resolver<EditForm>,
+    [schema],
+  );
+  const serviceModeOptions = useMemo(() => getServiceModeOptions(t), [t]);
+  const handoffModeOptions = useMemo(() => getHandoffModeOptions(t), [t]);
+  const fallbackModeOptions = useMemo(() => getFallbackModeOptions(t), [t]);
+  const form = useForm<EditForm>({
     resolver,
     defaultValues: buildForm(null),
   });
@@ -296,14 +309,14 @@ function EditDialogBody({
         setGraphToolToAdd("");
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : "加载 AI Agent 详情失败",
+          error instanceof Error ? error.message : t("aiAgent.loadDetailFailed"),
         );
       } finally {
         setLoading(false);
       }
     }
     void loadDetail();
-  }, [itemId, reset]);
+  }, [itemId, reset, t]);
 
   useEffect(() => {
     async function loadAIConfigs() {
@@ -314,12 +327,12 @@ function EditDialogBody({
         setAIConfigs(data);
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : "加载 AI 配置失败",
+          error instanceof Error ? error.message : t("aiAgent.loadAiConfigFailed"),
         );
       }
     }
     void loadAIConfigs();
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     async function loadAgentTeams() {
@@ -327,11 +340,11 @@ function EditDialogBody({
         const data = await fetchAgentTeamsAll();
         setAgentTeams(data);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "加载客服组失败");
+        toast.error(error instanceof Error ? error.message : t("aiAgent.loadTeamsFailed"));
       }
     }
     void loadAgentTeams();
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     async function loadKnowledgeBases() {
@@ -341,11 +354,11 @@ function EditDialogBody({
         });
         setKnowledgeBases(data);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "加载知识库失败");
+        toast.error(error instanceof Error ? error.message : t("aiAgent.loadKnowledgeFailed"));
       }
     }
     void loadKnowledgeBases();
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     async function loadSkills() {
@@ -355,11 +368,11 @@ function EditDialogBody({
         });
         setSkills(data);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "加载 Skills 失败");
+        toast.error(error instanceof Error ? error.message : t("aiAgent.loadSkillsFailed"));
       }
     }
     void loadSkills();
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     async function loadDirectToolOptions() {
@@ -376,7 +389,7 @@ function EditDialogBody({
               autoInjected: tool.autoInjected,
               groupLabel:
                 tool.sourceType === "builtin"
-                  ? "内置工具"
+                  ? t("aiAgent.builtinTools")
                   : tool.serverCode,
               meta: {
                 toolCode: tool.toolCode,
@@ -398,12 +411,12 @@ function EditDialogBody({
         );
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : "加载 Direct Tools 失败",
+          error instanceof Error ? error.message : t("aiAgent.loadDirectToolsFailed"),
         );
       }
     }
     void loadDirectToolOptions();
-  }, []);
+  }, [t]);
 
   const aiConfigOptions = useMemo(
     () =>
@@ -508,13 +521,13 @@ function EditDialogBody({
   const directToolsGrouped = useMemo(() => {
     const groups = new Map<string, DirectToolItem[]>();
     for (const tool of directTools) {
-      const groupLabel = tool.serverCode || "未分组";
+      const groupLabel = tool.serverCode || t("aiAgent.ungrouped");
       const current = groups.get(groupLabel) ?? [];
       current.push(tool);
       groups.set(groupLabel, current);
     }
     return Array.from(groups.entries());
-  }, [directTools]);
+  }, [directTools, t]);
 
   const addableGraphToolOptions = useMemo(
     () =>
@@ -545,7 +558,7 @@ function EditDialogBody({
   const handoffMode = watch("handoffMode");
   const selectedHandoffModeLabel =
     handoffModeOptions.find((item) => item.value === handoffMode)?.label ??
-    "未选择";
+    t("aiAgent.notSelected");
 
   async function onFormSubmit(values: EditForm) {
     await onSubmit(
@@ -653,7 +666,7 @@ function EditDialogBody({
     <ProjectDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={itemId ? "编辑 AI Agent" : "新建 AI Agent"}
+      title={itemId ? t("aiAgent.editTitle") : t("aiAgent.createTitle")}
       size="xl"
       defaultFullscreen
       footer={
@@ -663,17 +676,17 @@ function EditDialogBody({
             variant="outline"
             onClick={() => onOpenChange(false)}
           >
-            取消
+            {t("aiAgent.cancel")}
           </Button>
           <Button type="submit" form={formId} disabled={saving || loading}>
-            {saving ? "保存中..." : "保存"}
+            {saving ? t("aiAgent.saving") : t("aiAgent.save")}
           </Button>
         </>
       }
     >
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="text-muted-foreground">加载中...</div>
+          <div className="text-muted-foreground">{t("aiAgent.loading")}</div>
         </div>
       ) : (
         <form
@@ -682,11 +695,11 @@ function EditDialogBody({
           className="space-y-6"
         >
           <SectionCard
-            title="基础信息"
+            title={t("aiAgent.sectionBasic")}
           >
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
               <Field data-invalid={!!errors.name}>
-                <FieldLabel htmlFor="ai-agent-name">名称</FieldLabel>
+                <FieldLabel htmlFor="ai-agent-name">{t("aiAgent.name")}</FieldLabel>
                 <FieldContent>
                   <Input id="ai-agent-name" {...register("name")} />
                   <FieldError errors={[errors.name]} />
@@ -694,7 +707,7 @@ function EditDialogBody({
               </Field>
 
               <Field data-invalid={!!errors.aiConfigId}>
-                <FieldLabel>AI 配置</FieldLabel>
+                <FieldLabel>{t("aiAgent.aiConfig")}</FieldLabel>
                 <FieldContent>
                   <Controller
                     control={control}
@@ -703,9 +716,9 @@ function EditDialogBody({
                       <OptionCombobox
                         value={field.value}
                         options={aiConfigOptions}
-                        placeholder="请选择 AI 配置"
-                        searchPlaceholder="搜索 AI 配置"
-                        emptyText="未找到 AI 配置"
+                        placeholder={t("aiAgent.selectAiConfig")}
+                        searchPlaceholder={t("aiAgent.searchAiConfig")}
+                        emptyText={t("aiAgent.emptyAiConfig")}
                         onChange={field.onChange}
                       />
                     )}
@@ -715,7 +728,7 @@ function EditDialogBody({
               </Field>
 
               <Field data-invalid={!!errors.serviceMode}>
-                <FieldLabel>服务模式</FieldLabel>
+                <FieldLabel>{t("aiAgent.columnServiceMode")}</FieldLabel>
                 <FieldContent>
                   <Controller
                     control={control}
@@ -724,9 +737,9 @@ function EditDialogBody({
                       <OptionCombobox
                         value={field.value}
                         options={serviceModeOptions}
-                        placeholder="请选择服务模式"
-                        searchPlaceholder="搜索服务模式"
-                        emptyText="未找到服务模式"
+                        placeholder={t("aiAgent.selectServiceMode")}
+                        searchPlaceholder={t("aiAgent.searchServiceMode")}
+                        emptyText={t("aiAgent.emptyServiceMode")}
                         onChange={field.onChange}
                       />
                     )}
@@ -737,14 +750,14 @@ function EditDialogBody({
             </div>
 
             <Field data-invalid={!!errors.description}>
-              <FieldLabel htmlFor="ai-agent-description">描述</FieldLabel>
+              <FieldLabel htmlFor="ai-agent-description">{t("aiAgent.description")}</FieldLabel>
               <FieldContent>
                 <Textarea id="ai-agent-description" {...register("description")} />
                 <FieldError errors={[errors.description]} />
               </FieldContent>
             </Field>
             <Field data-invalid={!!errors.welcomeMessage}>
-              <FieldLabel htmlFor="ai-agent-welcome-message">欢迎语</FieldLabel>
+              <FieldLabel htmlFor="ai-agent-welcome-message">{t("aiAgent.welcomeMessage")}</FieldLabel>
               <FieldContent>
                 <Textarea
                   id="ai-agent-welcome-message"
@@ -757,7 +770,7 @@ function EditDialogBody({
 
             <Field data-invalid={!!errors.systemPrompt}>
               <FieldLabel htmlFor="ai-agent-system-prompt">
-                系统提示词
+                {t("aiAgent.systemPrompt")}
               </FieldLabel>
               <FieldContent>
                 <Textarea
@@ -771,12 +784,12 @@ function EditDialogBody({
           </SectionCard>
 
           <SectionCard
-            title="服务策略"
+            title={t("aiAgent.sectionStrategy")}
           >
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,1.15fr)]">
               <div className="space-y-4">
                 <Field data-invalid={!!errors.handoffMode}>
-                  <FieldLabel>转人工模式</FieldLabel>
+                  <FieldLabel>{t("aiAgent.handoffMode")}</FieldLabel>
                   <FieldContent>
                     <Controller
                       control={control}
@@ -785,9 +798,9 @@ function EditDialogBody({
                         <OptionCombobox
                           value={field.value}
                           options={handoffModeOptions}
-                          placeholder="请选择转人工模式"
-                          searchPlaceholder="搜索转人工模式"
-                          emptyText="未找到转人工模式"
+                          placeholder={t("aiAgent.selectHandoffMode")}
+                          searchPlaceholder={t("aiAgent.searchHandoffMode")}
+                          emptyText={t("aiAgent.emptyHandoffMode")}
                           onChange={field.onChange}
                         />
                       )}
@@ -801,7 +814,7 @@ function EditDialogBody({
                     htmlFor="ai-agent-reply-timeout-seconds"
                     className="flex items-center gap-1"
                   >
-                    回复超时秒数
+                    {t("aiAgent.replyTimeoutSeconds")}
                     <Popover>
                       <PopoverTrigger
                         render={
@@ -815,7 +828,7 @@ function EditDialogBody({
                       />
                       <PopoverContent side="top" align="start" className="max-w-xs">
                         <PopoverDescription>
-                          AI 自动回复的异步执行超时时间。填 0 时使用系统默认值 180 秒。
+                          {t("aiAgent.replyTimeoutHelp")}
                         </PopoverDescription>
                       </PopoverContent>
                     </Popover>
@@ -834,28 +847,28 @@ function EditDialogBody({
               </div>
 
               <div className="rounded-lg border bg-muted/10 p-4">
-                <div className="mb-1 text-sm font-medium">客服组</div>
+                <div className="mb-1 text-sm font-medium">{t("aiAgent.teams")}</div>
                 <div className="mb-4 text-xs text-muted-foreground">
-                  当前转人工模式：{selectedHandoffModeLabel}
+                  {t("aiAgent.currentHandoffMode", { mode: selectedHandoffModeLabel })}
                   {handoffMode ===
                     String(AIAgentHandoffMode.DefaultTeamPool)
-                    ? "。该模式要求至少配置一个客服组。"
-                    : "。仅在涉及转人工时生效。"}
+                    ? t("aiAgent.handoffNeedsTeam")
+                    : t("aiAgent.handoffOnlyWhenNeeded")}
                 </div>
                 <Field>
                   <FieldContent className="space-y-3">
                     <OptionCombobox
                       value={teamToAdd}
                       options={addableTeamOptions}
-                      placeholder="请选择客服组"
-                      searchPlaceholder="搜索客服组"
-                      emptyText="未找到客服组"
+                      placeholder={t("aiAgent.selectTeam")}
+                      searchPlaceholder={t("aiAgent.searchTeam")}
+                      emptyText={t("aiAgent.emptyTeam")}
                       onChange={handleAddTeam}
                     />
                     <div className="flex flex-wrap gap-2">
                       {selectedTeamOptions.length === 0 ? (
                         <span className="text-sm text-muted-foreground">
-                          未配置客服组
+                          {t("aiAgent.noTeams")}
                         </span>
                       ) : (
                         selectedTeamOptions.map((option) => (
@@ -873,7 +886,7 @@ function EditDialogBody({
                               onClick={() =>
                                 handleRemoveTeam(Number(option.value))
                               }
-                              aria-label={`移除客服组 ${option.label}`}
+                              aria-label={t("aiAgent.removeTeam", { name: option.label })}
                             >
                               <Trash2Icon className="size-3" />
                             </Button>
@@ -888,19 +901,19 @@ function EditDialogBody({
           </SectionCard>
 
           <SectionCard
-            title="能力配置"
+            title={t("aiAgent.sectionCapabilities")}
           >
             <Tabs defaultValue="knowledge" className="gap-4">
               <TabsList className="w-fit">
-                <TabsTrigger value="knowledge">知识库</TabsTrigger>
-                <TabsTrigger value="skills">Skills</TabsTrigger>
-                <TabsTrigger value="direct-tools">Direct Tools</TabsTrigger>
-                <TabsTrigger value="graph-tools">Graph Tools</TabsTrigger>
+                <TabsTrigger value="knowledge">{t("aiAgent.knowledgeTab")}</TabsTrigger>
+                <TabsTrigger value="skills">{t("aiAgent.skillsTab")}</TabsTrigger>
+                <TabsTrigger value="direct-tools">{t("aiAgent.directToolsTab")}</TabsTrigger>
+                <TabsTrigger value="graph-tools">{t("aiAgent.graphToolsTab")}</TabsTrigger>
               </TabsList>
 
               <TabsContent value="knowledge" className="space-y-4">
                 <div className="text-xs text-muted-foreground">
-                  至少选择一个知识库，可调整知识库优先级。
+                  {t("aiAgent.knowledgeHint")}
                 </div>
                 <Field data-invalid={selectedKnowledgeIds.length === 0}>
                   <FieldContent className="space-y-3">
@@ -909,9 +922,9 @@ function EditDialogBody({
                         <OptionCombobox
                           value={knowledgeToAdd}
                           options={addableKnowledgeOptions}
-                          placeholder="选择并添加知识库"
-                          searchPlaceholder="搜索知识库"
-                          emptyText="没有可添加的知识库"
+                          placeholder={t("aiAgent.selectKnowledge")}
+                          searchPlaceholder={t("aiAgent.searchKnowledge")}
+                          emptyText={t("aiAgent.emptyKnowledge")}
                           onChange={handleAddKnowledge}
                         />
                       </div>
@@ -922,12 +935,12 @@ function EditDialogBody({
                         onClick={() => handleAddKnowledge(knowledgeToAdd)}
                       >
                         <PlusIcon />
-                        添加
+                        {t("aiAgent.add")}
                       </Button>
                     </div>
                     {selectedKnowledgeIds.length === 0 ? (
                       <div className="rounded-md border border-dashed px-3 py-4 text-sm text-muted-foreground">
-                        请至少选择一个知识库。
+                        {t("aiAgent.knowledgeRequired")}
                       </div>
                     ) : (
                       <div className="space-y-2 rounded-md border p-3">
@@ -975,14 +988,14 @@ function EditDialogBody({
                       </div>
                     )}
                     {selectedKnowledgeIds.length === 0 ? (
-                      <FieldError errors={[{ message: "请至少选择一个知识库" }]} />
+                      <FieldError errors={[{ message: t("aiAgent.knowledgeRequired") }]} />
                     ) : null}
                   </FieldContent>
                 </Field>
 
                 <div className="grid grid-cols-1 gap-4 xl:grid-cols-1">
                   <Field data-invalid={!!errors.fallbackMode}>
-                    <FieldLabel>兜底策略</FieldLabel>
+                    <FieldLabel>{t("aiAgent.fallbackMode")}</FieldLabel>
                     <FieldContent className="space-y-3">
                       <Controller
                         control={control}
@@ -991,9 +1004,9 @@ function EditDialogBody({
                           <OptionCombobox
                             value={field.value}
                             options={fallbackModeOptions}
-                            placeholder="请选择兜底策略"
-                            searchPlaceholder="搜索兜底策略"
-                            emptyText="未找到兜底策略"
+                            placeholder={t("aiAgent.selectFallbackMode")}
+                            searchPlaceholder={t("aiAgent.searchFallbackMode")}
+                            emptyText={t("aiAgent.emptyFallbackMode")}
                             onChange={field.onChange}
                           />
                         )}
@@ -1004,11 +1017,11 @@ function EditDialogBody({
 
                   <Field data-invalid={!!errors.fallbackMessage}>
                     <FieldLabel htmlFor="ai-agent-fallback-message">
-                      兜底文案
+                      {t("aiAgent.fallbackMessage")}
                     </FieldLabel>
                     <FieldContent>
                       <div className="mb-1 text-xs text-muted-foreground">
-                        知识库未命中或命中证据不足时，会按这里的策略和文案进行兜底回复。
+                        {t("aiAgent.fallbackMessageHint")}
                       </div>
                       <Textarea
                         id="ai-agent-fallback-message"
@@ -1023,7 +1036,7 @@ function EditDialogBody({
 
               <TabsContent value="skills" className="space-y-4">
                 <div className="text-xs text-muted-foreground">
-                  用于固定业务流程和多步任务编排。
+                  {t("aiAgent.skillsHint")}
                 </div>
                 <Field>
                   <FieldContent className="space-y-3">
@@ -1032,9 +1045,9 @@ function EditDialogBody({
                         <OptionCombobox
                           value={skillToAdd}
                           options={addableSkillOptions}
-                          placeholder="选择并添加 Skill"
-                          searchPlaceholder="搜索 Skill"
-                          emptyText="没有可添加的 Skill"
+                          placeholder={t("aiAgent.selectSkill")}
+                          searchPlaceholder={t("aiAgent.searchSkill")}
+                          emptyText={t("aiAgent.emptySkill")}
                           onChange={handleAddSkill}
                         />
                       </div>
@@ -1045,13 +1058,13 @@ function EditDialogBody({
                         onClick={() => handleAddSkill(skillToAdd)}
                       >
                         <PlusIcon />
-                        添加
+                        {t("aiAgent.add")}
                       </Button>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {selectedSkillOptions.length === 0 ? (
                         <span className="text-sm text-muted-foreground">
-                          不绑定 Skill 时，自动路由只会走知识库或转人工。
+                          {t("aiAgent.noSkillsHint")}
                         </span>
                       ) : (
                         selectedSkillOptions.map((option) => (
@@ -1069,7 +1082,7 @@ function EditDialogBody({
                               onClick={() =>
                                 handleRemoveSkill(Number(option.value))
                               }
-                              aria-label={`移除 Skill ${option.label}`}
+                              aria-label={t("aiAgent.removeSkill", { name: option.label })}
                             >
                               <Trash2Icon className="size-3" />
                             </Button>
@@ -1083,7 +1096,7 @@ function EditDialogBody({
 
               <TabsContent value="direct-tools" className="space-y-4">
                 <div className="text-xs text-muted-foreground">
-                  仅用于外部 MCP 工具的低风险、原子化查询。
+                  {t("aiAgent.directToolsHint")}
                 </div>
                 <Field>
                   <FieldContent className="space-y-3">
@@ -1092,9 +1105,9 @@ function EditDialogBody({
                         <OptionCombobox
                           value={directToolGroupToAdd}
                           options={directToolGroupOptions}
-                          placeholder="选择工具分组"
-                          searchPlaceholder="搜索工具分组"
-                          emptyText="没有可用的工具分组"
+                          placeholder={t("aiAgent.selectToolGroup")}
+                          searchPlaceholder={t("aiAgent.searchToolGroup")}
+                          emptyText={t("aiAgent.emptyToolGroup")}
                           onChange={(value) => {
                             setDirectToolGroupToAdd(value);
                             setDirectToolToAdd("");
@@ -1105,9 +1118,9 @@ function EditDialogBody({
                         <OptionCombobox
                           value={directToolToAdd}
                           options={addableDirectToolOptions}
-                          placeholder="选择 Direct Tool"
-                          searchPlaceholder="搜索 Direct Tool"
-                          emptyText="没有可添加的 Direct Tool"
+                          placeholder={t("aiAgent.selectDirectTool")}
+                          searchPlaceholder={t("aiAgent.searchDirectTool")}
+                          emptyText={t("aiAgent.emptyDirectTool")}
                           onChange={handleAddDirectTool}
                         />
                       </div>
@@ -1118,13 +1131,13 @@ function EditDialogBody({
                         onClick={() => handleAddDirectTool(directToolToAdd)}
                       >
                         <PlusIcon />
-                        添加
+                        {t("aiAgent.add")}
                       </Button>
                     </div>
                     <div className="space-y-3">
                       {directTools.length === 0 ? (
                         <span className="text-sm text-muted-foreground">
-                          不配置 Direct Tool 时，Agent 不会直接调用外部或内置工具，只会依赖知识库、Skill 和普通回复。
+                          {t("aiAgent.noDirectToolsHint")}
                         </span>
                       ) : (
                         directToolsGrouped.map(([groupLabel, tools]) => (
@@ -1156,7 +1169,7 @@ function EditDialogBody({
                                       onClick={() =>
                                         handleRemoveDirectTool(value)
                                       }
-                                      aria-label={`移除 Direct Tool ${value}`}
+                                      aria-label={t("aiAgent.removeDirectTool", { name: value })}
                                     >
                                       <Trash2Icon className="size-3" />
                                     </Button>
@@ -1174,7 +1187,7 @@ function EditDialogBody({
 
               <TabsContent value="graph-tools" className="space-y-4">
                 <div className="text-xs text-muted-foreground">
-                  用于建单、转人工等系统内置流程，不再混放到 Direct Tools 中。
+                  {t("aiAgent.graphToolsHint")}
                 </div>
                 <Field>
                   <FieldContent className="space-y-3">
@@ -1183,9 +1196,9 @@ function EditDialogBody({
                         <OptionCombobox
                           value={graphToolToAdd}
                           options={addableGraphToolOptions}
-                          placeholder="选择 Graph Tool"
-                          searchPlaceholder="搜索 Graph Tool"
-                          emptyText="没有可添加的 Graph Tool"
+                          placeholder={t("aiAgent.selectGraphTool")}
+                          searchPlaceholder={t("aiAgent.searchGraphTool")}
+                          emptyText={t("aiAgent.emptyGraphTool")}
                           onChange={handleAddGraphTool}
                         />
                       </div>
@@ -1196,13 +1209,13 @@ function EditDialogBody({
                         onClick={() => handleAddGraphTool(graphToolToAdd)}
                       >
                         <PlusIcon />
-                        添加
+                        {t("aiAgent.add")}
                       </Button>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {graphTools.length === 0 ? (
                         <span className="text-sm text-muted-foreground">
-                          不配置 Graph Tool 时，Agent 不会暴露建单/转人工等内置流程工具。
+                          {t("aiAgent.noGraphToolsHint")}
                         </span>
                       ) : (
                         graphTools.map((toolCode) => {
@@ -1225,7 +1238,7 @@ function EditDialogBody({
                                 size="icon"
                                 className="size-5"
                                 onClick={() => handleRemoveGraphTool(toolCode)}
-                                aria-label={`移除 Graph Tool ${toolCode}`}
+                                aria-label={t("aiAgent.removeGraphTool", { name: toolCode })}
                               >
                                 <Trash2Icon className="size-3" />
                               </Button>

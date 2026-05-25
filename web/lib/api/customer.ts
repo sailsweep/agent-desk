@@ -31,7 +31,7 @@ export type UpdateAdminCustomerPayload = CreateAdminCustomerPayload & {
   id: number
 }
 
-/** 与 POST /customer/save/profile 请求体一致 */
+/** Matches POST /customer/save/profile request body. */
 export type SaveCustomerProfileContactLine = {
   id?: number
   contactType: ContactType | string
@@ -49,14 +49,14 @@ export type SaveCustomerProfilePayload = {
   contacts: SaveCustomerProfileContactLine[]
 }
 
-/** 与 POST /customer/list JSON Body 一致 */
+/** Matches POST /customer/list JSON body. */
 export type CustomerListRequest = {
   page: number
   limit: number
   status?: number
   gender?: number
   companyId?: number
-  /** 模糊匹配：客户名、主手机、主邮箱、联系方式、公司名称 */
+  /** Fuzzy match against customer name, primary phone, primary email, contacts, and company name. */
   keyword?: string
 }
 
@@ -78,7 +78,7 @@ export function createCustomer(payload: CreateAdminCustomerPayload) {
   })
 }
 
-/** 单请求 + 单事务保存客户主信息与联系方式全量 */
+/** Saves the customer profile and the full contact list in one request and transaction. */
 export function saveCustomerProfile(payload: SaveCustomerProfilePayload) {
   return request<AdminCustomer>("/api/dashboard/customer/save_profile", {
     method: "POST",

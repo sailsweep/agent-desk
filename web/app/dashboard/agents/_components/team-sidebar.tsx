@@ -31,8 +31,8 @@ import {
   type AdminAgentTeam,
   type CreateAdminAgentTeamPayload,
 } from "@/lib/api/admin";
-import { Status, StatusLabels } from "@/lib/generated/enums";
-import { getEnumLabel } from "@/lib/enums";
+import { Status } from "@/lib/generated/enums";
+import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 
 type AgentTeamSidebarProps = {
@@ -41,17 +41,21 @@ type AgentTeamSidebarProps = {
   onTeamsChange?: (teams: AdminAgentTeam[]) => void;
 };
 
-const statusTabs = [
-  { value: "all", label: "全部" },
-  { value: String(Status.Ok), label: StatusLabels[Status.Ok] },
-  { value: String(Status.Disabled), label: StatusLabels[Status.Disabled] },
-] as const;
+function getStatusTabs(t: (key: string, values?: Record<string, string | number>) => string) {
+  return [
+    { value: "all", label: t("agentProfile.all") },
+    { value: String(Status.Ok), label: t("agentProfile.enabled") },
+    { value: String(Status.Disabled), label: t("agentProfile.disabled") },
+  ] as const;
+}
 
 export function AgentTeamSidebar({
   selectedTeamId,
   onSelectTeam,
   onTeamsChange,
 }: AgentTeamSidebarProps) {
+  const t = useI18n();
+  const statusTabs = getStatusTabs(t);
   const [keyword, setKeyword] = useState("");
   const [statusFilter, setStatusFilter] =
     useState<(typeof statusTabs)[number]["value"]>("all");
@@ -69,11 +73,11 @@ export function AgentTeamSidebar({
       setTeams(data);
       onTeamsChange?.(data);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载客服组失败");
+      toast.error(error instanceof Error ? error.message : t("agentProfile.loadTeamsFailed"));
     } finally {
       setLoading(false);
     }
-  }, [onTeamsChange]);
+  }, [onTeamsChange, t]);
 
   useEffect(() => {
     void loadData();
@@ -135,16 +139,16 @@ export function AgentTeamSidebar({
     try {
       if (editingItem) {
         await updateAgentTeam({ id: editingItem.id, ...payload });
-        toast.success(`已更新客服组：${editingItem.name}`);
+        toast.success(t("agentProfile.teamUpdated", { name: editingItem.name }));
       } else {
         await createAgentTeam(payload);
-        toast.success(`已创建客服组：${payload.name}`);
+        toast.success(t("agentProfile.teamCreated", { name: payload.name }));
       }
       setDialogOpen(false);
       setEditingItem(null);
       await loadData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "保存客服组失败");
+      toast.error(error instanceof Error ? error.message : t("agentProfile.teamSaveFailed"));
     } finally {
       setSaving(false);
     }
@@ -154,10 +158,10 @@ export function AgentTeamSidebar({
     setActionLoadingId(item.id);
     try {
       await deleteAgentTeam(item.id);
-      toast.success(`已删除客服组：${item.name}`);
+      toast.success(t("agentProfile.teamDeleted", { name: item.name }));
       await loadData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "删除客服组失败");
+      toast.error(error instanceof Error ? error.message : t("agentProfile.teamDeleteFailed"));
     } finally {
       setActionLoadingId(null);
     }
@@ -169,7 +173,7 @@ export function AgentTeamSidebar({
         <div className="border-b px-3 py-3">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <div className="text-sm font-medium">客服组</div>
+              <div className="text-sm font-medium">{t("agentProfile.teamTitle")}</div>
             </div>
           </div>
           <div className="relative mt-3">
@@ -177,7 +181,7 @@ export function AgentTeamSidebar({
             <Input
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
-              placeholder="搜索客服组"
+              placeholder={t("agentProfile.searchTeams")}
               className="pl-9"
             />
           </div>
@@ -235,7 +239,7 @@ export function AgentTeamSidebar({
                       item.status === Status.Ok ? "secondary" : "outline"
                     }
                   >
-                    {getEnumLabel(StatusLabels, item.status as Status)}
+                    {item.status === Status.Ok ? t("agentProfile.enabled") : t("agentProfile.disabled")}
                   </Badge>
                 </button>
                 <DropdownMenu>
@@ -247,21 +251,21 @@ export function AgentTeamSidebar({
                         className="opacity-0 group-hover:opacity-100"
                       />
                     }
-                    aria-label={`更多操作 ${item.name}`}
+                    aria-label={t("agentProfile.moreActions", { name: item.name })}
                   >
                     <MoreHorizontalIcon />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-40 min-w-40">
                     <DropdownMenuItem onClick={() => openEditDialog(item)}>
                       <Pencil />
-                      编辑
+                      {t("agentProfile.edit")}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => void handleDelete(item)}
                       className="text-destructive focus:text-destructive"
                     >
                       <Trash2Icon />
-                      {actionLoadingId === item.id ? "删除中..." : "删除"}
+                      {actionLoadingId === item.id ? t("agentProfile.deleting") : t("agentProfile.delete")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -269,7 +273,7 @@ export function AgentTeamSidebar({
             ))}
             {!loading && filteredTeams.length === 0 ? (
               <div className="px-2 py-10 text-center text-sm text-muted-foreground">
-                没有匹配的客服组
+                {t("agentProfile.noTeams")}
               </div>
             ) : null}
           </div>

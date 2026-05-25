@@ -50,19 +50,21 @@ import {
 } from "@/lib/api/company"
 import { getEnumOptions } from "@/lib/enums"
 import { Status, StatusLabels } from "@/lib/generated/enums"
+import { useI18n } from "@/i18n/provider"
 import { EditDialog } from "./_components/edit"
 
-const listStatusOptions = [
-  { value: "all", label: "全部状态" },
-  ...getEnumOptions(StatusLabels)
-    .filter((item) => Number(item.value) !== Status.Deleted)
-    .map((item) => ({
-      value: String(item.value),
-      label: item.label,
-    })),
-] as const
+function getStatusLabel(status: Status, t: (key: string) => string) {
+  if (status === Status.Disabled) {
+    return t("status.disabled")
+  }
+  if (status === Status.Deleted) {
+    return t("status.deleted")
+  }
+  return t("status.ok")
+}
 
 export default function DashboardCompaniesPage() {
+  const t = useI18n()
   const [nameInput, setNameInput] = useState("")
   const [codeInput, setCodeInput] = useState("")
   const [statusFilterInput, setStatusFilterInput] = useState("all")
@@ -93,11 +95,21 @@ export default function DashboardCompaniesPage() {
       })
       setResult(data)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载公司列表失败")
+      toast.error(error instanceof Error ? error.message : t("company.loadFailed"))
     } finally {
       setLoading(false)
     }
-  }, [code, limit, name, page, statusFilter])
+  }, [code, limit, name, page, statusFilter, t])
+
+  const listStatusOptions = [
+    { value: "all", label: t("status.all") },
+    ...getEnumOptions(StatusLabels)
+      .filter((item) => Number(item.value) !== Status.Deleted)
+      .map((item) => ({
+        value: String(item.value),
+        label: getStatusLabel(item.value as Status, t),
+      })),
+  ]
 
   useEffect(() => {
     void loadData()
@@ -143,16 +155,16 @@ export default function DashboardCompaniesPage() {
     try {
       if (editingItem) {
         await updateCompany({ id: editingItem.id, ...payload })
-        toast.success(`已更新公司：${editingItem.name}`)
+        toast.success(t("company.updated", { name: editingItem.name }))
       } else {
         await createCompany(payload)
-        toast.success(`已创建公司：${payload.name}`)
+        toast.success(t("company.created", { name: payload.name }))
       }
       setDialogOpen(false)
       setEditingItem(null)
       await loadData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "保存公司失败")
+      toast.error(error instanceof Error ? error.message : t("company.saveFailed"))
     } finally {
       setSaving(false)
     }
@@ -163,10 +175,10 @@ export default function DashboardCompaniesPage() {
     try {
       const nextStatus = item.status === 0 ? 1 : 0
       await updateCompanyStatus(item.id, nextStatus)
-      toast.success(`已${nextStatus === 0 ? "启用" : "禁用"}：${item.name}`)
+      toast.success(t(nextStatus === 0 ? "company.enabled" : "company.disabled", { name: item.name }))
       await loadData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "更新状态失败")
+      toast.error(error instanceof Error ? error.message : t("company.statusUpdateFailed"))
     } finally {
       setActionLoadingId(null)
     }
@@ -176,10 +188,10 @@ export default function DashboardCompaniesPage() {
     setActionLoadingId(item.id)
     try {
       await deleteCompany(item.id)
-      toast.success(`已删除公司：${item.name}`)
+      toast.success(t("company.deleted", { name: item.name }))
       await loadData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "删除公司失败")
+      toast.error(error instanceof Error ? error.message : t("company.deleteFailed"))
     } finally {
       setActionLoadingId(null)
     }
@@ -193,11 +205,11 @@ export default function DashboardCompaniesPage() {
             <>
               <Button variant="outline" onClick={() => void loadData()} disabled={loading}>
                 <RefreshCwIcon className={loading ? "animate-spin" : ""} />
-                刷新
+                {t("company.refresh")}
               </Button>
               <Button onClick={openCreateDialog}>
                 <PlusIcon />
-                新建公司
+                {t("company.new")}
               </Button>
             </>
           }
@@ -208,7 +220,7 @@ export default function DashboardCompaniesPage() {
               value={nameInput}
               onChange={(event) => setNameInput(event.target.value)}
               onKeyDown={handleFilterKeyDown}
-              placeholder="按公司名称筛选"
+              placeholder={t("company.filterName")}
               className="pl-9"
             />
           </div>
@@ -216,20 +228,20 @@ export default function DashboardCompaniesPage() {
             value={codeInput}
             onChange={(event) => setCodeInput(event.target.value)}
             onKeyDown={handleFilterKeyDown}
-            placeholder="按公司编码筛选"
+            placeholder={t("company.filterCode")}
             className="w-full sm:w-44"
           />
           <div className="w-full sm:w-36">
             <OptionCombobox
               value={statusFilterInput}
               onChange={setStatusFilterInput}
-              placeholder="全部状态"
+              placeholder={t("status.all")}
               options={[...listStatusOptions]}
             />
           </div>
           <Button variant="outline" onClick={applyFilters} disabled={loading}>
             <SearchIcon />
-            查询
+            {t("company.query")}
           </Button>
         </DashboardToolbar>
 
@@ -252,12 +264,12 @@ export default function DashboardCompaniesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-20">ID</TableHead>
-                <TableHead>公司名称</TableHead>
-                <TableHead>公司编码</TableHead>
-                <TableHead className="w-28">客户数</TableHead>
-                <TableHead className="w-24">状态</TableHead>
-                <TableHead>备注</TableHead>
-                <TableHead className="w-40">操作</TableHead>
+                <TableHead>{t("company.columnName")}</TableHead>
+                <TableHead>{t("company.columnCode")}</TableHead>
+                <TableHead className="w-28">{t("company.columnCustomerCount")}</TableHead>
+                <TableHead className="w-24">{t("company.columnStatus")}</TableHead>
+                <TableHead>{t("company.columnRemark")}</TableHead>
+                <TableHead className="w-40">{t("company.columnActions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -265,8 +277,8 @@ export default function DashboardCompaniesPage() {
                 <DashboardTableStateRow
                   colSpan={7}
                   loading={loading}
-                  loadingText="正在加载公司数据..."
-                  emptyText="暂无公司数据"
+                  loadingText={t("company.loading")}
+                  emptyText={t("company.empty")}
                 />
               ) : (
                 result.results.map((item) => {
@@ -287,7 +299,7 @@ export default function DashboardCompaniesPage() {
                                 : "secondary"
                           }
                         >
-                          {StatusLabels[item.status as Status] ?? "未知"}
+                          {StatusLabels[item.status as Status] ? getStatusLabel(item.status as Status, t) : t("company.unknownStatus")}
                         </Badge>
                       </TableCell>
                       <TableCell className="max-w-[320px]">
@@ -296,14 +308,14 @@ export default function DashboardCompaniesPage() {
                       <TableCell>
                         <ButtonGroup className="w-full justify-end">
                           <Button variant="outline" size="sm" onClick={() => openEditDialog(item)}>
-                            编辑
+                            {t("company.edit")}
                           </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger
                               render={
                                 <Button variant="outline" size="sm" disabled={actionLoading} />
                               }
-                              aria-label={`更多操作 ${item.name}`}
+                              aria-label={t("company.moreActions", { name: item.name })}
                             >
                               <MoreHorizontalIcon />
                             </DropdownMenuTrigger>
@@ -313,16 +325,16 @@ export default function DashboardCompaniesPage() {
                                 onClick={() => void handleToggleStatus(item)}
                               >
                                 {actionLoading ? (
-                                  "处理中..."
+                                  t("company.processing")
                                 ) : item.status === Status.Ok ? (
                                   <>
                                     <BanIcon />
-                                    禁用
+                                    {t("company.disable")}
                                   </>
                                 ) : (
                                   <>
                                     <CheckCircle2Icon />
-                                    启用
+                                    {t("company.enable")}
                                   </>
                                 )}
                               </DropdownMenuItem>
@@ -332,7 +344,7 @@ export default function DashboardCompaniesPage() {
                                 onClick={() => void handleDelete(item)}
                               >
                                 <Trash2Icon />
-                                删除
+                                {t("company.delete")}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

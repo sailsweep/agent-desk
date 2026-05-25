@@ -7,6 +7,7 @@ import { toast } from "sonner"
 
 import { useAuth } from "@/components/auth-provider"
 import { loginWithPassword } from "@/lib/api/auth"
+import { useI18n } from "@/i18n/provider"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -29,6 +30,7 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"form">) {
+  const t = useI18n()
   const router = useRouter()
   const searchParams = useSearchParams()
   const { session } = useAuth()
@@ -72,12 +74,12 @@ export function LoginForm({
 
     try {
       await loginWithPassword({ username, password })
-      toast.success("登录成功，正在进入系统")
+      toast.success(t("auth.loginSuccess"))
       startTransition(() => {
         router.push(redirectPath)
       })
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "登录失败")
+      toast.error(error instanceof Error ? error.message : t("auth.loginFailed"))
     } finally {
       setIsPending(false)
     }
@@ -92,36 +94,36 @@ export function LoginForm({
       <FieldGroup>
         <div className="flex flex-col gap-2 text-center">
           <span className="mx-auto inline-flex rounded-full border border-amber-300/60 bg-amber-50 px-3 py-1 text-[11px] font-medium tracking-[0.22em] text-amber-900 uppercase">
-            贝壳AI
+            {t("auth.badge")}
           </span>
-          <h1 className="text-3xl font-semibold tracking-tight">欢迎使用贝壳 AI 客服平台</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">{t("auth.welcome")}</h1>
         </div>
         <Field>
-          <FieldLabel htmlFor="username">用户名</FieldLabel>
+          <FieldLabel htmlFor="username">{t("auth.username")}</FieldLabel>
           <Input
             id="username"
             name="username"
-            placeholder="用户名或邮箱"
+            placeholder={t("auth.usernamePlaceholder")}
             autoComplete="username"
             required
           />
         </Field>
         <Field>
           <div className="flex items-center">
-            <FieldLabel htmlFor="password">密码</FieldLabel>
+            <FieldLabel htmlFor="password">{t("auth.password")}</FieldLabel>
           </div>
           <Input
             id="password"
             name="password"
             type="password"
-            placeholder="请输入密码"
+            placeholder={t("auth.passwordPlaceholder")}
             autoComplete="current-password"
             required
           />
         </Field>
         <Field>
           <Button type="submit" disabled={isPending}>
-            {isPending ? "登录中..." : "登录"}
+            {isPending ? t("auth.signingIn") : t("auth.signIn")}
           </Button>
         </Field>
         <Field>
@@ -135,7 +137,7 @@ export function LoginForm({
             }}
           >
             <Image src="/images/wxwork.svg" alt="" width={16} height={16} className="size-4 shrink-0" />
-            企业微信登录
+            {t("auth.wxworkSignIn")}
           </Button>
         </Field>
         <Field>
@@ -148,7 +150,7 @@ export function LoginForm({
             }}
           >
             <KeyRoundIcon className="size-4 shrink-0" />
-            OIDC 登录
+            {t("auth.oidcSignIn")}
           </Button>
         </Field>
       </FieldGroup>

@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/sheet"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { KnowledgeBase } from "@/lib/api/admin"
+import { useI18n } from "@/i18n/provider"
 import {
   Bug,
   DownloadIcon,
@@ -27,6 +28,7 @@ import { KnowledgeBaseList } from "./_components/knowledge-base-list"
 import { RetrieveLogList } from "./_components/retrieve-log-list"
 
 export default function DashboardKnowledgeDocumentsPage() {
+  const t = useI18n()
   const [selectedKnowledgeBase, setSelectedKnowledgeBase] = useState<KnowledgeBase | null>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [debugPanelOpen, setDebugPanelOpen] = useState(false)
@@ -53,7 +55,7 @@ export default function DashboardKnowledgeDocumentsPage() {
           size="icon"
           className="absolute top-4 left-1/2 z-10 size-7 -translate-x-1/2 rounded-full shadow-sm"
           onClick={() => setSidebarCollapsed((value) => !value)}
-          aria-label={sidebarCollapsed ? "展开知识库列表" : "折叠知识库列表"}
+          aria-label={sidebarCollapsed ? t("knowledge.expandList") : t("knowledge.collapseList")}
         >
           {sidebarCollapsed ? (
             <PanelLeftOpenIcon className="size-3.5" />
@@ -67,8 +69,8 @@ export default function DashboardKnowledgeDocumentsPage() {
           <div className="border-b px-6 py-4">
             <div className="flex items-center gap-2">
               <TabsList>
-                <TabsTrigger value="documents">{isFAQKnowledgeBase ? "FAQ" : "文档"}</TabsTrigger>
-                <TabsTrigger value="retrieveLogs">检索日志</TabsTrigger>
+                <TabsTrigger value="documents">{isFAQKnowledgeBase ? t("knowledge.faq") : t("knowledge.document")}</TabsTrigger>
+                <TabsTrigger value="retrieveLogs">{t("knowledge.retrieveLogs")}</TabsTrigger>
               </TabsList>
               {activeTab === "documents" && !isFAQKnowledgeBase && documentActionState ? (
                 <div className="ml-auto flex items-center gap-1">
@@ -78,7 +80,7 @@ export default function DashboardKnowledgeDocumentsPage() {
                     className="size-7"
                     onClick={documentActionState.onRefresh}
                     disabled={documentActionState.loading}
-                    aria-label="刷新文档"
+                    aria-label={t("knowledge.refreshDocuments")}
                   >
                     <RefreshCwIcon className={documentActionState.loading ? "size-4 animate-spin" : "size-4"} />
                   </Button>
@@ -87,7 +89,7 @@ export default function DashboardKnowledgeDocumentsPage() {
                     size="icon"
                     className="size-7"
                     onClick={() => documentActionState.onChangeViewMode("list")}
-                    aria-label="列表布局"
+                    aria-label={t("knowledge.listLayout")}
                   >
                     <LayoutListIcon className="size-4" />
                   </Button>
@@ -96,7 +98,7 @@ export default function DashboardKnowledgeDocumentsPage() {
                     size="icon"
                     className="size-7"
                     onClick={() => documentActionState.onChangeViewMode("grid")}
-                    aria-label="网格布局"
+                    aria-label={t("knowledge.gridLayout")}
                   >
                     <LayoutGridIcon className="size-4" />
                   </Button>
@@ -105,7 +107,7 @@ export default function DashboardKnowledgeDocumentsPage() {
                     size="icon"
                     className="size-7"
                     onClick={() => setDebugPanelOpen(true)}
-                    aria-label="打开调试面板"
+                    aria-label={t("knowledge.openDebugPanel")}
                   >
                     <Bug className="size-4" />
                   </Button>
@@ -114,7 +116,7 @@ export default function DashboardKnowledgeDocumentsPage() {
                     size="icon"
                     className="size-7"
                     onClick={documentActionState.onCreate}
-                    aria-label="新增文档"
+                    aria-label={t("knowledge.newDocument")}
                   >
                     <PlusIcon className="size-4" />
                   </Button>
@@ -128,7 +130,7 @@ export default function DashboardKnowledgeDocumentsPage() {
                     className="size-7"
                     onClick={faqActionState.onRefresh}
                     disabled={faqActionState.loading}
-                    aria-label="刷新FAQ"
+                    aria-label={t("knowledge.refreshFAQ")}
                   >
                     <RefreshCwIcon className={faqActionState.loading ? "size-4 animate-spin" : "size-4"} />
                   </Button>
@@ -138,7 +140,7 @@ export default function DashboardKnowledgeDocumentsPage() {
                     className="size-7"
                     onClick={faqActionState.onImport}
                     disabled={faqActionState.importing}
-                    aria-label="导入FAQ"
+                    aria-label={t("knowledge.importFAQ")}
                   >
                     <DownloadIcon className="size-4" />
                   </Button>
@@ -147,7 +149,7 @@ export default function DashboardKnowledgeDocumentsPage() {
                     size="icon"
                     className="size-7"
                     onClick={() => setDebugPanelOpen(true)}
-                    aria-label="打开调试面板"
+                    aria-label={t("knowledge.openDebugPanel")}
                   >
                     <Bug className="size-4" />
                   </Button>
@@ -156,7 +158,7 @@ export default function DashboardKnowledgeDocumentsPage() {
                     size="icon"
                     className="size-7"
                     onClick={faqActionState.onCreate}
-                    aria-label="新增FAQ"
+                    aria-label={t("knowledge.newFAQ")}
                   >
                     <PlusIcon className="size-4" />
                   </Button>
@@ -187,7 +189,7 @@ export default function DashboardKnowledgeDocumentsPage() {
       <Sheet open={debugPanelOpen} onOpenChange={setDebugPanelOpen}>
         <SheetContent side="right" className="min-w-170">
           <SheetHeader>
-            <SheetTitle>RAG 调试</SheetTitle>
+            <SheetTitle>{t("knowledge.ragDebug")}</SheetTitle>
           </SheetHeader>
           <DebugPanel knowledgeBaseId={selectedKnowledgeBase?.id ?? null} />
         </SheetContent>

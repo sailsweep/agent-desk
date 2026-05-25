@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, Resolver, useForm } from "react-hook-form";
 import { z } from "zod/v4";
 
+import { OptionCombobox } from "@/components/option-combobox";
 import { ProjectDialog } from "@/components/project-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,21 +15,15 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   type AdminQuickReply,
   type CreateAdminQuickReplyPayload,
   fetchQuickReply,
 } from "@/lib/api/admin";
-import { getEnumLabel, getEnumOptions } from "@/lib/enums";
+import { getEnumOptions } from "@/lib/enums";
 import { Status, StatusLabels } from "@/lib/generated/enums";
+import { useI18n } from "@/i18n/provider";
 
 type QuickReplyFormDialogProps = {
   open: boolean;
@@ -46,33 +41,39 @@ const emptyForm: EditForm = {
   sortNo: "0",
 };
 
-const formStatusOptions = getEnumOptions(StatusLabels).filter(
-  (item) => Number(item.value) !== Status.Deleted,
-);
+type EditForm = {
+  groupName: string;
+  title: string;
+  content: string;
+  status: string;
+  sortNo: string;
+};
 
-const quickReplyFormSchema = z.object({
-  groupName: z.string().trim().min(1, "分组名称不能为空"),
-  title: z.string().trim().min(1, "标题不能为空"),
-  content: z.string().trim().min(1, "回复内容不能为空"),
-  status: z.enum([String(Status.Ok), String(Status.Disabled)], {
-    message: "请选择状态",
-  }),
-  sortNo: z
-    .string()
-    .trim()
-    .min(1, "排序不能为空")
-    .regex(/^\d+$/, "排序值必须是大于等于 0 的整数"),
-});
+function createSchema(t: (key: string) => string) {
+  return z.object({
+    groupName: z.string().trim().min(1, t("quickReply.groupNameRequired")),
+    title: z.string().trim().min(1, t("quickReply.titleRequired")),
+    content: z.string().trim().min(1, t("quickReply.contentRequired")),
+    status: z.enum([String(Status.Ok), String(Status.Disabled)], {
+      message: t("quickReply.statusRequired"),
+    }),
+    sortNo: z
+      .string()
+      .trim()
+      .min(1, t("quickReply.sortRequired"))
+      .regex(/^\d+$/, t("quickReply.sortInvalid")),
+  });
+}
 
-type EditForm = z.infer<typeof quickReplyFormSchema>;
-const editFormResolver = zodResolver(quickReplyFormSchema as never) as Resolver<
-  z.input<typeof quickReplyFormSchema>,
-  undefined,
-  z.output<typeof quickReplyFormSchema>
->;
-
-function getStatusLabel(value: string) {
-  return getEnumLabel(StatusLabels, Number(value) as Status);
+function getLocalizedStatusLabel(value: string | number, t: (key: string) => string) {
+  const status = Number(value) as Status;
+  if (status === Status.Disabled) {
+    return t("status.disabled");
+  }
+  if (status === Status.Deleted) {
+    return t("status.deleted");
+  }
+  return t("status.ok");
 }
 
 function buildForm(item: AdminQuickReply | null): EditForm {
@@ -137,8 +138,29 @@ function QuickReplyFormDialogBody({
   onOpenChange,
   onSubmit,
 }: QuickReplyFormDialogBodyProps) {
+  const t = useI18n();
   const formId = "quick-reply-edit-form";
   const [loading, setLoading] = useState(false);
+  const quickReplyFormSchema = useMemo(() => createSchema(t), [t]);
+  const editFormResolver = useMemo(
+    () =>
+      zodResolver(quickReplyFormSchema as never) as Resolver<
+        z.input<typeof quickReplyFormSchema>,
+        undefined,
+        z.output<typeof quickReplyFormSchema>
+      >,
+    [quickReplyFormSchema],
+  );
+  const formStatusOptions = useMemo(
+    () =>
+      getEnumOptions(StatusLabels)
+        .filter((item) => Number(item.value) !== Status.Deleted)
+        .map((item) => ({
+          value: String(item.value),
+          label: getLocalizedStatusLabel(item.value, t),
+        })),
+    [t],
+  );
   const form = useForm<
     z.input<typeof quickReplyFormSchema>,
     undefined,
@@ -183,7 +205,7 @@ function QuickReplyFormDialogBody({
     <ProjectDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={itemId ? "编辑" : "新建"}
+      title={itemId ? t("quickReply.editTitle") : t("quickReply.createTitle")}
       size="md"
       allowFullscreen
       footer={
@@ -194,26 +216,26 @@ function QuickReplyFormDialogBody({
             onClick={() => onOpenChange(false)}
             disabled={saving}
           >
-            取消
+            {t("quickReply.cancel")}
           </Button>
           <Button type="submit" form={formId} disabled={saving || loading}>
-            {saving ? "保存中..." : itemId ? "保存" : "创建"}
+            {saving ? t("quickReply.saving") : itemId ? t("quickReply.save") : t("quickReply.create")}
           </Button>
         </>
       }
     >
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="text-muted-foreground">加载中...</div>
+          <div className="text-muted-foreground">{t("quickReply.loadingDetail")}</div>
         </div>
       ) : (
         <form id={formId} onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
           <Field data-invalid={!!errors.groupName}>
-            <FieldLabel htmlFor="quick-reply-group-name">分组名称</FieldLabel>
+            <FieldLabel htmlFor="quick-reply-group-name">{t("quickReply.groupName")}</FieldLabel>
             <FieldContent>
               <Input
                 id="quick-reply-group-name"
-                placeholder="例如：售前、售后、催单"
+                placeholder={t("quickReply.groupNamePlaceholder")}
                 aria-invalid={!!errors.groupName}
                 {...register("groupName")}
               />
@@ -221,11 +243,11 @@ function QuickReplyFormDialogBody({
             </FieldContent>
           </Field>
           <Field data-invalid={!!errors.title}>
-            <FieldLabel htmlFor="quick-reply-title">标题</FieldLabel>
+            <FieldLabel htmlFor="quick-reply-title">{t("quickReply.title")}</FieldLabel>
             <FieldContent>
               <Input
                 id="quick-reply-title"
-                placeholder="请输入快捷回复标题"
+                placeholder={t("quickReply.titlePlaceholder")}
                 aria-invalid={!!errors.title}
                 {...register("title")}
               />
@@ -233,11 +255,11 @@ function QuickReplyFormDialogBody({
             </FieldContent>
           </Field>
           <Field data-invalid={!!errors.content}>
-            <FieldLabel htmlFor="quick-reply-content">回复内容</FieldLabel>
+            <FieldLabel htmlFor="quick-reply-content">{t("quickReply.content")}</FieldLabel>
             <FieldContent>
               <Textarea
                 id="quick-reply-content"
-                placeholder="请输入回复内容"
+                placeholder={t("quickReply.contentPlaceholder")}
                 rows={6}
                 aria-invalid={!!errors.content}
                 {...register("content")}
@@ -247,49 +269,32 @@ function QuickReplyFormDialogBody({
           </Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field data-invalid={!!errors.status}>
-              <FieldLabel htmlFor="quick-reply-status">状态</FieldLabel>
+              <FieldLabel>{t("quickReply.columnStatus")}</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
                   name="status"
                   render={({ field }) => (
-                    <Select
+                    <OptionCombobox
                       value={field.value}
-                      onValueChange={field.onChange}
-                      modal={false}
-                    >
-                      <SelectTrigger
-                        id="quick-reply-status"
-                        className="w-full"
-                        aria-invalid={!!errors.status}
-                      >
-                        <SelectValue>{getStatusLabel(field.value)}</SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {formStatusOptions.map((option) => (
-                          <SelectItem
-                            key={String(option.value)}
-                            value={String(option.value)}
-                          >
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      options={formStatusOptions}
+                      placeholder={t("quickReply.statusRequired")}
+                      onChange={field.onChange}
+                    />
                   )}
                 />
                 <FieldError errors={[errors.status]} />
               </FieldContent>
             </Field>
             <Field data-invalid={!!errors.sortNo}>
-              <FieldLabel htmlFor="quick-reply-sort-no">排序</FieldLabel>
+              <FieldLabel htmlFor="quick-reply-sort-no">{t("quickReply.columnSort")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="quick-reply-sort-no"
                   type="number"
                   min={0}
                   step={1}
-                  placeholder="数字越大越靠前"
+                  placeholder={t("quickReply.sortPlaceholder")}
                   aria-invalid={!!errors.sortNo}
                   {...register("sortNo")}
                 />

@@ -28,6 +28,7 @@ import {
   fetchWxWorkKFAccounts,
   resetChannelUserTokenSecret,
 } from "@/lib/api/admin"
+import { useI18n } from "@/i18n/provider"
 
 type ChannelFormDialogProps = {
   open: boolean
@@ -37,16 +38,7 @@ type ChannelFormDialogProps = {
   onSubmit: (payload: CreateAdminChannelPayload) => Promise<void>
 }
 
-const channelTypeOptions = [
-  { value: "web", label: "Web 站点" },
-  { value: "wechat_mp", label: "微信公众号" },
-  { value: "wxwork_kf", label: "企业微信客服" },
-] as const
-
-const widgetPositionOptions = [
-  { value: "right", label: "右下角" },
-  { value: "left", label: "左下角" },
-] as const
+type Translate = (key: string, values?: Record<string, string | number>) => string
 
 type WebChannelConfig = {
   title?: string
@@ -64,59 +56,72 @@ type WechatMPChannelConfig = {
   userTokenSecret?: string
 }
 
-const defaultWebChannelConfig: Required<WebChannelConfig> = {
-  title: "在线客服",
-  subtitle: "欢迎咨询",
-  themeColor: "#2563eb",
-  position: "right",
-  width: "380px",
-  userTokenSecret: "",
+function getDefaultWebChannelConfig(t: Translate): Required<WebChannelConfig> {
+  return {
+    title: t("channel.defaultTitleWeb"),
+    subtitle: t("channel.defaultSubtitle"),
+    themeColor: "#2563eb",
+    position: "right",
+    width: "380px",
+    userTokenSecret: "",
+  }
 }
 
-const schema = z
-  .object({
-    channelType: z.enum(["web", "wechat_mp", "wxwork_kf"], "请选择渠道类型"),
-    aiAgentId: z.string().trim().regex(/^\d+$/, "请选择 AI Agent"),
-    name: z.string().trim().min(1, "渠道名称不能为空"),
-    openKfId: z.string().trim(),
-    widgetTitle: z.string().trim(),
-    widgetSubtitle: z.string().trim(),
-    widgetThemeColor: z.string().trim(),
-    widgetPosition: z.enum(["left", "right"]),
-    widgetWidth: z.string().trim(),
-    userTokenSecret: z.string().trim(),
-    remark: z.string().trim(),
-  })
-  .superRefine((values, ctx) => {
-    if (values.channelType === "wxwork_kf" && !values.openKfId.trim()) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["openKfId"],
-        message: "请选择企业微信客服账号",
-      })
-    }
-  })
+function createSchema(t: Translate) {
+  return z
+    .object({
+      channelType: z.enum(["web", "wechat_mp", "wxwork_kf"], t("channel.typeRequired")),
+      aiAgentId: z.string().trim().regex(/^\d+$/, t("channel.agentRequired")),
+      name: z.string().trim().min(1, t("channel.nameRequired")),
+      openKfId: z.string().trim(),
+      widgetTitle: z.string().trim(),
+      widgetSubtitle: z.string().trim(),
+      widgetThemeColor: z.string().trim(),
+      widgetPosition: z.enum(["left", "right"]),
+      widgetWidth: z.string().trim(),
+      userTokenSecret: z.string().trim(),
+      remark: z.string().trim(),
+    })
+    .superRefine((values, ctx) => {
+      if (values.channelType === "wxwork_kf" && !values.openKfId.trim()) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["openKfId"],
+          message: t("channel.wxworkAccountRequired"),
+        })
+      }
+    })
+}
 
-type EditForm = z.infer<typeof schema>
+type EditForm = {
+  channelType: "web" | "wechat_mp" | "wxwork_kf"
+  aiAgentId: string
+  name: string
+  openKfId: string
+  widgetTitle: string
+  widgetSubtitle: string
+  widgetThemeColor: string
+  widgetPosition: "left" | "right"
+  widgetWidth: string
+  userTokenSecret: string
+  remark: string
+}
 
-const resolver = zodResolver(schema as never) as Resolver<
-  z.input<typeof schema>,
-  undefined,
-  z.output<typeof schema>
->
-
-const emptyForm: EditForm = {
-  channelType: "web",
-  aiAgentId: "",
-  name: "",
-  openKfId: "",
-  widgetTitle: defaultWebChannelConfig.title,
-  widgetSubtitle: defaultWebChannelConfig.subtitle,
-  widgetThemeColor: defaultWebChannelConfig.themeColor,
-  widgetPosition: defaultWebChannelConfig.position,
-  widgetWidth: defaultWebChannelConfig.width,
-  userTokenSecret: "",
-  remark: "",
+function createEmptyForm(t: Translate): EditForm {
+  const defaultWebChannelConfig = getDefaultWebChannelConfig(t)
+  return {
+    channelType: "web",
+    aiAgentId: "",
+    name: "",
+    openKfId: "",
+    widgetTitle: defaultWebChannelConfig.title,
+    widgetSubtitle: defaultWebChannelConfig.subtitle,
+    widgetThemeColor: defaultWebChannelConfig.themeColor,
+    widgetPosition: defaultWebChannelConfig.position,
+    widgetWidth: defaultWebChannelConfig.width,
+    userTokenSecret: "",
+    remark: "",
+  }
 }
 
 function parseOpenKfId(configJson: string): string {
@@ -131,7 +136,8 @@ function parseOpenKfId(configJson: string): string {
   }
 }
 
-function parseWebChannelConfig(configJson: string): Required<WebChannelConfig> {
+function parseWebChannelConfig(configJson: string, t: Translate): Required<WebChannelConfig> {
+  const defaultWebChannelConfig = getDefaultWebChannelConfig(t)
   if (!configJson.trim()) {
     return defaultWebChannelConfig
   }
@@ -152,9 +158,10 @@ function parseWebChannelConfig(configJson: string): Required<WebChannelConfig> {
   }
 }
 
-function parseWechatMPChannelConfig(configJson: string): Required<WechatMPChannelConfig> {
+function parseWechatMPChannelConfig(configJson: string, t: Translate): Required<WechatMPChannelConfig> {
+  const defaultWebChannelConfig = getDefaultWebChannelConfig(t)
   const fallback = {
-    title: "公众号客服",
+    title: t("channel.defaultTitleWechat"),
     subtitle: defaultWebChannelConfig.subtitle,
     themeColor: defaultWebChannelConfig.themeColor,
     userTokenSecret: "",
@@ -176,14 +183,14 @@ function parseWechatMPChannelConfig(configJson: string): Required<WechatMPChanne
   }
 }
 
-function buildForm(item: AdminChannel | null): EditForm {
+function buildForm(item: AdminChannel | null, t: Translate): EditForm {
   if (!item) {
-    return emptyForm
+    return createEmptyForm(t)
   }
   const isWechatMP = item.channelType === "wechat_mp"
-  const webConfig = parseWebChannelConfig(item.configJson)
+  const webConfig = parseWebChannelConfig(item.configJson, t)
   const wechatConfig = isWechatMP
-    ? parseWechatMPChannelConfig(item.configJson)
+    ? parseWechatMPChannelConfig(item.configJson, t)
     : null
   return {
     channelType:
@@ -205,12 +212,13 @@ function buildForm(item: AdminChannel | null): EditForm {
   }
 }
 
-function buildPayload(form: EditForm, status: number): CreateAdminChannelPayload {
+function buildPayload(form: EditForm, status: number, t: Translate): CreateAdminChannelPayload {
   const channelType = form.channelType
+  const defaultWebChannelConfig = getDefaultWebChannelConfig(t)
   const webLikeConfig = {
     title:
       form.widgetTitle.trim() ||
-      (channelType === "wechat_mp" ? "公众号客服" : defaultWebChannelConfig.title),
+      (channelType === "wechat_mp" ? t("channel.defaultTitleWechat") : defaultWebChannelConfig.title),
     subtitle: form.widgetSubtitle.trim(),
     themeColor:
       form.widgetThemeColor.trim() || defaultWebChannelConfig.themeColor,
@@ -267,7 +275,19 @@ function ChannelFormBody({
   onOpenChange,
   onSubmit,
 }: ChannelFormBodyProps) {
+  const t = useI18n()
   const formId = "channel-edit-form"
+  const emptyForm = useMemo(() => createEmptyForm(t), [t])
+  const schema = useMemo(() => createSchema(t), [t])
+  const resolver = useMemo(
+    () =>
+      zodResolver(schema as never) as Resolver<
+        z.input<typeof schema>,
+        undefined,
+        z.output<typeof schema>
+      >,
+    [schema],
+  )
   const [loading, setLoading] = useState(false)
   const [aiAgents, setAIAgents] = useState<AIAgent[]>([])
   const [wxWorkKFAccounts, setWxWorkKFAccounts] = useState<WxWorkKFAccount[]>([])
@@ -320,7 +340,7 @@ function ChannelFormBody({
         const data = await fetchChannel(itemId)
         setChannelDetail(data)
         setCurrentStatus(data.status)
-        reset(buildForm(data))
+        reset(buildForm(data, t))
       } catch (error) {
         console.error("Failed to load channel:", error)
       } finally {
@@ -328,7 +348,7 @@ function ChannelFormBody({
       }
     }
     void loadDetail()
-  }, [itemId, reset])
+  }, [emptyForm, itemId, reset, t])
 
   useEffect(() => {
     if (
@@ -348,7 +368,7 @@ function ChannelFormBody({
       } catch (error) {
         console.error("Failed to load WeCom KF accounts:", error)
         setWxWorkKFAccountsError(
-          error instanceof Error ? error.message : "企业微信客服账号加载失败"
+          error instanceof Error ? error.message : t("channel.loadWxworkAccountsFailed")
         )
       } finally {
         setWxWorkKFAccountsLoading(false)
@@ -360,6 +380,7 @@ function ChannelFormBody({
     wxWorkKFAccounts.length,
     wxWorkKFAccountsError,
     wxWorkKFAccountsLoading,
+    t,
   ])
 
   const aiAgentOptions = aiAgents.map((item) => ({
@@ -370,6 +391,15 @@ function ChannelFormBody({
     value: item.openKfId,
     label: item.name ? `${item.name} (${item.openKfId})` : item.openKfId,
   }))
+  const channelTypeOptions = [
+    { value: "web", label: t("channel.typeWeb") },
+    { value: "wechat_mp", label: t("channel.typeWechatMp") },
+    { value: "wxwork_kf", label: t("channel.typeWxworkKf") },
+  ] as const
+  const widgetPositionOptions = [
+    { value: "right", label: t("channel.positionRight") },
+    { value: "left", label: t("channel.positionLeft") },
+  ] as const
   if (
     channelType === "wxwork_kf" &&
     openKfId &&
@@ -382,14 +412,14 @@ function ChannelFormBody({
   }
 
   async function onFormSubmit(values: EditForm) {
-    await onSubmit(buildPayload(values, currentStatus))
+    await onSubmit(buildPayload(values, currentStatus, t))
   }
 
   async function handleResetUserTokenSecret() {
     if (!itemId) {
       return
     }
-    if (!window.confirm("重置后旧 userToken 将在过期后失效，确认重置？")) {
+    if (!window.confirm(t("channel.resetSecretConfirm"))) {
       return
     }
     try {
@@ -405,9 +435,9 @@ function ChannelFormBody({
           configJson: JSON.stringify(parsed),
         })
       }
-      toast.success("已重置用户 JWT Secret")
+      toast.success(t("channel.resetSecretSuccess"))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "重置用户 JWT Secret 失败")
+      toast.error(error instanceof Error ? error.message : t("channel.resetSecretFailed"))
     }
   }
 
@@ -417,9 +447,9 @@ function ChannelFormBody({
     }
     try {
       await navigator.clipboard.writeText(userTokenSecret)
-      toast.success("已复制用户 JWT Secret")
+      toast.success(t("channel.copySecretSuccess"))
     } catch {
-      toast.error("复制失败")
+      toast.error(t("channel.copyFailed"))
     }
   }
 
@@ -427,29 +457,29 @@ function ChannelFormBody({
     <ProjectDialog
       open={true}
       onOpenChange={onOpenChange}
-      title={itemId ? "编辑渠道" : "新建渠道"}
+      title={itemId ? t("channel.editTitle") : t("channel.createTitle")}
       size="lg"
       allowFullscreen
       footer={
         <>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            取消
+            {t("channel.cancel")}
           </Button>
           <Button type="submit" form={formId} disabled={saving || loading}>
-            {saving ? "保存中..." : "保存"}
+            {saving ? t("channel.saving") : t("channel.save")}
           </Button>
         </>
       }
     >
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="text-muted-foreground">加载中...</div>
+          <div className="text-muted-foreground">{t("channel.loadingDetail")}</div>
         </div>
       ) : (
         <form id={formId} onSubmit={handleSubmit(onFormSubmit)} className="space-y-5">
           <div className="grid grid-cols-1 gap-4">
             <Field data-invalid={!!errors.name}>
-              <FieldLabel htmlFor="channel-name">渠道名称</FieldLabel>
+              <FieldLabel htmlFor="channel-name">{t("channel.name")}</FieldLabel>
               <FieldContent>
                 <Input id="channel-name" {...register("name")} />
                 <FieldError errors={[errors.name]} />
@@ -457,7 +487,7 @@ function ChannelFormBody({
             </Field>
 
             <Field data-invalid={!!errors.aiAgentId}>
-              <FieldLabel>接待 Agent</FieldLabel>
+              <FieldLabel>{t("channel.columnAgent")}</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
@@ -466,9 +496,9 @@ function ChannelFormBody({
                     <OptionCombobox
                       value={field.value}
                       options={aiAgentOptions}
-                      placeholder="请选择 AI Agent"
-                      searchPlaceholder="搜索 AI Agent"
-                      emptyText="未找到 AI Agent"
+                      placeholder={t("channel.agentRequired")}
+                      searchPlaceholder={t("channel.searchAiAgent")}
+                      emptyText={t("channel.emptyAiAgent")}
                       onChange={field.onChange}
                     />
                   )}
@@ -478,7 +508,7 @@ function ChannelFormBody({
             </Field>
 
             <Field data-invalid={!!errors.channelType}>
-              <FieldLabel>接入渠道</FieldLabel>
+              <FieldLabel>{t("channel.channelType")}</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
@@ -487,9 +517,9 @@ function ChannelFormBody({
                     <OptionCombobox
                       value={field.value}
                       options={[...channelTypeOptions]}
-                      placeholder="请选择接入渠道"
-                      searchPlaceholder="搜索接入渠道"
-                      emptyText="未找到接入渠道"
+                      placeholder={t("channel.selectChannelType")}
+                      searchPlaceholder={t("channel.searchChannelType")}
+                      emptyText={t("channel.emptyChannelType")}
                       onChange={field.onChange}
                     />
                   )}
@@ -501,19 +531,19 @@ function ChannelFormBody({
 
           <div className="space-y-4 rounded-md border p-4">
             <div>
-              <div className="text-sm font-medium">渠道配置</div>
+              <div className="text-sm font-medium">{t("channel.configTitle")}</div>
               <div className="text-xs text-muted-foreground">
                 {channelType === "wxwork_kf"
-                  ? "配置企业微信客服账号，用于匹配回调消息和对外发送消息。"
+                  ? t("channel.configWxworkDescription")
                   : channelType === "wechat_mp"
-                    ? "配置公众号菜单直达聊天页的展示参数。"
-                    : "配置 Web 站点客服窗口的展示参数。"}
+                    ? t("channel.configWechatDescription")
+                    : t("channel.configWebDescription")}
               </div>
             </div>
 
             {channelType === "wxwork_kf" ? (
               <Field data-invalid={!!errors.openKfId}>
-                <FieldLabel>企业微信客服账号</FieldLabel>
+                <FieldLabel>{t("channel.wxworkAccount")}</FieldLabel>
                 <FieldContent>
                   <Controller
                     control={control}
@@ -523,11 +553,11 @@ function ChannelFormBody({
                         value={field.value}
                         options={wxWorkKFAccountOptions}
                         placeholder={
-                          wxWorkKFAccountsLoading ? "正在加载客服账号" : "请选择客服账号"
+                          wxWorkKFAccountsLoading ? t("channel.loadingWxworkAccount") : t("channel.selectWxworkAccount")
                         }
-                        searchPlaceholder="搜索客服账号"
+                        searchPlaceholder={t("channel.searchWxworkAccount")}
                         emptyText={
-                          wxWorkKFAccountsError || "未找到企业微信客服账号"
+                          wxWorkKFAccountsError || t("channel.emptyWxworkAccount")
                         }
                         disabled={wxWorkKFAccountsLoading}
                         onChange={field.onChange}
@@ -543,7 +573,7 @@ function ChannelFormBody({
               <>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field data-invalid={!!errors.widgetTitle}>
-                    <FieldLabel htmlFor="channel-widget-title">窗口标题</FieldLabel>
+                    <FieldLabel htmlFor="channel-widget-title">{t("channel.widgetTitle")}</FieldLabel>
                     <FieldContent>
                       <Input id="channel-widget-title" {...register("widgetTitle")} />
                       <FieldError errors={[errors.widgetTitle]} />
@@ -551,7 +581,7 @@ function ChannelFormBody({
                   </Field>
 
                   <Field data-invalid={!!errors.widgetSubtitle}>
-                    <FieldLabel htmlFor="channel-widget-subtitle">窗口副标题</FieldLabel>
+                    <FieldLabel htmlFor="channel-widget-subtitle">{t("channel.widgetSubtitle")}</FieldLabel>
                     <FieldContent>
                       <Input
                         id="channel-widget-subtitle"
@@ -562,7 +592,7 @@ function ChannelFormBody({
                   </Field>
 
                   <Field data-invalid={!!errors.widgetThemeColor}>
-                    <FieldLabel htmlFor="channel-widget-theme-color">主题色</FieldLabel>
+                    <FieldLabel htmlFor="channel-widget-theme-color">{t("channel.themeColor")}</FieldLabel>
                     <FieldContent>
                       <Input
                         id="channel-widget-theme-color"
@@ -576,7 +606,7 @@ function ChannelFormBody({
                   {channelType === "web" ? (
                     <>
                       <Field data-invalid={!!errors.widgetPosition}>
-                        <FieldLabel>挂载位置</FieldLabel>
+                        <FieldLabel>{t("channel.mountPosition")}</FieldLabel>
                         <FieldContent>
                           <Controller
                             control={control}
@@ -585,9 +615,9 @@ function ChannelFormBody({
                               <OptionCombobox
                                 value={field.value}
                                 options={[...widgetPositionOptions]}
-                                placeholder="请选择挂载位置"
-                                searchPlaceholder="搜索挂载位置"
-                                emptyText="未找到挂载位置"
+                                placeholder={t("channel.selectMountPosition")}
+                                searchPlaceholder={t("channel.searchMountPosition")}
+                                emptyText={t("channel.emptyMountPosition")}
                                 onChange={field.onChange}
                               />
                             )}
@@ -597,7 +627,7 @@ function ChannelFormBody({
                       </Field>
 
                       <Field data-invalid={!!errors.widgetWidth}>
-                        <FieldLabel htmlFor="channel-widget-width">窗口宽度</FieldLabel>
+                        <FieldLabel htmlFor="channel-widget-width">{t("channel.widgetWidth")}</FieldLabel>
                         <FieldContent>
                           <Input
                             id="channel-widget-width"
@@ -612,14 +642,14 @@ function ChannelFormBody({
                 </div>
                 <div className="space-y-3 rounded-md border p-3">
                   <div>
-                    <div className="text-sm font-medium">用户 JWT Secret</div>
+                    <div className="text-sm font-medium">{t("channel.userJwtSecret")}</div>
                     <div className="text-xs text-muted-foreground">
-                      业务系统使用该 secret 签发 userToken。重置后请同步更新业务系统配置。
+                      {t("channel.userJwtSecretDescription")}
                     </div>
                   </div>
                   {!itemId ? (
                     <div className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
-                      保存渠道后可生成用户 JWT Secret。
+                      {t("channel.secretAfterSave")}
                     </div>
                   ) : (
                     <Field data-invalid={!!errors.userTokenSecret}>
@@ -640,14 +670,14 @@ function ChannelFormBody({
                               disabled={!userTokenSecret}
                             >
                               <CopyIcon className="size-4" />
-                              复制
+                              {t("channel.copy")}
                             </Button>
                             <Button
                               type="button"
                               variant="outline"
                               onClick={() => void handleResetUserTokenSecret()}
                             >
-                              重置
+                              {t("channel.reset")}
                             </Button>
                           </div>
                         </div>
@@ -666,7 +696,7 @@ function ChannelFormBody({
           </div>
 
           <Field data-invalid={!!errors.remark}>
-            <FieldLabel htmlFor="channel-remark">备注</FieldLabel>
+            <FieldLabel htmlFor="channel-remark">{t("channel.remark")}</FieldLabel>
             <FieldContent>
               <Textarea id="channel-remark" rows={3} {...register("remark")} />
               <FieldError errors={[errors.remark]} />
@@ -679,6 +709,7 @@ function ChannelFormBody({
 }
 
 function WebAccessGuide({ channelId }: { channelId: string }) {
+  const t = useI18n()
   const [origin, setOrigin] = useState("")
 
   useEffect(() => {
@@ -723,29 +754,29 @@ function WebAccessGuide({ channelId }: { channelId: string }) {
       await navigator.clipboard.writeText(text)
       toast.success(successMessage)
     } catch {
-      toast.error("复制失败")
+      toast.error(t("channel.copyFailed"))
     }
   }
 
   return (
     <div className="space-y-4 border-t pt-4">
       <div>
-        <div className="text-sm font-medium">Web 接入信息</div>
+        <div className="text-sm font-medium">{t("channel.webAccessInfo")}</div>
         <div className="text-xs text-muted-foreground">
           {channelId
-            ? "复制链接或嵌入代码即可接入当前 Web 渠道。"
-            : "保存渠道后生成接入链接。"}
+            ? t("channel.webAccessReady")
+            : t("channel.webAccessPending")}
         </div>
       </div>
 
       {!channelId ? (
         <div className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
-          当前为新建渠道，保存后会生成 channelId。
+          {t("channel.newChannelPending")}
         </div>
       ) : (
         <div className="space-y-4">
           <div className="space-y-2">
-            <div className="text-xs font-medium text-muted-foreground">直接访问链接</div>
+            <div className="text-xs font-medium text-muted-foreground">{t("channel.directAccessUrl")}</div>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Input readOnly value={accessUrl} className="font-mono text-xs" />
               <div className="flex gap-2">
@@ -753,8 +784,8 @@ function WebAccessGuide({ channelId }: { channelId: string }) {
                   type="button"
                   variant="outline"
                   size="icon"
-                  title="复制链接"
-                  onClick={() => copyText(accessUrl, "已复制接入链接")}
+                  title={t("channel.copyLink")}
+                  onClick={() => copyText(accessUrl, t("channel.copiedAccessLink"))}
                 >
                   <CopyIcon className="size-4" />
                 </Button>
@@ -762,7 +793,7 @@ function WebAccessGuide({ channelId }: { channelId: string }) {
                   type="button"
                   variant="outline"
                   size="icon"
-                  title="打开链接"
+                  title={t("channel.openLink")}
                   onClick={() => window.open(accessUrl, "_blank", "noopener,noreferrer")}
                 >
                   <ExternalLinkIcon className="size-4" />
@@ -774,16 +805,16 @@ function WebAccessGuide({ channelId }: { channelId: string }) {
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
               <div className="text-xs font-medium text-muted-foreground">
-                嵌入式接入代码
+                {t("channel.embeddedSnippet")}
               </div>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => copyText(snippet, "已复制接入代码")}
+                onClick={() => copyText(snippet, t("channel.copiedSnippet"))}
               >
                 <CopyIcon className="size-4" />
-                复制代码
+                {t("channel.copyCode")}
               </Button>
             </div>
             <pre className="max-h-48 overflow-auto rounded-md bg-muted p-3 text-xs leading-5">
@@ -792,11 +823,11 @@ function WebAccessGuide({ channelId }: { channelId: string }) {
           </div>
 
           <div className="flex flex-col gap-2 rounded-md bg-muted px-3 py-3 text-xs text-muted-foreground">
-            <div className="font-medium text-foreground">接入教程</div>
-            <div>1. 确认该渠道已启用。</div>
-            <div>2. 将嵌入代码粘贴到目标网站 HTML 的 body 结束标签前。</div>
-            <div>3. 发布网站后刷新页面，客服入口会按渠道配置展示。</div>
-            <div>4. 独立页面或二维码场景可直接使用访问链接。</div>
+            <div className="font-medium text-foreground">{t("channel.accessGuide")}</div>
+            <div>{t("channel.webGuide1")}</div>
+            <div>{t("channel.webGuide2")}</div>
+            <div>{t("channel.webGuide3")}</div>
+            <div>{t("channel.webGuide4")}</div>
             <div className="pt-1">
               <Button
                 type="button"
@@ -805,7 +836,7 @@ function WebAccessGuide({ channelId }: { channelId: string }) {
                 onClick={() => window.open(testUrl, "_blank", "noopener,noreferrer")}
               >
                 <ExternalLinkIcon className="size-4" />
-                打开测试页
+                {t("channel.openTestPage")}
               </Button>
             </div>
           </div>
@@ -816,6 +847,7 @@ function WebAccessGuide({ channelId }: { channelId: string }) {
 }
 
 function WechatMPAccessGuide({ channelId }: { channelId: string }) {
+  const t = useI18n()
   const [origin, setOrigin] = useState("")
 
   useEffect(() => {
@@ -837,32 +869,32 @@ function WechatMPAccessGuide({ channelId }: { channelId: string }) {
     }
     try {
       await navigator.clipboard.writeText(text)
-      toast.success("已复制公众号菜单链接")
+      toast.success(t("channel.copiedWechatMenuUrl"))
     } catch {
-      toast.error("复制失败")
+      toast.error(t("channel.copyFailed"))
     }
   }
 
   return (
     <div className="space-y-4 border-t pt-4">
       <div>
-        <div className="text-sm font-medium">微信公众号接入信息</div>
+        <div className="text-sm font-medium">{t("channel.wechatAccessInfo")}</div>
         <div className="text-xs text-muted-foreground">
           {channelId
-            ? "将该链接配置到微信公众号自定义菜单，用户点击菜单后直接进入客服聊天页。"
-            : "保存渠道后生成公众号菜单链接。"}
+            ? t("channel.wechatAccessReady")
+            : t("channel.wechatAccessPending")}
         </div>
       </div>
 
       {!channelId ? (
         <div className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
-          当前为新建渠道，保存后会生成 channelId。
+          {t("channel.newChannelPending")}
         </div>
       ) : (
         <div className="space-y-4">
           <div className="space-y-2">
             <div className="text-xs font-medium text-muted-foreground">
-              公众号菜单链接
+              {t("channel.wechatMenuUrl")}
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Input readOnly value={menuUrl} className="font-mono text-xs" />
@@ -871,7 +903,7 @@ function WechatMPAccessGuide({ channelId }: { channelId: string }) {
                   type="button"
                   variant="outline"
                   size="icon"
-                  title="复制链接"
+                  title={t("channel.copyLink")}
                   onClick={() => copyText(menuUrl)}
                 >
                   <CopyIcon className="size-4" />
@@ -880,7 +912,7 @@ function WechatMPAccessGuide({ channelId }: { channelId: string }) {
                   type="button"
                   variant="outline"
                   size="icon"
-                  title="打开链接"
+                  title={t("channel.openLink")}
                   onClick={() => window.open(menuUrl, "_blank", "noopener,noreferrer")}
                 >
                   <ExternalLinkIcon className="size-4" />
@@ -890,10 +922,10 @@ function WechatMPAccessGuide({ channelId }: { channelId: string }) {
           </div>
 
           <div className="flex flex-col gap-2 rounded-md bg-muted px-3 py-3 text-xs text-muted-foreground">
-            <div className="font-medium text-foreground">接入教程</div>
-            <div>1. 确认该渠道已启用。</div>
-            <div>2. 将公众号自定义菜单跳转地址设置为上方链接。</div>
-            <div>3. 用户点击菜单后会直接进入客服聊天页。</div>
+            <div className="font-medium text-foreground">{t("channel.accessGuide")}</div>
+            <div>{t("channel.webGuide1")}</div>
+            <div>{t("channel.wechatGuide2")}</div>
+            <div>{t("channel.wechatGuide3")}</div>
           </div>
         </div>
       )}

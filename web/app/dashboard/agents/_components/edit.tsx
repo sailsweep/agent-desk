@@ -2,12 +2,13 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckIcon, ChevronsUpDownIcon } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { Controller, Resolver, useForm } from "react-hook-form";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Controller, type Resolver, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod/v4";
 
 import { ImageInput } from "@/components/image-input";
+import { OptionCombobox } from "@/components/option-combobox";
 import { ProjectDialog } from "@/components/project-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,13 +31,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -44,13 +38,12 @@ import {
   fetchUsersAll,
   type AdminAgentProfile,
   type AdminUser,
-  type CreateAdminAgentProfilePayload
+  type CreateAdminAgentProfilePayload,
 } from "@/lib/api/admin";
-import {
-  ServiceStatus,
-  ServiceStatusLabels,
-} from "@/lib/generated/enums";
-import { getEnumLabel, getEnumOptions } from "@/lib/enums";
+import { useI18n } from "@/i18n/provider";
+import { ServiceStatus } from "@/lib/generated/enums";
+
+type TFunction = (key: string, values?: Record<string, string | number>) => string;
 
 type AgentEditDialogProps = {
   open: boolean;
@@ -61,7 +54,6 @@ type AgentEditDialogProps = {
   onSubmit: (payload: CreateAdminAgentProfilePayload) => Promise<void>;
 };
 
-const serviceStatusOptions = getEnumOptions(ServiceStatusLabels);
 const emptyForm: EditForm = {
   userId: "",
   teamId: "",
@@ -76,40 +68,49 @@ const emptyForm: EditForm = {
   remark: "",
 };
 
-const editFormSchema = z.object({
-  userId: z.string().trim().min(1, "请选择关联用户"),
-  teamId: z.string().trim().min(1, "请选择所属客服组"),
-  agentCode: z.string().trim().min(1, "客服工号不能为空"),
-  displayName: z.string().trim().min(1, "展示名不能为空"),
+type EditForm = {
+  userId: string;
+  teamId: string;
+  agentCode: string;
+  displayName: string;
+  avatar: string;
+  serviceStatus: "0" | "1";
+  maxConcurrentCount: string;
+  priorityLevel: string;
+  autoAssignEnabled: boolean;
+  receiveOfflineMessage: boolean;
+  remark: string;
+};
+
+function createEditFormSchema(t: TFunction) {
+  return z.object({
+  userId: z.string().trim().min(1, t("agentProfile.userRequired")),
+  teamId: z.string().trim().min(1, t("agentProfile.teamRequired")),
+  agentCode: z.string().trim().min(1, t("agentProfile.agentCodeRequired")),
+  displayName: z.string().trim().min(1, t("agentProfile.displayNameRequired")),
   avatar: z.string().trim(),
   serviceStatus: z.enum(["0", "1"], {
-    message: "请选择客服状态",
+    message: t("agentProfile.statusRequired"),
   }),
   maxConcurrentCount: z
     .string()
     .trim()
-    .regex(/^\d+$/, "最大并发必须是大于等于 0 的整数"),
+    .regex(/^\d+$/, t("agentProfile.maxConcurrentInvalid")),
   priorityLevel: z
     .string()
     .trim()
-    .regex(/^-?\d+$/, "优先级必须是整数"),
+    .regex(/^-?\d+$/, t("agentProfile.priorityInvalid")),
   autoAssignEnabled: z.boolean(),
   receiveOfflineMessage: z.boolean(),
   remark: z.string().trim(),
-});
+  });
+}
 
-type EditForm = z.infer<typeof editFormSchema>;
-const editFormResolver = zodResolver(editFormSchema as never) as Resolver<
-  z.input<typeof editFormSchema>,
-  undefined,
-  z.output<typeof editFormSchema>
->;
-
-function getStatusLabel(value: string) {
-  return getEnumLabel(
-    ServiceStatusLabels,
-    Number(value) as ServiceStatus,
-  );
+function getServiceStatusOptions(t: TFunction) {
+  return [
+    { value: String(ServiceStatus.Idle), label: t("agentProfile.statusIdle") },
+    { value: String(ServiceStatus.Busy), label: t("agentProfile.statusBusy") },
+  ];
 }
 
 function buildForm(item: AdminAgentProfile | null): EditForm {
@@ -203,6 +204,7 @@ function AgentEditDialogBody({
   onOpenChange,
   onSubmit,
 }: AgentEditDialogBodyProps) {
+  const t = useI18n();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [userSelectOpen, setUserSelectOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -210,6 +212,7 @@ function AgentEditDialogBody({
     value: String(user.id),
     label: `${user.nickname || user.username} (${user.username})`,
   }));
+  const serviceStatusOptions = useMemo(() => getServiceStatusOptions(t), [t]);
   const loadOptions = useCallback(async () => {
     try {
       const [usersData] = await Promise.all([
@@ -217,14 +220,15 @@ function AgentEditDialogBody({
       ]);
       setUsers(usersData);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载选项失败");
+      toast.error(error instanceof Error ? error.message : t("agentProfile.loadOptionsFailed"));
     }
-  }, []);
-  const form = useForm<
-    z.input<typeof editFormSchema>,
-    undefined,
-    z.output<typeof editFormSchema>
-  >({
+  }, [t]);
+  const editFormSchema = useMemo(() => createEditFormSchema(t), [t]);
+  const editFormResolver = useMemo(
+    () => zodResolver(editFormSchema) as Resolver<EditForm>,
+    [editFormSchema],
+  );
+  const form = useForm<EditForm>({
     resolver: editFormResolver,
     defaultValues: buildFormWithDefaultTeam(null, defaultTeamId),
   });
@@ -247,13 +251,13 @@ function AgentEditDialogBody({
         const data = await fetchAgentProfile(itemId);
         reset(buildForm(data));
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "加载客服档案详情失败");
+        toast.error(error instanceof Error ? error.message : t("agentProfile.loadDetailFailed"));
       } finally {
         setLoading(false);
       }
     }
     void loadDetail();
-  }, [itemId, defaultTeamId, reset]);
+  }, [itemId, defaultTeamId, reset, t]);
 
   useEffect(() => {
     if (open) {
@@ -271,7 +275,7 @@ function AgentEditDialogBody({
     <ProjectDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={itemId ? "编辑客服档案" : "新建客服档案"}
+      title={itemId ? t("agentProfile.editTitle") : t("agentProfile.createTitle")}
       size="lg"
       footer={
         <>
@@ -281,17 +285,17 @@ function AgentEditDialogBody({
             onClick={() => onOpenChange(false)}
             disabled={saving}
           >
-            取消
+            {t("agentProfile.cancel")}
           </Button>
           <Button type="submit" form={formId} disabled={saving || loading}>
-            {saving ? "保存中..." : "保存"}
+            {saving ? t("agentProfile.saving") : t("agentProfile.save")}
           </Button>
         </>
       }
     >
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="text-muted-foreground">加载中...</div>
+          <div className="text-muted-foreground">{t("agentProfile.loading")}</div>
         </div>
       ) : (
         <form
@@ -301,7 +305,7 @@ function AgentEditDialogBody({
         >
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field data-invalid={!!errors.userId}>
-              <FieldLabel>关联用户</FieldLabel>
+              <FieldLabel>{t("agentProfile.linkedUser")}</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
@@ -324,7 +328,7 @@ function AgentEditDialogBody({
                         <span className="truncate">
                           {userOptions.find(
                             (option) => option.value === field.value,
-                          )?.label ?? "请选择用户"}
+                          )?.label ?? t("agentProfile.selectUser")}
                         </span>
                         <ChevronsUpDownIcon className="ml-2 size-4 shrink-0 opacity-50" />
                       </PopoverTrigger>
@@ -333,9 +337,9 @@ function AgentEditDialogBody({
                         align="start"
                       >
                         <Command>
-                          <CommandInput placeholder="搜索用户..." />
+                          <CommandInput placeholder={t("agentProfile.searchUser")} />
                           <CommandList>
-                            <CommandEmpty>没有匹配的用户</CommandEmpty>
+                            <CommandEmpty>{t("agentProfile.emptyUser")}</CommandEmpty>
                             <CommandGroup>
                               {userOptions.map((option) => (
                                 <CommandItem
@@ -367,11 +371,11 @@ function AgentEditDialogBody({
               </FieldContent>
             </Field>
             <Field data-invalid={!!errors.displayName}>
-              <FieldLabel htmlFor="agent-display-name">展示名</FieldLabel>
+              <FieldLabel htmlFor="agent-display-name">{t("agentProfile.displayName")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="agent-display-name"
-                  placeholder="请输入展示名"
+                  placeholder={t("agentProfile.displayNamePlaceholder")}
                   {...register("displayName")}
                 />
                 <FieldError errors={[errors.displayName]} />
@@ -381,11 +385,11 @@ function AgentEditDialogBody({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field data-invalid={!!errors.agentCode}>
-              <FieldLabel htmlFor="agent-code">客服工号</FieldLabel>
+              <FieldLabel htmlFor="agent-code">{t("agentProfile.agentCodeLabel")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="agent-code"
-                  placeholder="例如：A1001"
+                  placeholder={t("agentProfile.agentCodePlaceholder")}
                   {...register("agentCode")}
                 />
                 <FieldError errors={[errors.agentCode]} />
@@ -393,7 +397,7 @@ function AgentEditDialogBody({
             </Field>
 
             <Field className="min-h-32">
-              <FieldLabel>头像</FieldLabel>
+              <FieldLabel>{t("agentProfile.avatar")}</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
@@ -404,7 +408,7 @@ function AgentEditDialogBody({
                       onChange={field.onChange}
                       disabled={saving}
                       prefix="avatar"
-                      placeholder="上传头像"
+                      placeholder={t("agentProfile.avatarUpload")}
                       className="size-16 rounded-full"
                     />
                   )}
@@ -415,31 +419,20 @@ function AgentEditDialogBody({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field data-invalid={!!errors.serviceStatus}>
-              <FieldLabel>客服状态</FieldLabel>
+              <FieldLabel>{t("agentProfile.serviceStatus")}</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
                   name="serviceStatus"
                   render={({ field }) => (
-                    <Select
+                    <OptionCombobox
+                      options={serviceStatusOptions}
                       value={field.value}
-                      onValueChange={field.onChange}
-                      modal={false}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue>{getStatusLabel(field.value)}</SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {serviceStatusOptions.map((option) => (
-                          <SelectItem
-                            key={option.value}
-                            value={String(option.value)}
-                          >
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onChange={field.onChange}
+                      placeholder={t("agentProfile.selectStatus")}
+                      searchPlaceholder={t("agentProfile.searchStatus")}
+                      emptyText={t("agentProfile.emptyStatus")}
+                    />
                   )}
                 />
                 <FieldError errors={[errors.serviceStatus]} />
@@ -450,7 +443,7 @@ function AgentEditDialogBody({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field data-invalid={!!errors.maxConcurrentCount}>
               <FieldLabel htmlFor="agent-max-concurrent-count">
-                最大并发
+                {t("agentProfile.maxConcurrent")}
               </FieldLabel>
               <FieldContent>
                 <Input
@@ -463,7 +456,7 @@ function AgentEditDialogBody({
               </FieldContent>
             </Field>
             <Field data-invalid={!!errors.priorityLevel}>
-              <FieldLabel htmlFor="agent-priority-level">优先级</FieldLabel>
+              <FieldLabel htmlFor="agent-priority-level">{t("agentProfile.priority")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="agent-priority-level"
@@ -478,7 +471,7 @@ function AgentEditDialogBody({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field>
-              <FieldLabel>参与自动分配</FieldLabel>
+              <FieldLabel>{t("agentProfile.autoAssignEnabled")}</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
@@ -493,7 +486,7 @@ function AgentEditDialogBody({
               </FieldContent>
             </Field>
             <Field>
-              <FieldLabel>离线接收消息</FieldLabel>
+              <FieldLabel>{t("agentProfile.receiveOfflineMessage")}</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
@@ -510,12 +503,12 @@ function AgentEditDialogBody({
           </div>
 
           <Field>
-            <FieldLabel htmlFor="agent-remark">备注</FieldLabel>
+            <FieldLabel htmlFor="agent-remark">{t("agentProfile.remark")}</FieldLabel>
             <FieldContent>
               <Textarea
                 id="agent-remark"
                 rows={4}
-                placeholder="请输入备注"
+                placeholder={t("agentProfile.remarkPlaceholder")}
                 {...register("remark")}
               />
             </FieldContent>

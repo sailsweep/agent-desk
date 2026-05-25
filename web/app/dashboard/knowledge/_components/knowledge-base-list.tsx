@@ -29,7 +29,7 @@ import {
   Trash2Icon,
 } from "lucide-react";
 import type { CSSProperties } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -47,13 +47,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { OptionCombobox } from "@/components/option-combobox";
 import {
   createKnowledgeBase,
   deleteKnowledgeBase,
@@ -64,8 +58,8 @@ import {
   type CreateKnowledgeBasePayload,
   type KnowledgeBase,
 } from "@/lib/api/admin";
-import { getEnumLabel, getEnumOptions } from "@/lib/enums";
-import { KnowledgeBaseType, StatusLabels } from "@/lib/generated/enums";
+import { useI18n } from "@/i18n/provider";
+import { KnowledgeBaseType, Status } from "@/lib/generated/enums";
 import { cn } from "@/lib/utils";
 import { EditDialog } from "./knowledge-base-edit";
 
@@ -74,10 +68,16 @@ type KnowledgeBaseListProps = {
   onSelectKnowledgeBase: (knowledgeBase: KnowledgeBase | null) => void;
 };
 
-const statusOptions = [
-  { value: "all", label: "全部状态" },
-  ...getEnumOptions(StatusLabels),
-] as const;
+type TFunction = (key: string, values?: Record<string, string | number>) => string;
+
+function getStatusOptions(t: TFunction) {
+  return [
+    { value: "all", label: t("knowledge.allStatus") },
+    { value: String(Status.Ok), label: t("knowledge.statusOk") },
+    { value: String(Status.Disabled), label: t("knowledge.statusDisabled") },
+    { value: String(Status.Deleted), label: t("knowledge.statusDeleted") },
+  ];
+}
 
 type SortableKnowledgeBaseCardProps = {
   item: KnowledgeBase;
@@ -89,6 +89,7 @@ type SortableKnowledgeBaseCardProps = {
   onRebuildIndex: () => void;
   deleteLoadingId: number | null;
   rebuildIndexLoadingId: number | null;
+  t: TFunction;
 };
 
 function SortableKnowledgeBaseCard({
@@ -101,6 +102,7 @@ function SortableKnowledgeBaseCard({
   onRebuildIndex,
   deleteLoadingId,
   rebuildIndexLoadingId,
+  t,
 }: SortableKnowledgeBaseCardProps) {
   const {
     attributes,
@@ -157,7 +159,7 @@ function SortableKnowledgeBaseCard({
                 className="size-6 opacity-0 group-hover:opacity-100"
               />
             }
-            aria-label={`更多操作 ${item.name}`}
+            aria-label={t("knowledge.moreActions", { name: item.name })}
           >
             <MoreHorizontalIcon className="size-3.5" />
           </DropdownMenuTrigger>
@@ -169,7 +171,7 @@ function SortableKnowledgeBaseCard({
               }}
             >
               <PencilIcon className="mr-2 size-3.5" />
-              编辑
+              {t("knowledge.edit")}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={(e) => {
@@ -178,7 +180,7 @@ function SortableKnowledgeBaseCard({
               }}
             >
               <RefreshCwIcon className="mr-2 size-3.5" />
-              {rebuildIndexLoadingId === item.id ? "重建中..." : "重建索引"}
+              {rebuildIndexLoadingId === item.id ? t("knowledge.rebuilding") : t("knowledge.rebuildIndex")}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={(e) => {
@@ -188,7 +190,7 @@ function SortableKnowledgeBaseCard({
               className="text-destructive focus:text-destructive"
             >
               <Trash2Icon className="mr-2 size-3.5" />
-              {deleteLoadingId === item.id ? "删除中..." : "删除"}
+              {deleteLoadingId === item.id ? t("knowledge.deleting") : t("knowledge.delete")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -201,7 +203,7 @@ function SortableKnowledgeBaseCard({
           }}
         >
           <PencilIcon className="mr-2 size-3.5" />
-          编辑
+          {t("knowledge.edit")}
         </ContextMenuItem>
         <ContextMenuItem
           onClick={(e) => {
@@ -210,7 +212,7 @@ function SortableKnowledgeBaseCard({
           }}
         >
           <RefreshCwIcon className="mr-2 size-3.5" />
-          {rebuildIndexLoadingId === item.id ? "重建中..." : "重建索引"}
+          {rebuildIndexLoadingId === item.id ? t("knowledge.rebuilding") : t("knowledge.rebuildIndex")}
         </ContextMenuItem>
         <ContextMenuItem
           onClick={(e) => {
@@ -220,7 +222,7 @@ function SortableKnowledgeBaseCard({
           variant="destructive"
         >
           <Trash2Icon className="mr-2 size-3.5" />
-          {deleteLoadingId === item.id ? "删除中..." : "删除"}
+          {deleteLoadingId === item.id ? t("knowledge.deleting") : t("knowledge.delete")}
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
@@ -231,6 +233,7 @@ export function KnowledgeBaseList({
   selectedKnowledgeBaseId,
   onSelectKnowledgeBase,
 }: KnowledgeBaseListProps) {
+  const t = useI18n();
   const [keywordInput, setKeywordInput] = useState("");
   const [statusFilterInput, setStatusFilterInput] = useState("all");
   const [keyword, setKeyword] = useState("");
@@ -245,6 +248,7 @@ export function KnowledgeBaseList({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
+  const statusOptions = useMemo(() => getStatusOptions(t), [t]);
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -268,11 +272,11 @@ export function KnowledgeBaseList({
       });
       setKnowledgeBases(data.results);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载知识库失败");
+      toast.error(error instanceof Error ? error.message : t("knowledge.loadBasesFailed"));
     } finally {
       setLoading(false);
     }
-  }, [keyword, statusFilter]);
+  }, [keyword, statusFilter, t]);
 
   useEffect(() => {
     void loadData();
@@ -340,16 +344,16 @@ export function KnowledgeBaseList({
         const editingItem = knowledgeBases.find(
           (item) => item.id === editingItemId,
         );
-        toast.success(`已更新知识库：${editingItem?.name || payload.name}`);
+        toast.success(t("knowledge.baseUpdated", { name: editingItem?.name || payload.name }));
       } else {
         await createKnowledgeBase(payload);
-        toast.success(`已创建知识库：${payload.name}`);
+        toast.success(t("knowledge.baseCreated", { name: payload.name }));
       }
       setDialogOpen(false);
       setEditingItemId(null);
       await loadData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "保存知识库失败");
+      toast.error(error instanceof Error ? error.message : t("knowledge.baseSaveFailed"));
     } finally {
       setSaving(false);
     }
@@ -359,13 +363,13 @@ export function KnowledgeBaseList({
     setDeleteLoadingId(item.id);
     try {
       await deleteKnowledgeBase(item.id);
-      toast.success(`已删除知识库：${item.name}`);
+      toast.success(t("knowledge.baseDeleted", { name: item.name }));
       if (selectedKnowledgeBaseId === item.id) {
         onSelectKnowledgeBase(null);
       }
       await loadData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "删除知识库失败");
+      toast.error(error instanceof Error ? error.message : t("knowledge.baseDeleteFailed"));
     } finally {
       setDeleteLoadingId(null);
     }
@@ -375,10 +379,10 @@ export function KnowledgeBaseList({
     setRebuildIndexLoadingId(item.id);
     try {
       await rebuildKnowledgeBaseIndex(item.id);
-      toast.success(`已开始重建知识库索引：${item.name}`);
+      toast.success(t("knowledge.rebuildStarted", { name: item.name }));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "重建知识库索引失败",
+        error instanceof Error ? error.message : t("knowledge.rebuildFailed"),
       );
     } finally {
       setRebuildIndexLoadingId(null);
@@ -404,12 +408,12 @@ export function KnowledgeBaseList({
 
     try {
       await updateKnowledgeBaseSort(nextResults.map((item) => item.id));
-      toast.success("知识库排序已更新");
+      toast.success(t("knowledge.sortUpdated"));
       await loadData();
     } catch (error) {
       setKnowledgeBases(previousResults);
       toast.error(
-        error instanceof Error ? error.message : "更新知识库排序失败",
+        error instanceof Error ? error.message : t("knowledge.sortUpdateFailed"),
       );
     } finally {
       setSorting(false);
@@ -421,7 +425,7 @@ export function KnowledgeBaseList({
       <div className="flex h-full flex-col border-r bg-muted/30">
         <div className="flex flex-col gap-2 border-b bg-background p-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold">知识库</h2>
+            <h2 className="text-sm font-semibold">{t("knowledge.title")}</h2>
             <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
@@ -451,33 +455,18 @@ export function KnowledgeBaseList({
                 value={keywordInput}
                 onChange={(event) => setKeywordInput(event.target.value)}
                 onKeyDown={handleFilterKeyDown}
-                placeholder="搜索知识库"
+                placeholder={t("knowledge.searchBase")}
                 className="h-8 pl-8 text-xs"
               />
             </div>
-            <Select
+            <OptionCombobox
               value={statusFilterInput}
-              onValueChange={handleStatusFilterChange}
-            >
-              <SelectTrigger className="h-8 w-28 text-xs">
-                <SelectValue>
-                  {statusFilterInput === "all"
-                    ? "全部状态"
-                    : getEnumLabel(StatusLabels, Number(statusFilterInput))}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((item) => (
-                  <SelectItem
-                    key={item.value}
-                    value={item.value}
-                    className="text-xs"
-                  >
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={handleStatusFilterChange}
+              options={statusOptions}
+              placeholder={t("knowledge.allStatus")}
+              searchPlaceholder={t("knowledge.searchBase")}
+              emptyText={t("knowledge.emptyBases")}
+            />
           </div>
         </div>
         <ScrollArea className="flex-1">
@@ -503,13 +492,14 @@ export function KnowledgeBaseList({
                     onRebuildIndex={() => void handleRebuildIndex(item)}
                     deleteLoadingId={deleteLoadingId}
                     rebuildIndexLoadingId={rebuildIndexLoadingId}
+                    t={t}
                   />
                 ))}
               </SortableContext>
             </DndContext>
             {!loading && knowledgeBases.length === 0 ? (
               <div className="py-8 text-center text-sm text-muted-foreground">
-                没有匹配的知识库
+                {t("knowledge.emptyBases")}
               </div>
             ) : null}
           </div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { DropletsIcon, PaletteIcon } from "lucide-react"
 
+import { useI18n } from "@/i18n/provider"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -19,22 +20,22 @@ const DEFAULT_PALETTE: PaletteMode = "green"
 
 const paletteOptions: Array<{
   value: PaletteMode
-  label: string
+  labelKey: string
   swatch: string
 }> = [
   {
     value: "green",
-    label: "温润服务绿",
+    labelKey: "palette.green",
     swatch: "bg-teal-700",
   },
   {
     value: "gray",
-    label: "中性精密灰",
+    labelKey: "palette.gray",
     swatch: "bg-slate-500",
   },
   {
     value: "blue",
-    label: "清透科技蓝",
+    labelKey: "palette.blue",
     swatch: "bg-blue-600",
   },
 ]
@@ -56,6 +57,7 @@ function applyPalette(value: PaletteMode) {
 }
 
 export function PaletteToggle() {
+  const t = useI18n()
   const [palette, setPalette] = useState<PaletteMode>(DEFAULT_PALETTE)
 
   useEffect(() => {
@@ -77,7 +79,7 @@ export function PaletteToggle() {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={<Button variant="outline" size="sm" />}
-        aria-label="切换主题色"
+        aria-label={t("palette.toggle")}
       >
         <ActiveIcon />
       </DropdownMenuTrigger>
@@ -86,7 +88,7 @@ export function PaletteToggle() {
           {paletteOptions.map((option) => (
             <DropdownMenuRadioItem key={option.value} value={option.value}>
               <span className={`size-2.5 rounded-full ${option.swatch}`} />
-              <span className="flex-1">{option.label}</span>
+              <span className="flex-1">{t(option.labelKey)}</span>
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>

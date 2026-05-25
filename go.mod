@@ -19,8 +19,10 @@ require (
 	github.com/mlogclub/codegen v1.0.3
 	github.com/mlogclub/simple v1.2.40
 	github.com/modelcontextprotocol/go-sdk v1.4.1
+	github.com/nicksnyder/go-i18n/v2 v2.6.1
 	github.com/openai/openai-go/v3 v3.28.0
 	github.com/panjf2000/ants/v2 v2.12.0
+	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/qdrant/go-client v1.17.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/silenceper/wechat/v2 v2.1.12
@@ -29,6 +31,7 @@ require (
 	github.com/yuin/goldmark v1.4.13
 	golang.org/x/crypto v0.49.0
 	golang.org/x/net v0.51.0
+	golang.org/x/text v0.35.0
 	golang.org/x/tools v0.42.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/mysql v1.5.7
@@ -79,7 +82,6 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/nikolalohinski/gonja v1.5.3 // indirect
 	github.com/nxadm/tail v1.4.11 // indirect
-	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.59.0 // indirect
@@ -104,7 +106,6 @@ require (
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260209200024-4cfbd4190f57 // indirect
 	google.golang.org/grpc v1.78.0 // indirect

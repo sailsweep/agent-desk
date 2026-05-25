@@ -36,6 +36,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAgentConversationRealtime } from "@/hooks/use-agent-conversation-realtime";
+import { useI18n } from "@/i18n/provider";
 import {
   agentConversationFilterOptions,
   agentConversationSelectors,
@@ -61,6 +62,7 @@ function getCustomerOnlineDotClassName(online?: boolean) {
 }
 
 export default function ConversationsPage() {
+  const t = useI18n();
   const conversation = useAgentConversationsStore(
     agentConversationSelectors.selectedConversation,
   );
@@ -117,11 +119,13 @@ export default function ConversationsPage() {
   const currentFilterOption =
     agentConversationFilterOptions.find((opt) => opt.value === conversationFilter) ??
     agentConversationFilterOptions[0];
+  const getFilterLabel = (labelKey: string) => t(labelKey);
+
   useEffect(() => {
     void loadConversations().catch((error) => {
-      toast.error(error instanceof Error ? error.message : "加载会话列表失败");
+      toast.error(error instanceof Error ? error.message : t("conversation.loadListFailed"));
     });
-  }, [loadConversations, conversationFilter]);
+  }, [loadConversations, conversationFilter, t]);
 
   async function handleConversationChanged(conversationId: number) {
     await loadConversations();
@@ -181,7 +185,11 @@ export default function ConversationsPage() {
                   />
                 }
               >
-                <span className="truncate">{currentFilterOption?.label ?? "筛选状态"}</span>
+                <span className="truncate">
+                  {currentFilterOption
+                    ? getFilterLabel(currentFilterOption.labelKey)
+                    : t("conversation.filterPlaceholder")}
+                </span>
                 <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-44 min-w-44">
@@ -193,7 +201,7 @@ export default function ConversationsPage() {
                 >
                   {agentConversationFilterOptions.map((opt) => (
                     <DropdownMenuRadioItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                      {getFilterLabel(opt.labelKey)}
                     </DropdownMenuRadioItem>
                   ))}
                 </DropdownMenuRadioGroup>
@@ -216,7 +224,7 @@ export default function ConversationsPage() {
                     value={opt.value}
                     className="shrink-0 px-2.5 text-xs sm:text-sm"
                   >
-                    {opt.label}
+                    {getFilterLabel(opt.labelKey)}
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -233,7 +241,7 @@ export default function ConversationsPage() {
                   key={opt.value}
                   className="shrink-0 px-2.5 text-xs sm:text-sm"
                 >
-                  {opt.label}
+                  {getFilterLabel(opt.labelKey)}
                 </span>
               ))}
             </div>
@@ -281,13 +289,16 @@ export default function ConversationsPage() {
               <Avatar className="size-8 shrink-0 lg:size-9">
                 <AvatarImage src="" />
                 <AvatarFallback className="bg-primary/10 text-sm text-primary">
-                  客
+                  {t("conversation.customerAvatar")}
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="min-w-0 truncate text-sm font-medium leading-tight">
-                    {conversation.customerName || `客户 #${conversation.customerId || conversation.id}`}
+                    {conversation.customerName ||
+                      t("conversation.customerFallback", {
+                        id: conversation.customerId || conversation.id,
+                      })}
                   </p>
                   <span
                     className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] leading-none ${getCustomerOnlineClassName(
@@ -299,15 +310,17 @@ export default function ConversationsPage() {
                         conversation.customerOnline,
                       )}`}
                     />
-                    {conversation.customerOnline ? "用户在线" : "用户离线"}
+                    {conversation.customerOnline
+                      ? t("conversation.customerOnline")
+                      : t("conversation.customerOffline")}
                   </span>
                 </div>
                 <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                  <span>渠道 #{conversation.channelId || "-"}</span>
+                  <span>{t("conversation.channelNumber", { id: conversation.channelId || "-" })}</span>
                   {conversation.customerId ? (
                     <>
                       <span className="text-muted-foreground/60"> / </span>
-                      <span>已关联客户</span>
+                      <span>{t("conversation.linkedCustomer")}</span>
                     </>
                   ) : null}
                 </p>
@@ -315,12 +328,14 @@ export default function ConversationsPage() {
             </>
           ) : (
             <div className="min-w-0">
-              <p className="truncate font-medium text-[14px] leading-tight">会话工作台</p>
+              <p className="truncate font-medium text-[14px] leading-tight">
+                {t("conversation.workbenchTitle")}
+              </p>
               <p className="mt-0.5 truncate text-[14px] text-muted-foreground sm:text-[14px] lg:hidden">
-                打开菜单选择会话
+                {t("conversation.openMenuSelectConversation")}
               </p>
               <p className="mt-0.5 hidden truncate text-[12px] text-muted-foreground lg:block">
-                请选择左侧会话开始处理消息
+                {t("conversation.selectConversationFromSidebar")}
               </p>
             </div>
           )}
@@ -331,7 +346,7 @@ export default function ConversationsPage() {
             size="icon"
             className={`${workbenchIconButtonClassName} lg:hidden`}
             disabled={!conversation}
-            aria-label="会话信息"
+            aria-label={t("conversation.conversationInfo")}
             onClick={() => setMobileCustomerSheetOpen(true)}
           >
             <CircleUserRoundIcon className="size-4" />
@@ -355,21 +370,21 @@ export default function ConversationsPage() {
                 disabled={!conversation}
               >
                 <FilePlus2Icon />
-                转工单
+                {t("conversation.createTicket")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setTransferOpen(true)}
                 disabled={!conversation || conversation.status !== 3}
               >
                 <ArrowRightLeftIcon />
-                转接会话
+                {t("conversation.transferConversation")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setCloseOpen(true)}
                 disabled={!conversation || conversation.status === 4}
               >
                 <CircleXIcon />
-                关闭会话
+                {t("conversation.closeConversation")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -378,7 +393,11 @@ export default function ConversationsPage() {
             size="icon"
             className={`${workbenchIconButtonClassName} hidden lg:flex`}
             onClick={handleInfoPanelToggle}
-            aria-label={infoPanelCollapsed ? "展开会话信息" : "收起会话信息"}
+            aria-label={
+              infoPanelCollapsed
+                ? t("conversation.expandConversationInfo")
+                : t("conversation.collapseConversationInfo")
+            }
           >
             {infoPanelCollapsed ? (
               <ChevronLeft className="size-4" />
@@ -396,11 +415,10 @@ export default function ConversationsPage() {
 
   return (
     <div className="flex h-[calc(100dvh-var(--header-height))] min-h-0 w-full min-w-0 flex-col overflow-hidden lg:h-full">
-      {/* H5 无左侧导航：顶栏 h-12、left-0；lg 起有 w-14 侧栏，与 layout 一致 */}
       {mobileMenuOpen && (
         <button
           type="button"
-          aria-label="关闭会话列表"
+          aria-label={t("conversation.closeConversationList")}
           className="fixed top-12 right-0 bottom-0 left-0 z-30 bg-black/50 lg:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />

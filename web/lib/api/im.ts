@@ -1,4 +1,5 @@
 import { request } from "@/lib/api/client"
+import { translateCurrentMessage } from "@/i18n/messages"
 import { readKefuChatRuntimeConfig } from "@/lib/sdk/runtime-config"
 import { generateUUID } from "@/lib/utils"
 
@@ -280,7 +281,7 @@ function createExchangeHeaders() {
 function createImHeaders() {
   const sessionToken = getCustomerSessionToken()
   if (!sessionToken) {
-    throw new Error("客服会话未初始化")
+    throw new Error(translateCurrentMessage("api.customerSessionNotReady"))
   }
   return {
     ...createChannelHeaders(),

@@ -50,33 +50,29 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Status, StatusLabels } from "@/lib/generated/enums"
-import { getEnumLabel, getEnumOptions } from "@/lib/enums"
+import { getEnumOptions } from "@/lib/enums"
 import { ButtonGroup } from "@/components/ui/button-group"
 import { Switch } from "@/components/ui/switch"
+import { useI18n } from "@/i18n/provider"
 
-const statusOptions = [
-  { value: "all", label: "全部状态" },
-  ...getEnumOptions(StatusLabels).map((option) => ({
-    value: String(option.value),
-    label: option.label,
-  })),
-] as const
-
-const channelTypeOptions = [
-  { value: "all", label: "全部类型" },
-  { value: "web", label: "Web 站点" },
-  { value: "wechat_mp", label: "微信公众号" },
-  { value: "wxwork_kf", label: "企业微信客服" },
-] as const
-
-function getChannelTypeLabel(channelType: string) {
+function getChannelTypeLabel(channelType: string, t: (key: string) => string) {
   if (channelType === "wechat_mp") {
-    return "微信公众号"
+    return t("channel.typeWechatMp")
   }
   if (channelType === "wxwork_kf") {
-    return "企业微信客服"
+    return t("channel.typeWxworkKf")
   }
-  return "Web 站点"
+  return t("channel.typeWeb")
+}
+
+function getStatusLabel(status: Status, t: (key: string) => string) {
+  if (status === Status.Disabled) {
+    return t("status.disabled")
+  }
+  if (status === Status.Deleted) {
+    return t("status.deleted")
+  }
+  return t("status.ok")
 }
 
 function ChannelIcon({ channelType }: { channelType: string }) {
@@ -90,6 +86,7 @@ function ChannelIcon({ channelType }: { channelType: string }) {
 }
 
 export default function DashboardChannelsPage() {
+  const t = useI18n()
   const [nameInput, setNameInput] = useState("")
   const [channelIdInput, setChannelIdInput] = useState("")
   const [channelTypeInput, setChannelTypeInput] = useState("all")
@@ -123,11 +120,26 @@ export default function DashboardChannelsPage() {
       })
       setResult(data)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载接入渠道失败")
+      toast.error(error instanceof Error ? error.message : t("channel.loadFailed"))
     } finally {
       setLoading(false)
     }
-  }, [channelId, channelType, limit, name, page, status])
+  }, [channelId, channelType, limit, name, page, status, t])
+
+  const statusOptions = [
+    { value: "all", label: t("status.all") },
+    ...getEnumOptions(StatusLabels).map((option) => ({
+      value: String(option.value),
+      label: getStatusLabel(option.value as Status, t),
+    })),
+  ]
+
+  const channelTypeOptions = [
+    { value: "all", label: t("channel.allTypes") },
+    { value: "web", label: t("channel.typeWeb") },
+    { value: "wechat_mp", label: t("channel.typeWechatMp") },
+    { value: "wxwork_kf", label: t("channel.typeWxworkKf") },
+  ]
 
   useEffect(() => {
     void loadData()
@@ -167,16 +179,16 @@ export default function DashboardChannelsPage() {
     try {
       if (editingItem) {
         await updateChannel({ id: editingItem.id, ...payload })
-        toast.success(`已更新接入渠道：${payload.name}`)
+        toast.success(t("channel.updated", { name: payload.name }))
       } else {
         const created = await createChannel(payload)
-        toast.success(`已创建接入渠道：${created.name}`)
+        toast.success(t("channel.created", { name: created.name }))
       }
       setDialogOpen(false)
       setEditingItem(null)
       await loadData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "保存接入渠道失败")
+      toast.error(error instanceof Error ? error.message : t("channel.saveFailed"))
     } finally {
       setSaving(false)
     }
@@ -187,10 +199,10 @@ export default function DashboardChannelsPage() {
     try {
       const nextStatus = item.status === Status.Ok ? Status.Disabled : Status.Ok
       await updateChannelStatus(item.id, nextStatus)
-      toast.success(`已${nextStatus === Status.Ok ? "启用" : "禁用"}：${item.name}`)
+      toast.success(t(nextStatus === Status.Ok ? "channel.statusEnabled" : "channel.statusDisabled", { name: item.name }))
       await loadData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "更新渠道状态失败")
+      toast.error(error instanceof Error ? error.message : t("channel.statusUpdateFailed"))
     } finally {
       setActionLoadingId(null)
     }
@@ -200,10 +212,10 @@ export default function DashboardChannelsPage() {
     setActionLoadingId(item.id)
     try {
       await deleteChannel(item.id)
-      toast.success(`已删除接入渠道：${item.name}`)
+      toast.success(t("channel.deleted", { name: item.name }))
       await loadData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "删除接入渠道失败")
+      toast.error(error instanceof Error ? error.message : t("channel.deleteFailed"))
     } finally {
       setActionLoadingId(null)
     }
@@ -217,11 +229,11 @@ export default function DashboardChannelsPage() {
             <>
               <Button variant="outline" onClick={() => void loadData()} disabled={loading}>
                 <RefreshCwIcon className={loading ? "animate-spin" : ""} />
-                刷新
+                {t("channel.refresh")}
               </Button>
               <Button onClick={openCreateDialog}>
                 <PlusIcon />
-                新建渠道
+                {t("channel.new")}
               </Button>
             </>
           }
@@ -230,7 +242,7 @@ export default function DashboardChannelsPage() {
             value={nameInput}
             onChange={(event) => setNameInput(event.target.value)}
             onKeyDown={handleFilterKeyDown}
-            placeholder="按渠道名称筛选"
+            placeholder={t("channel.filterName")}
             className="w-full sm:w-56"
           />
           <div className="relative w-full sm:w-72">
@@ -239,7 +251,7 @@ export default function DashboardChannelsPage() {
               value={channelIdInput}
               onChange={(event) => setChannelIdInput(event.target.value)}
               onKeyDown={handleFilterKeyDown}
-              placeholder="按 channelId 筛选"
+              placeholder={t("channel.filterChannelId")}
               className="pl-9"
             />
           </div>
@@ -247,9 +259,9 @@ export default function DashboardChannelsPage() {
             <OptionCombobox
               value={channelTypeInput}
               options={[...channelTypeOptions]}
-              placeholder="全部类型"
-              searchPlaceholder="搜索渠道类型"
-              emptyText="未找到渠道类型"
+              placeholder={t("channel.allTypes")}
+              searchPlaceholder={t("channel.searchType")}
+              emptyText={t("channel.emptyType")}
               onChange={setChannelTypeInput}
             />
           </div>
@@ -257,15 +269,15 @@ export default function DashboardChannelsPage() {
             <OptionCombobox
               value={statusInput}
               options={[...statusOptions]}
-              placeholder="全部状态"
-              searchPlaceholder="搜索状态"
-              emptyText="未找到状态"
+              placeholder={t("status.all")}
+              searchPlaceholder={t("channel.searchStatus")}
+              emptyText={t("channel.emptyStatus")}
               onChange={setStatusInput}
             />
           </div>
           <Button variant="outline" onClick={applyFilters} disabled={loading}>
             <SearchIcon />
-            查询
+            {t("channel.query")}
           </Button>
         </DashboardToolbar>
 
@@ -287,12 +299,12 @@ export default function DashboardChannelsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>渠道</TableHead>
-                <TableHead>类型</TableHead>
+                <TableHead>{t("channel.columnChannel")}</TableHead>
+                <TableHead>{t("channel.columnType")}</TableHead>
                 <TableHead>ChannelID</TableHead>
-                <TableHead>接待 Agent</TableHead>
-                <TableHead>状态</TableHead>
-                <TableHead className="w-[88px] text-right">操作</TableHead>
+                <TableHead>{t("channel.columnAgent")}</TableHead>
+                <TableHead>{t("channel.columnStatus")}</TableHead>
+                <TableHead className="w-[88px] text-right">{t("channel.columnActions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -300,8 +312,8 @@ export default function DashboardChannelsPage() {
                 <DashboardTableStateRow
                   colSpan={6}
                   loading={loading}
-                  loadingText="正在加载接入渠道..."
-                  emptyText="暂无接入渠道"
+                  loadingText={t("channel.loading")}
+                  emptyText={t("channel.empty")}
                 />
               ) : null}
               {result.results.map((item) => (
@@ -313,12 +325,12 @@ export default function DashboardChannelsPage() {
                       </div>
                       <div>
                         <div className="font-medium">{item.name}</div>
-                        <div className="text-xs text-muted-foreground">{getChannelTypeLabel(item.channelType)}</div>
+                        <div className="text-xs text-muted-foreground">{getChannelTypeLabel(item.channelType, t)}</div>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{getChannelTypeLabel(item.channelType)}</Badge>
+                    <Badge variant="outline">{getChannelTypeLabel(item.channelType, t)}</Badge>
                   </TableCell>
                   <TableCell className="font-mono text-xs">{item.channelId || "-"}</TableCell>
                   <TableCell>{item.aiAgentName || "-"}</TableCell>
@@ -328,22 +340,22 @@ export default function DashboardChannelsPage() {
                         checked={item.status === Status.Ok}
                         disabled={actionLoadingId === item.id}
                         onCheckedChange={() => void handleToggleStatus(item)}
-                        aria-label={`${item.name} 状态切换`}
+                        aria-label={t("channel.toggleStatus", { name: item.name })}
                       />
                       <Badge variant={item.status === Status.Ok ? "default" : "outline"}>
-                        {getEnumLabel(StatusLabels, item.status as Status)}
+                        {getStatusLabel(item.status as Status, t)}
                       </Badge>
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
                     <ButtonGroup className="ml-auto">
                       <Button variant="outline" size="sm" onClick={() => openEditDialog(item)}>
-                        编辑
+                        {t("channel.edit")}
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger
                           render={<Button variant="outline" size="icon-sm" className="ml-auto" />}
-                          aria-label={`更多操作 ${item.name}`}
+                          aria-label={t("channel.moreActions", { name: item.name })}
                         >
                           <MoreHorizontalIcon />
                         </DropdownMenuTrigger>
@@ -354,7 +366,7 @@ export default function DashboardChannelsPage() {
                             onClick={() => void handleDelete(item)}
                           >
                             <Trash2Icon className="size-4" />
-                            删除
+                            {t("channel.delete")}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

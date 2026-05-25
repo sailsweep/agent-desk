@@ -17,6 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { useI18n } from "@/i18n/provider"
 
 type SummaryCardsProps = {
   summary: DashboardOverview["summary"]
@@ -24,8 +25,8 @@ type SummaryCardsProps = {
 
 type SummaryCardItem = {
   key: keyof DashboardOverview["summary"]
-  title: string
-  description: string
+  titleKey: string
+  descriptionKey: string
   link: string
   icon: typeof BotMessageSquareIcon
   format?: (value: number) => string
@@ -34,36 +35,36 @@ type SummaryCardItem = {
 const cards: SummaryCardItem[] = [
   {
     key: "todayNewConversations",
-    title: "今日新增会话",
-    description: "今日进入系统的新增咨询量",
+    titleKey: "dashboardHome.summaryTodayNewConversations",
+    descriptionKey: "dashboardHome.summaryTodayNewConversationsDescription",
     link: "/dashboard/conversations",
     icon: BotMessageSquareIcon,
   },
   {
     key: "processingConversations",
-    title: "当前处理中",
-    description: "正在由 AI 或人工接待的会话",
+    titleKey: "dashboardHome.summaryProcessingConversations",
+    descriptionKey: "dashboardHome.summaryProcessingConversationsDescription",
     link: "/dashboard/conversations",
     icon: WavesIcon,
   },
   {
     key: "pendingDispatchConversations",
-    title: "待分配会话",
-    description: "仍在待接入池中等待分配",
+    titleKey: "dashboardHome.summaryPendingDispatchConversations",
+    descriptionKey: "dashboardHome.summaryPendingDispatchConversationsDescription",
     link: "/dashboard/conversations",
     icon: CircleDashedIcon,
   },
   {
     key: "onlineAgents",
-    title: "在线客服",
-    description: "近 15 分钟内仍有活跃心跳的客服",
+    titleKey: "dashboardHome.summaryOnlineAgents",
+    descriptionKey: "dashboardHome.summaryOnlineAgentsDescription",
     link: "/dashboard/agents",
     icon: HeadsetIcon,
   },
   {
     key: "aiServiceRate",
-    title: "AI 接待占比",
-    description: "当前活跃会话中 AI 参与服务比例",
+    titleKey: "dashboardHome.summaryAiServiceRate",
+    descriptionKey: "dashboardHome.summaryAiServiceRateDescription",
     link: "/dashboard/ai-agents",
     icon: SparklesIcon,
     format: (value: number) => `${value.toFixed(1)}%`,
@@ -71,6 +72,8 @@ const cards: SummaryCardItem[] = [
 ]
 
 export function SummaryCards({ summary }: SummaryCardsProps) {
+  const t = useI18n()
+
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
       {cards.map((item) => {
@@ -86,8 +89,8 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
             <Card className="h-full transition-colors hover:border-primary/40">
               <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
                 <div className="space-y-1">
-                  <CardTitle className="text-sm font-medium">{item.title}</CardTitle>
-                  <CardDescription>{item.description}</CardDescription>
+                  <CardTitle className="text-sm font-medium">{t(item.titleKey)}</CardTitle>
+                  <CardDescription>{t(item.descriptionKey)}</CardDescription>
                 </div>
                 <div className="rounded-full bg-primary/10 p-2 text-primary">
                   <Icon className="size-4" />

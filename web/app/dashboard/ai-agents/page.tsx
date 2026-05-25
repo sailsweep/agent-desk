@@ -73,34 +73,48 @@ import {
   type CreateAIAgentPayload,
   type PageResult,
 } from "@/lib/api/admin";
-import {
-  IMConversationServiceModeLabels,
-  Status,
-  StatusLabels,
-} from "@/lib/generated/enums";
-import { getEnumLabel, getEnumOptions } from "@/lib/enums";
+import { IMConversationServiceMode, Status } from "@/lib/generated/enums";
+import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import { EditDialog } from "./_components/edit";
 import { ButtonGroup } from "@/components/ui/button-group";
 
-const statusOptions = [
-  { value: "all", label: "全部状态" },
-  ...getEnumOptions(StatusLabels).map((option) => ({
-    value: String(option.value),
-    label: option.label,
-  })),
-];
+type TFunction = (key: string, values?: Record<string, string | number>) => string;
 
-function getStatusLabel(value: string) {
+function getStatusOptions(t: TFunction) {
+  return [
+    { value: "all", label: t("aiAgent.allStatuses") },
+    { value: String(Status.Ok), label: t("aiAgent.enabled") },
+    { value: String(Status.Disabled), label: t("aiAgent.disabled") },
+    { value: String(Status.Deleted), label: t("status.deleted") },
+  ];
+}
+
+function getStatusLabel(value: string, t: TFunction) {
   return (
-    statusOptions.find((item) => item.value === value)?.label ?? "全部状态"
+    getStatusOptions(t).find((item) => item.value === value)?.label ??
+    t("aiAgent.allStatuses")
   );
+}
+
+function getServiceModeLabel(mode: number, t: TFunction) {
+  switch (mode) {
+    case IMConversationServiceMode.AIOnly:
+      return t("aiAgent.serviceAiOnly");
+    case IMConversationServiceMode.HumanOnly:
+      return t("aiAgent.serviceHumanOnly");
+    case IMConversationServiceMode.AIFirst:
+      return t("aiAgent.serviceAiFirst");
+    default:
+      return "-";
+  }
 }
 
 type SortableAIAgentRowProps = {
   item: AIAgent;
   disabled: boolean;
   actionLoadingId: number | null;
+  t: TFunction;
   openEditDialog: (item: AIAgent) => void;
   handleToggleStatus: (item: AIAgent) => void;
   handleDelete: (item: AIAgent) => void;
@@ -110,6 +124,7 @@ function SortableAIAgentRow({
   item,
   disabled,
   actionLoadingId,
+  t,
   openEditDialog,
   handleToggleStatus,
   handleDelete,
@@ -154,7 +169,7 @@ function SortableAIAgentRow({
           size="icon"
           className="size-8 cursor-grab active:cursor-grabbing"
           disabled={disabled}
-          aria-label={`拖拽排序 ${item.name}`}
+          aria-label={t("aiAgent.dragSort", { name: item.name })}
           {...attributes}
           {...listeners}
         >
@@ -175,15 +190,14 @@ function SortableAIAgentRow({
         {item.aiConfigName || "-"}
       </TableCell>
       <TableCell>
-        {getEnumLabel(
-          IMConversationServiceModeLabels,
-          item.serviceMode as keyof typeof IMConversationServiceModeLabels,
-        )}
+        {getServiceModeLabel(item.serviceMode, t)}
       </TableCell>
       <TableCell>
         <div className="flex flex-wrap gap-1">
           {knowledgeIds.length === 0 ? (
-            <span className="text-sm text-muted-foreground">未配置</span>
+            <span className="text-sm text-muted-foreground">
+              {t("aiAgent.notConfigured")}
+            </span>
           ) : (
             knowledgeBaseNames.map((name, index) => (
               <Badge key={knowledgeIds[index] ?? `${item.id}-${index}`} variant="secondary">
@@ -196,7 +210,7 @@ function SortableAIAgentRow({
       <TableCell>
         <div className="flex flex-wrap gap-1">
           {skills.length === 0 ? (
-            <span className="text-sm text-muted-foreground">仅RAG</span>
+            <span className="text-sm text-muted-foreground">{t("aiAgent.ragOnly")}</span>
           ) : (
             skills.map((skill) => (
               <Badge key={skill.id} variant="outline">
@@ -214,7 +228,9 @@ function SortableAIAgentRow({
           </div>
           <div className="flex flex-wrap gap-1">
             {directToolServerCodes.length === 0 ? (
-              <span className="text-sm text-muted-foreground">未绑定 MCP Server</span>
+              <span className="text-sm text-muted-foreground">
+                {t("aiAgent.noMcpServer")}
+              </span>
             ) : (
               directToolServerCodes.map((serverCode) => (
                 <Badge key={serverCode} variant="outline">
@@ -231,12 +247,12 @@ function SortableAIAgentRow({
             checked={item.status === Status.Ok}
             disabled={actionLoadingId === item.id}
             onCheckedChange={() => void handleToggleStatus(item)}
-            aria-label={`${item.name} 状态切换`}
+            aria-label={t("aiAgent.toggleStatus", { name: item.name })}
           />
           <Badge
             variant={item.status === Status.Ok ? "default" : "secondary"}
           >
-            {getStatusLabel(String(item.status))}
+            {getStatusLabel(String(item.status), t)}
           </Badge>
         </div>
       </TableCell>
@@ -247,14 +263,14 @@ function SortableAIAgentRow({
             size="sm"
             onClick={() => openEditDialog(item)}
           >
-            编辑
+            {t("aiAgent.edit")}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
                 <Button variant="outline" size="icon-sm" className="ml-auto" />
               }
-              aria-label={`更多操作 ${item.name}`}
+              aria-label={t("aiAgent.moreActions", { name: item.name })}
             >
               <MoreHorizontalIcon />
             </DropdownMenuTrigger>
@@ -264,7 +280,7 @@ function SortableAIAgentRow({
                 onClick={() => void handleToggleStatus(item)}
               >
                 <PowerIcon className="size-4" />
-                {item.status === Status.Ok ? "停用" : "启用"}
+                {item.status === Status.Ok ? t("aiAgent.stop") : t("aiAgent.enabled")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-destructive"
@@ -272,7 +288,7 @@ function SortableAIAgentRow({
                 onClick={() => void handleDelete(item)}
               >
                 <Trash2Icon className="size-4" />
-                删除
+                {t("aiAgent.delete")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -283,6 +299,8 @@ function SortableAIAgentRow({
 }
 
 export default function DashboardAIAgentsPage() {
+  const t = useI18n();
+  const statusOptions = getStatusOptions(t);
   const [nameInput, setNameInput] = useState("");
   const [statusInput, setStatusInput] = useState("all");
   const [name, setName] = useState("");
@@ -324,12 +342,12 @@ export default function DashboardAIAgentsPage() {
       setResult(data);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "加载 AI Agent 失败",
+        error instanceof Error ? error.message : t("aiAgent.loadFailed"),
       );
     } finally {
       setLoading(false);
     }
-  }, [limit, name, page, status]);
+  }, [limit, name, page, status, t]);
 
   useEffect(() => {
     void loadData();
@@ -367,17 +385,17 @@ export default function DashboardAIAgentsPage() {
     try {
       if (editingItemId) {
         await updateAIAgent({ id: editingItemId, ...payload });
-        toast.success(`已更新 AI Agent：${payload.name}`);
+        toast.success(t("aiAgent.updated", { name: payload.name }));
       } else {
         const created = await createAIAgent(payload);
-        toast.success(`已创建 AI Agent：${created.name}`);
+        toast.success(t("aiAgent.created", { name: created.name }));
       }
       setDialogOpen(false);
       setEditingItemId(null);
       await loadData();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "保存 AI Agent 失败",
+        error instanceof Error ? error.message : t("aiAgent.saveFailed"),
       );
     } finally {
       setSaving(false);
@@ -391,12 +409,15 @@ export default function DashboardAIAgentsPage() {
         item.status === Status.Ok ? Status.Disabled : Status.Ok;
       await updateAIAgentStatus(item.id, nextStatus);
       toast.success(
-        `已${nextStatus === Status.Ok ? "启用" : "停用"}：${item.name}`,
+        t("aiAgent.statusChanged", {
+          name: item.name,
+          status: nextStatus === Status.Ok ? t("aiAgent.enabled") : t("aiAgent.stop"),
+        }),
       );
       await loadData();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "更新 AI Agent 状态失败",
+        error instanceof Error ? error.message : t("aiAgent.statusUpdateFailed"),
       );
     } finally {
       setActionLoadingId(null);
@@ -407,11 +428,11 @@ export default function DashboardAIAgentsPage() {
     setActionLoadingId(item.id);
     try {
       await deleteAIAgent(item.id);
-      toast.success(`已删除 AI Agent：${item.name}`);
+      toast.success(t("aiAgent.deleted", { name: item.name }));
       await loadData();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "删除 AI Agent 失败",
+        error instanceof Error ? error.message : t("aiAgent.deleteFailed"),
       );
     } finally {
       setActionLoadingId(null);
@@ -440,14 +461,14 @@ export default function DashboardAIAgentsPage() {
 
     try {
       await updateAIAgentSort(nextResults.map((item) => item.id));
-      toast.success("AI Agent 排序已更新");
+      toast.success(t("aiAgent.sortUpdated"));
       await loadData();
     } catch (error) {
       setResult((current) => ({
         ...current,
         results: previousResults,
       }));
-      toast.error(error instanceof Error ? error.message : "更新排序失败");
+      toast.error(error instanceof Error ? error.message : t("aiAgent.sortUpdateFailed"));
     } finally {
       setSorting(false);
     }
@@ -465,11 +486,11 @@ export default function DashboardAIAgentsPage() {
                 disabled={loading}
               >
                 <RefreshCwIcon className={loading ? "animate-spin" : ""} />
-                刷新
+                {t("aiAgent.refresh")}
               </Button>
               <Button onClick={openCreateDialog}>
                 <PlusIcon />
-                新建 AI Agent
+                {t("aiAgent.new")}
               </Button>
             </>
           }
@@ -478,22 +499,22 @@ export default function DashboardAIAgentsPage() {
             value={nameInput}
             onChange={(event) => setNameInput(event.target.value)}
             onKeyDown={handleFilterKeyDown}
-            placeholder="按名称筛选"
+            placeholder={t("aiAgent.filterName")}
             className="w-full sm:w-56"
           />
           <div className="w-full sm:w-52">
             <OptionCombobox
               value={statusInput}
               options={statusOptions}
-              placeholder="全部状态"
-              searchPlaceholder="搜索状态"
-              emptyText="未找到状态"
+              placeholder={t("aiAgent.allStatuses")}
+              searchPlaceholder={t("aiAgent.searchStatus")}
+              emptyText={t("aiAgent.emptyStatus")}
               onChange={setStatusInput}
             />
           </div>
           <Button variant="outline" onClick={applyFilters} disabled={loading}>
             <SearchIcon />
-            查询
+            {t("aiAgent.query")}
           </Button>
         </DashboardToolbar>
 
@@ -521,13 +542,15 @@ export default function DashboardAIAgentsPage() {
                 <TableRow>
                   <TableHead className="w-14"></TableHead>
                   <TableHead>Agent</TableHead>
-                  <TableHead>AI配置</TableHead>
-                  <TableHead>服务模式</TableHead>
-                  <TableHead>知识库</TableHead>
-                  <TableHead>Skills</TableHead>
-                  <TableHead>能力概览</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead className="w-[88px] text-right">操作</TableHead>
+                  <TableHead>{t("aiAgent.columnAiConfig")}</TableHead>
+                  <TableHead>{t("aiAgent.columnServiceMode")}</TableHead>
+                  <TableHead>{t("aiAgent.columnKnowledge")}</TableHead>
+                  <TableHead>{t("aiAgent.columnSkills")}</TableHead>
+                  <TableHead>{t("aiAgent.columnCapabilities")}</TableHead>
+                  <TableHead>{t("aiAgent.columnStatus")}</TableHead>
+                  <TableHead className="w-[88px] text-right">
+                    {t("aiAgent.columnActions")}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -535,8 +558,8 @@ export default function DashboardAIAgentsPage() {
                   <DashboardTableStateRow
                     colSpan={9}
                     loading={loading}
-                    loadingText="正在加载 AI Agent..."
-                    emptyText="暂无 AI Agent"
+                    loadingText={t("aiAgent.loadingRows")}
+                    emptyText={t("aiAgent.emptyRows")}
                   />
                 ) : null}
                 <SortableContext
@@ -549,6 +572,7 @@ export default function DashboardAIAgentsPage() {
                       item={item}
                       disabled={sorting}
                       actionLoadingId={actionLoadingId}
+                      t={t}
                       openEditDialog={openEditDialog}
                       handleToggleStatus={handleToggleStatus}
                       handleDelete={handleDelete}

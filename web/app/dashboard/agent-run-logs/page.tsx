@@ -22,36 +22,62 @@ import {
   type AgentRunLog,
   type PageResult,
 } from "@/lib/api/admin"
+import { useI18n } from "@/i18n/provider"
 import { formatDateTime } from "@/lib/utils"
 
-const actionOptions = [
-  { value: "all", label: "全部动作" },
-  { value: "rag", label: "RAG" },
-  { value: "skill", label: "Skill" },
-  { value: "tool", label: "Tool" },
-  { value: "graph", label: "Graph" },
-  { value: "handoff", label: "转人工" },
-  { value: "reply", label: "回复" },
-  { value: "fallback", label: "兜底" },
-]
+type TFunction = (key: string, values?: Record<string, string | number>) => string
 
-const finalStatusOptions = [
-  { value: "all", label: "全部状态" },
-  { value: "completed", label: "completed" },
-  { value: "interrupted", label: "interrupted" },
-  { value: "expired", label: "expired" },
-  { value: "error", label: "error" },
-  { value: "fallback", label: "fallback" },
-]
+function getActionOptions(t: TFunction) {
+  return [
+    { value: "all", label: t("agentRunLog.allActions") },
+    { value: "rag", label: "RAG" },
+    { value: "skill", label: "Skill" },
+    { value: "tool", label: "Tool" },
+    { value: "graph", label: "Graph" },
+    { value: "handoff", label: t("agentRunLog.handoff") },
+    { value: "reply", label: t("agentRunLog.reply") },
+    { value: "fallback", label: t("agentRunLog.fallback") },
+  ]
+}
 
-const hitlStatusOptions = [
-  { value: "all", label: "全部 HITL" },
-  { value: "pending", label: "等待确认" },
-  { value: "confirmed", label: "已确认" },
-  { value: "cancelled", label: "已取消" },
-  { value: "expired", label: "已过期" },
-  { value: "triggered", label: "已触发" },
-]
+function getFinalStatusOptions(t: TFunction) {
+  return [
+    { value: "all", label: t("agentRunLog.allStatus") },
+    { value: "completed", label: "completed" },
+    { value: "interrupted", label: "interrupted" },
+    { value: "expired", label: "expired" },
+    { value: "error", label: "error" },
+    { value: "fallback", label: "fallback" },
+  ]
+}
+
+function getHitlStatusOptions(t: TFunction) {
+  return [
+    { value: "all", label: t("agentRunLog.allHitl") },
+    { value: "pending", label: t("agentRunLog.hitlPending") },
+    { value: "confirmed", label: t("agentRunLog.hitlConfirmed") },
+    { value: "cancelled", label: t("agentRunLog.hitlCancelled") },
+    { value: "expired", label: t("agentRunLog.hitlExpired") },
+    { value: "triggered", label: t("agentRunLog.hitlTriggered") },
+  ]
+}
+
+function getHitlStatusLabel(status: string | undefined, t: TFunction) {
+  switch (status) {
+    case "pending":
+      return t("agentRunLog.hitlPending")
+    case "confirmed":
+      return t("agentRunLog.hitlConfirmed")
+    case "cancelled":
+      return t("agentRunLog.hitlCancelled")
+    case "expired":
+      return t("agentRunLog.hitlExpired")
+    case "triggered":
+      return t("agentRunLog.hitlTriggered")
+    default:
+      return ""
+  }
+}
 
 function actionBadgeVariant(action: string) {
   switch (action) {
@@ -73,6 +99,7 @@ function actionBadgeVariant(action: string) {
 }
 
 export default function DashboardAgentRunLogsPage() {
+  const t = useI18n()
   const [keywordInput, setKeywordInput] = useState("")
   const [plannedActionInput, setPlannedActionInput] = useState("all")
   const [finalActionInput, setFinalActionInput] = useState("all")
@@ -95,16 +122,19 @@ export default function DashboardAgentRunLogsPage() {
     page: { page: 1, limit: 20, total: 0 },
   })
   const [aiAgents, setAiAgents] = useState<AIAgent[]>([])
+  const actionOptions = useMemo(() => getActionOptions(t), [t])
+  const finalStatusOptions = useMemo(() => getFinalStatusOptions(t), [t])
+  const hitlStatusOptions = useMemo(() => getHitlStatusOptions(t), [t])
 
   const aiAgentOptions = useMemo(
     () => [
-      { value: "all", label: "全部 Agent" },
+      { value: "all", label: t("agentRunLog.allAgents") },
       ...aiAgents.map((item) => ({
         value: String(item.id),
         label: item.name,
       })),
     ],
-    [aiAgents]
+    [aiAgents, t]
   )
 
   const loadData = useCallback(async () => {
@@ -122,11 +152,11 @@ export default function DashboardAgentRunLogsPage() {
       })
       setResult(data)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载 Agent 运行日志失败")
+      toast.error(error instanceof Error ? error.message : t("agentRunLog.loadFailed"))
     } finally {
       setLoading(false)
     }
-  }, [aiAgentId, finalAction, finalStatus, hitlStatus, keyword, limit, page, plannedAction])
+  }, [aiAgentId, finalAction, finalStatus, hitlStatus, keyword, limit, page, plannedAction, t])
 
   useEffect(() => {
     void loadData()
@@ -138,11 +168,11 @@ export default function DashboardAgentRunLogsPage() {
         const data = await fetchAIAgentsAll()
         setAiAgents(data)
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "加载 AI Agent 列表失败")
+        toast.error(error instanceof Error ? error.message : t("agentRunLog.loadAgentsFailed"))
       }
     }
     void loadAIAgents()
-  }, [])
+  }, [t])
 
   function applyFilters() {
     setKeyword(keywordInput)
@@ -174,7 +204,7 @@ export default function DashboardAgentRunLogsPage() {
               className="w-full xl:w-auto"
             >
               <RefreshCwIcon className={loading ? "animate-spin" : ""} />
-              刷新
+              {t("agentRunLog.refresh")}
             </Button>
           }
         >
@@ -184,7 +214,7 @@ export default function DashboardAgentRunLogsPage() {
               value={keywordInput}
               onChange={(event) => setKeywordInput(event.target.value)}
               onKeyDown={handleFilterKeyDown}
-              placeholder="按用户问题筛选"
+              placeholder={t("agentRunLog.filterUserMessage")}
               className="pl-9"
             />
           </div>
@@ -192,9 +222,9 @@ export default function DashboardAgentRunLogsPage() {
             <OptionCombobox
               value={plannedActionInput}
               options={actionOptions}
-              placeholder="规划动作"
-              searchPlaceholder="搜索动作"
-              emptyText="未找到动作"
+              placeholder={t("agentRunLog.plannedAction")}
+              searchPlaceholder={t("agentRunLog.searchAction")}
+              emptyText={t("agentRunLog.emptyAction")}
               onChange={(value) => setPlannedActionInput(value || "all")}
             />
           </div>
@@ -202,9 +232,9 @@ export default function DashboardAgentRunLogsPage() {
             <OptionCombobox
               value={finalActionInput}
               options={actionOptions}
-              placeholder="最终动作"
-              searchPlaceholder="搜索动作"
-              emptyText="未找到动作"
+              placeholder={t("agentRunLog.finalAction")}
+              searchPlaceholder={t("agentRunLog.searchAction")}
+              emptyText={t("agentRunLog.emptyAction")}
               onChange={(value) => setFinalActionInput(value || "all")}
             />
           </div>
@@ -212,9 +242,9 @@ export default function DashboardAgentRunLogsPage() {
             <OptionCombobox
               value={finalStatusInput}
               options={finalStatusOptions}
-              placeholder="最终状态"
-              searchPlaceholder="搜索状态"
-              emptyText="未找到状态"
+              placeholder={t("agentRunLog.finalStatus")}
+              searchPlaceholder={t("agentRunLog.searchStatus")}
+              emptyText={t("agentRunLog.emptyStatus")}
               onChange={(value) => setFinalStatusInput(value || "all")}
             />
           </div>
@@ -222,9 +252,9 @@ export default function DashboardAgentRunLogsPage() {
             <OptionCombobox
               value={hitlStatusInput}
               options={hitlStatusOptions}
-              placeholder="HITL 状态"
-              searchPlaceholder="搜索 HITL 状态"
-              emptyText="未找到状态"
+              placeholder={t("agentRunLog.hitlStatus")}
+              searchPlaceholder={t("agentRunLog.searchHitl")}
+              emptyText={t("agentRunLog.emptyStatus")}
               onChange={(value) => setHitlStatusInput(value || "all")}
             />
           </div>
@@ -232,15 +262,15 @@ export default function DashboardAgentRunLogsPage() {
             <OptionCombobox
               value={aiAgentIdInput}
               options={aiAgentOptions}
-              placeholder="选择 Agent"
-              searchPlaceholder="搜索 Agent"
-              emptyText="未找到 Agent"
+              placeholder={t("agentRunLog.selectAgent")}
+              searchPlaceholder={t("agentRunLog.searchAgent")}
+              emptyText={t("agentRunLog.emptyAgent")}
               onChange={(value) => setAiAgentIdInput(value || "all")}
             />
           </div>
           <Button variant="outline" onClick={applyFilters} disabled={loading} className="w-full xl:w-auto">
             <SearchIcon />
-            查询
+            {t("agentRunLog.query")}
           </Button>
         </DashboardToolbar>
 
@@ -261,18 +291,18 @@ export default function DashboardAgentRunLogsPage() {
         >
           {!loading && result.results.length === 0 ? (
             <div className="py-14 text-center text-sm text-muted-foreground">
-              暂无 Agent 运行日志
+              {t("agentRunLog.emptyRows")}
             </div>
           ) : (
             <div>
               <div className="hidden grid-cols-[160px_minmax(0,1.8fr)_110px_minmax(0,1.2fr)_130px_90px_76px] gap-3 border-b bg-muted/40 px-4 py-3 text-sm text-muted-foreground lg:grid">
-                <div>时间</div>
-                <div>用户问题</div>
-                <div>规划动作</div>
-                <div>Skill / Tool</div>
-                <div>最终状态</div>
-                <div className="text-right">耗时</div>
-                <div className="text-right">操作</div>
+                <div>{t("agentRunLog.time")}</div>
+                <div>{t("agentRunLog.userMessage")}</div>
+                <div>{t("agentRunLog.plannedAction")}</div>
+                <div>{t("agentRunLog.skillTool")}</div>
+                <div>{t("agentRunLog.finalStatus")}</div>
+                <div className="text-right">{t("agentRunLog.duration")}</div>
+                <div className="text-right">{t("agentRunLog.actions")}</div>
               </div>
 
               <div className="divide-y">
@@ -286,7 +316,7 @@ export default function DashboardAgentRunLogsPage() {
                     </div>
 
                     <div className="min-w-0">
-                      <UserMessagePreview value={item.userMessage} />
+                      <UserMessagePreview value={item.userMessage} t={t} />
                       {item.errorMessage ? (
                         <div className="truncate text-xs text-destructive">{item.errorMessage}</div>
                       ) : null}
@@ -310,13 +340,13 @@ export default function DashboardAgentRunLogsPage() {
                             </div>
                           ) : item.handoffReason ? (
                             <div className="truncate text-xs text-muted-foreground">
-                              转人工原因：{item.handoffReason}
+                              {t("agentRunLog.handoffReason", { reason: item.handoffReason })}
                             </div>
                           ) : item.recommendedAction ? (
                             <div className="truncate text-xs text-muted-foreground">
-                              分流建议：{item.recommendedAction}
+                              {t("agentRunLog.routingRecommendation", { action: item.recommendedAction })}
                               {item.riskLevel ? ` / ${item.riskLevel} risk` : ""}
-                              {item.ticketDraftReady ? " / 草稿已就绪" : ""}
+                              {item.ticketDraftReady ? ` / ${t("agentRunLog.draftReady")}` : ""}
                             </div>
                           ) : null}
                         </div>
@@ -331,8 +361,8 @@ export default function DashboardAgentRunLogsPage() {
                           {item.finalAction || "-"}
                         </Badge>
                         <div className="truncate text-xs text-muted-foreground">
-                          {item.hitlStatusName
-                            ? `${item.hitlStatusName} / ${item.finalStatus || "-"}`
+                          {getHitlStatusLabel(item.hitlStatus, t)
+                            ? `${getHitlStatusLabel(item.hitlStatus, t)} / ${item.finalStatus || "-"}`
                             : item.finalStatus || "-"}
                         </div>
                       </div>
@@ -351,7 +381,7 @@ export default function DashboardAgentRunLogsPage() {
                           setDetailOpen(true)
                         }}
                       >
-                        详情
+                        {t("agentRunLog.detail")}
                       </Button>
                     </div>
                   </article>
@@ -375,8 +405,8 @@ export default function DashboardAgentRunLogsPage() {
   )
 }
 
-function UserMessagePreview({ value }: { value?: string }) {
-  const preview = useMemo(() => summarizeUserMessage(value), [value])
+function UserMessagePreview({ value, t }: { value?: string; t: TFunction }) {
+  const preview = useMemo(() => summarizeUserMessage(value, t), [value, t])
 
   return (
     <div className="truncate text-sm text-foreground">
@@ -385,7 +415,7 @@ function UserMessagePreview({ value }: { value?: string }) {
   )
 }
 
-function summarizeUserMessage(value?: string) {
+function summarizeUserMessage(value: string | undefined, t: TFunction) {
   const normalized = value?.trim()
   if (!normalized) {
     return "-"
@@ -396,9 +426,9 @@ function summarizeUserMessage(value?: string) {
   }
   if (containsHTML(normalized)) {
     if (/<img[\s>]/i.test(normalized)) {
-      return "[图片]"
+      return t("agentRunLog.imageMessage")
     }
-    return "[富文本消息]"
+    return t("agentRunLog.richMessage")
   }
   return normalized
 }

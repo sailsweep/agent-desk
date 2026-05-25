@@ -4,6 +4,7 @@ import (
 	"cs-agent/internal/models"
 	"cs-agent/internal/pkg/dto/response"
 	"cs-agent/internal/pkg/enums"
+	"cs-agent/internal/pkg/i18nx"
 	"cs-agent/internal/repositories"
 	"fmt"
 	"sort"
@@ -23,7 +24,8 @@ func newDashboardService() *dashboardService {
 type dashboardService struct {
 }
 
-func (s *dashboardService) GetOverview(rangeValue string) response.DashboardOverviewResponse {
+func (s *dashboardService) GetOverview(rangeValue string, locale string) response.DashboardOverviewResponse {
+	locale = i18nx.NormalizeLocale(locale)
 	now := time.Now()
 	normalizedRange, trendDays := normalizeDashboardRange(rangeValue)
 	todayStart := startOfDay(now)
@@ -78,7 +80,7 @@ func (s *dashboardService) GetOverview(rangeValue string) response.DashboardOver
 	enabledAIAgents := repositories.DashboardRepository.ListAIAgents(db, func(tx *gorm.DB) *gorm.DB {
 		return tx.Where("status = ?", enums.StatusOk)
 	})
-	alerts := s.buildAlerts(now, db, enabledAIAgents, agentTeams, activeSchedules)
+	alerts := s.buildAlerts(now, db, enabledAIAgents, agentTeams, activeSchedules, locale)
 
 	return response.DashboardOverviewResponse{
 		Range:       normalizedRange,
@@ -91,7 +93,7 @@ func (s *dashboardService) GetOverview(rangeValue string) response.DashboardOver
 			AIServiceRate:                calcAIServiceRate(activeConversations),
 		},
 		ConversationStats: response.DashboardSectionStatsResponse{
-			StatusDistribution: buildConversationStatusDistribution(db),
+			StatusDistribution: buildConversationStatusDistribution(db, locale),
 			Trend:              buildConversationTrend(db, trendStart),
 		},
 		AgentStats: response.DashboardAgentStatsResponse{
@@ -110,7 +112,7 @@ func (s *dashboardService) GetOverview(rangeValue string) response.DashboardOver
 			TodayAIHandoffCount:             aiHandoffCount,
 		},
 		Alerts:     alerts,
-		QuickLinks: buildDashboardQuickLinks(),
+		QuickLinks: buildDashboardQuickLinks(locale),
 	}
 }
 
@@ -215,7 +217,7 @@ func (s *dashboardService) buildAgentStats(now time.Time, teams []models.AgentTe
 	return onlineAgents, busyAgents, offlineAgents, teamLoads
 }
 
-func (s *dashboardService) buildAlerts(now time.Time, db *gorm.DB, aiAgents []models.AIAgent, teams []models.AgentTeam, schedules []models.AgentTeamSchedule) []response.DashboardAlertResponse {
+func (s *dashboardService) buildAlerts(now time.Time, db *gorm.DB, aiAgents []models.AIAgent, teams []models.AgentTeam, schedules []models.AgentTeamSchedule, locale string) []response.DashboardAlertResponse {
 	alerts := make([]response.DashboardAlertResponse, 0, 4)
 	pendingTimeout := now.Add(-10 * time.Minute)
 	activeTimeout := now.Add(-30 * time.Minute)
@@ -227,8 +229,8 @@ func (s *dashboardService) buildAlerts(now time.Time, db *gorm.DB, aiAgents []mo
 		alerts = append(alerts, response.DashboardAlertResponse{
 			ID:          "pending-long-wait",
 			Level:       "warning",
-			Title:       "待接入会话堆积",
-			Description: "存在超过 10 分钟仍未接入的会话，建议优先处理分配。",
+			Title:       dashboardText(locale, "alert.pendingLongWait.title"),
+			Description: dashboardText(locale, "alert.pendingLongWait.description"),
 			Count:       pendingLongWaitCount,
 			Link:        "/dashboard/conversations",
 		})
@@ -244,8 +246,8 @@ func (s *dashboardService) buildAlerts(now time.Time, db *gorm.DB, aiAgents []mo
 		alerts = append(alerts, response.DashboardAlertResponse{
 			ID:          "stale-processing",
 			Level:       "warning",
-			Title:       "处理中会话长时间无响应",
-			Description: "部分处理中会话已超过 30 分钟没有最新消息，需要确认跟进状态。",
+			Title:       dashboardText(locale, "alert.staleProcessing.title"),
+			Description: dashboardText(locale, "alert.staleProcessing.description"),
 			Count:       staleProcessingCount,
 			Link:        "/dashboard/conversations",
 		})
@@ -265,8 +267,8 @@ func (s *dashboardService) buildAlerts(now time.Time, db *gorm.DB, aiAgents []mo
 		alerts = append(alerts, response.DashboardAlertResponse{
 			ID:          "team-no-schedule",
 			Level:       "info",
-			Title:       "客服组当前无生效排班",
-			Description: "部分启用中的客服组当前没有生效排班，可能影响自动分配。",
+			Title:       dashboardText(locale, "alert.teamNoSchedule.title"),
+			Description: dashboardText(locale, "alert.teamNoSchedule.description"),
 			Count:       scheduleMissingCount,
 			Link:        "/dashboard/agent-team-schedules",
 		})
@@ -282,8 +284,8 @@ func (s *dashboardService) buildAlerts(now time.Time, db *gorm.DB, aiAgents []mo
 		alerts = append(alerts, response.DashboardAlertResponse{
 			ID:          "ai-no-knowledge",
 			Level:       "info",
-			Title:       "AI Agent 未绑定知识库",
-			Description: "部分启用中的 AI Agent 尚未绑定知识库，回答质量可能不稳定。",
+			Title:       dashboardText(locale, "alert.aiNoKnowledge.title"),
+			Description: dashboardText(locale, "alert.aiNoKnowledge.description"),
 			Count:       aiAgentWithoutKnowledgeCount,
 			Link:        "/dashboard/ai-agents",
 		})
@@ -299,12 +301,12 @@ func (s *dashboardService) buildAlerts(now time.Time, db *gorm.DB, aiAgents []mo
 	return alerts
 }
 
-func buildConversationStatusDistribution(db *gorm.DB) []response.DashboardStatusDistributionItem {
+func buildConversationStatusDistribution(db *gorm.DB, locale string) []response.DashboardStatusDistributionItem {
 	ret := make([]response.DashboardStatusDistributionItem, 0, len(enums.IMConversationStatusValues))
 	for _, status := range enums.IMConversationStatusValues {
 		ret = append(ret, response.DashboardStatusDistributionItem{
 			Status: int(status),
-			Label:  labelOrDefault(enums.GetIMConversationStatusLabel(status), fmt.Sprintf("状态 %d", status)),
+			Label:  conversationStatusLabel(status, locale),
 			Count: repositories.DashboardRepository.CountConversations(db, func(tx *gorm.DB) *gorm.DB {
 				return tx.Where("status = ?", status)
 			}),
@@ -364,13 +366,13 @@ func flattenTrendMap(series map[string]*response.DashboardTrendItem) []response.
 	return ret
 }
 
-func buildDashboardQuickLinks() []response.DashboardQuickLinkResponse {
+func buildDashboardQuickLinks(locale string) []response.DashboardQuickLinkResponse {
 	return []response.DashboardQuickLinkResponse{
-		{Title: "会话管理", Description: "查看待接入与处理中会话", Link: "/dashboard/conversations"},
-		{Title: "客服档案", Description: "查看客服状态与分组配置", Link: "/dashboard/agents"},
-		{Title: "知识库", Description: "维护文档与查看检索日志", Link: "/dashboard/knowledge"},
-		{Title: "AI Agent", Description: "配置 AI 接待策略与知识绑定", Link: "/dashboard/ai-agents"},
-		{Title: "接入渠道", Description: "管理接入渠道与默认 Agent", Link: "/dashboard/channels"},
+		{Title: dashboardText(locale, "quick.conversations.title"), Description: dashboardText(locale, "quick.conversations.description"), Link: "/dashboard/conversations"},
+		{Title: dashboardText(locale, "quick.agents.title"), Description: dashboardText(locale, "quick.agents.description"), Link: "/dashboard/agents"},
+		{Title: dashboardText(locale, "quick.knowledge.title"), Description: dashboardText(locale, "quick.knowledge.description"), Link: "/dashboard/knowledge"},
+		{Title: dashboardText(locale, "quick.aiAgents.title"), Description: dashboardText(locale, "quick.aiAgents.description"), Link: "/dashboard/ai-agents"},
+		{Title: dashboardText(locale, "quick.channels.title"), Description: dashboardText(locale, "quick.channels.description"), Link: "/dashboard/channels"},
 	}
 }
 
@@ -414,4 +416,76 @@ func labelOrDefault(value, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func conversationStatusLabel(status enums.IMConversationStatus, locale string) string {
+	if i18nx.NormalizeLocale(locale) == i18nx.LocaleEnUS {
+		switch status {
+		case enums.IMConversationStatusAIServing:
+			return "AI active"
+		case enums.IMConversationStatusPending:
+			return "Queued"
+		case enums.IMConversationStatusActive:
+			return "In progress"
+		case enums.IMConversationStatusClosed:
+			return "Closed"
+		default:
+			return fmt.Sprintf("Status %d", status)
+		}
+	}
+	return labelOrDefault(enums.GetIMConversationStatusLabel(status), fmt.Sprintf("状态 %d", status))
+}
+
+func dashboardText(locale string, key string) string {
+	if i18nx.NormalizeLocale(locale) == i18nx.LocaleEnUS {
+		if value, ok := dashboardEnUS[key]; ok {
+			return value
+		}
+	}
+	if value, ok := dashboardZhCN[key]; ok {
+		return value
+	}
+	return key
+}
+
+var dashboardZhCN = map[string]string{
+	"alert.pendingLongWait.title":       "待接入会话堆积",
+	"alert.pendingLongWait.description": "存在超过 10 分钟仍未接入的会话，建议优先处理分配。",
+	"alert.staleProcessing.title":       "处理中会话长时间无响应",
+	"alert.staleProcessing.description": "部分处理中会话已超过 30 分钟没有最新消息，需要确认跟进状态。",
+	"alert.teamNoSchedule.title":        "客服组当前无生效排班",
+	"alert.teamNoSchedule.description":  "部分启用中的客服组当前没有生效排班，可能影响自动分配。",
+	"alert.aiNoKnowledge.title":         "AI Agent 未绑定知识库",
+	"alert.aiNoKnowledge.description":   "部分启用中的 AI Agent 尚未绑定知识库，回答质量可能不稳定。",
+	"quick.conversations.title":         "会话管理",
+	"quick.conversations.description":   "查看待接入与处理中会话",
+	"quick.agents.title":                "客服档案",
+	"quick.agents.description":          "查看客服状态与分组配置",
+	"quick.knowledge.title":             "知识库",
+	"quick.knowledge.description":       "维护文档与查看检索日志",
+	"quick.aiAgents.title":              "AI Agent",
+	"quick.aiAgents.description":        "配置 AI 接待策略与知识绑定",
+	"quick.channels.title":              "接入渠道",
+	"quick.channels.description":        "管理接入渠道与默认 Agent",
+}
+
+var dashboardEnUS = map[string]string{
+	"alert.pendingLongWait.title":       "Queued conversations are piling up",
+	"alert.pendingLongWait.description": "Some conversations have been waiting for more than 10 minutes. Prioritize assignment.",
+	"alert.staleProcessing.title":       "Active conversations need attention",
+	"alert.staleProcessing.description": "Some active conversations have had no new messages for over 30 minutes. Check their follow-up status.",
+	"alert.teamNoSchedule.title":        "Agent teams have no active schedule",
+	"alert.teamNoSchedule.description":  "Some enabled agent teams do not have an active schedule right now, which may affect automatic assignment.",
+	"alert.aiNoKnowledge.title":         "AI Agents are missing knowledge bases",
+	"alert.aiNoKnowledge.description":   "Some enabled AI Agents are not linked to a knowledge base yet, which may reduce answer quality.",
+	"quick.conversations.title":         "Conversations",
+	"quick.conversations.description":   "Review queued and active conversations",
+	"quick.agents.title":                "Agents",
+	"quick.agents.description":          "Check agent status and team setup",
+	"quick.knowledge.title":             "Knowledge base",
+	"quick.knowledge.description":       "Manage documents and review retrieval logs",
+	"quick.aiAgents.title":              "AI Agents",
+	"quick.aiAgents.description":        "Configure AI service policies and knowledge bindings",
+	"quick.channels.title":              "Channels",
+	"quick.channels.description":        "Manage channels and default agents",
 }

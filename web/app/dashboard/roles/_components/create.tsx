@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import { Resolver, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod/v4"
@@ -22,6 +23,7 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { useI18n } from "@/i18n/provider"
 
 type CreateRoleDrawerProps = {
   open: boolean
@@ -30,23 +32,11 @@ type CreateRoleDrawerProps = {
   onSubmit: (payload: CreateAdminRolePayload) => Promise<void>
 }
 
-const createFormSchema = z.object({
-  name: z.string().trim().min(1, "角色名称不能为空"),
-  code: z
-    .string()
-    .trim()
-    .min(1, "角色编码不能为空")
-    .regex(/^[A-Za-z][A-Za-z0-9:_-]*$/, "角色编码需以字母开头，仅支持字母、数字、冒号、下划线和短横线"),
-  remark: z.string().trim(),
-})
-
-type CreateForm = z.infer<typeof createFormSchema>
-
-const createFormResolver = zodResolver(createFormSchema as never) as Resolver<
-  z.input<typeof createFormSchema>,
-  undefined,
-  z.output<typeof createFormSchema>
->
+type CreateForm = {
+  name: string
+  code: string
+  remark: string
+}
 
 const emptyForm: CreateForm = {
   name: "",
@@ -99,11 +89,25 @@ function CreateRoleDrawerBody({
   onOpenChange,
   onSubmit,
 }: CreateRoleDrawerBodyProps) {
-  const form = useForm<
-    z.input<typeof createFormSchema>,
-    undefined,
-    z.output<typeof createFormSchema>
-  >({
+  const t = useI18n()
+  const createFormSchema = useMemo(
+    () =>
+      z.object({
+        name: z.string().trim().min(1, t("role.nameRequired")),
+        code: z
+          .string()
+          .trim()
+          .min(1, t("role.codeRequired"))
+          .regex(/^[A-Za-z][A-Za-z0-9:_-]*$/, t("role.codeInvalid")),
+        remark: z.string().trim(),
+      }),
+    [t]
+  )
+  const createFormResolver = useMemo(
+    () => zodResolver(createFormSchema as never) as Resolver<CreateForm>,
+    [createFormSchema]
+  )
+  const form = useForm<CreateForm>({
     resolver: createFormResolver,
     defaultValues: buildEmptyForm(),
   })
@@ -122,8 +126,8 @@ function CreateRoleDrawerBody({
   return (
     <DrawerContent className="min-w-2xl">
       <DrawerHeader>
-        <DrawerTitle>添加角色</DrawerTitle>
-        <DrawerDescription>创建后可在列表中分配权限和调整排序。</DrawerDescription>
+        <DrawerTitle>{t("role.createTitle")}</DrawerTitle>
+        <DrawerDescription>{t("role.createDescription")}</DrawerDescription>
       </DrawerHeader>
       <form
         className="flex h-full flex-col"
@@ -131,11 +135,11 @@ function CreateRoleDrawerBody({
       >
         <div className="space-y-4 overflow-y-auto px-4 pb-4">
           <Field data-invalid={!!errors.name}>
-            <FieldLabel htmlFor="create-role-name">角色名称</FieldLabel>
+            <FieldLabel htmlFor="create-role-name">{t("role.name")}</FieldLabel>
             <FieldContent>
               <Input
                 id="create-role-name"
-                placeholder="例如：客服主管"
+                placeholder={t("role.namePlaceholder")}
                 autoComplete="off"
                 aria-invalid={!!errors.name}
                 {...register("name")}
@@ -144,11 +148,11 @@ function CreateRoleDrawerBody({
             </FieldContent>
           </Field>
           <Field data-invalid={!!errors.code}>
-            <FieldLabel htmlFor="create-role-code">角色编码</FieldLabel>
+            <FieldLabel htmlFor="create-role-code">{t("role.code")}</FieldLabel>
             <FieldContent>
               <Input
                 id="create-role-code"
-                placeholder="例如：support_manager"
+                placeholder={t("role.codePlaceholder")}
                 autoComplete="off"
                 aria-invalid={!!errors.code}
                 {...register("code")}
@@ -157,11 +161,11 @@ function CreateRoleDrawerBody({
             </FieldContent>
           </Field>
           <Field data-invalid={!!errors.remark}>
-            <FieldLabel htmlFor="create-role-remark">备注</FieldLabel>
+            <FieldLabel htmlFor="create-role-remark">{t("role.remark")}</FieldLabel>
             <FieldContent>
               <Textarea
                 id="create-role-remark"
-                placeholder="可选"
+                placeholder={t("role.optional")}
                 aria-invalid={!!errors.remark}
                 {...register("remark")}
               />
@@ -171,7 +175,7 @@ function CreateRoleDrawerBody({
         </div>
         <DrawerFooter className="border-t">
           <Button type="submit" disabled={saving}>
-            {saving ? "创建中..." : "创建角色"}
+            {saving ? t("role.creating") : t("role.create")}
           </Button>
           <Button
             type="button"
@@ -179,7 +183,7 @@ function CreateRoleDrawerBody({
             onClick={() => onOpenChange(false)}
             disabled={saving}
           >
-            取消
+            {t("role.cancel")}
           </Button>
         </DrawerFooter>
       </form>

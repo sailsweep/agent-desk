@@ -6,7 +6,7 @@ import {
   Trash2Icon,
   WrenchIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { ListPagination } from "@/components/list-pagination";
@@ -20,13 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { OptionCombobox } from "@/components/option-combobox";
 import {
   TableBody,
   TableCell,
@@ -50,11 +44,10 @@ import {
   type KnowledgeFAQ,
   type PageResult,
 } from "@/lib/api/admin";
-import { getEnumLabel, getEnumOptions } from "@/lib/enums";
 import {
   KnowledgeDocumentIndexStatus,
-  KnowledgeDocumentIndexStatusLabels,
 } from "@/lib/generated/enums";
+import { useI18n } from "@/i18n/provider";
 import { formatDateTime } from "@/lib/utils";
 import { FAQEditDialog } from "./faq-edit";
 import { FAQImportDialog } from "./faq-import-dialog";
@@ -72,10 +65,23 @@ export type FAQListActionState = {
   importing: boolean;
 };
 
-const indexStatusOptions = [
-  { value: "all", label: "全部索引状态" },
-  ...getEnumOptions(KnowledgeDocumentIndexStatusLabels),
-] as const;
+type TFunction = (key: string, values?: Record<string, string | number>) => string;
+
+function getIndexStatusOptions(t: TFunction) {
+  return [
+    { value: "all", label: t("knowledge.allIndexStatus") },
+    { value: KnowledgeDocumentIndexStatus.Pending, label: t("knowledge.indexPending") },
+    { value: KnowledgeDocumentIndexStatus.Indexed, label: t("knowledge.indexIndexed") },
+    { value: KnowledgeDocumentIndexStatus.Failed, label: t("knowledge.indexFailed") },
+  ];
+}
+
+function getIndexStatusLabel(status: string, t: TFunction) {
+  if (status === KnowledgeDocumentIndexStatus.Pending) return t("knowledge.indexPending");
+  if (status === KnowledgeDocumentIndexStatus.Indexed) return t("knowledge.indexIndexed");
+  if (status === KnowledgeDocumentIndexStatus.Failed) return t("knowledge.indexFailed");
+  return status || "-";
+}
 
 function getIndexStatusBadgeVariant(status: string) {
   switch (status) {
@@ -88,10 +94,10 @@ function getIndexStatusBadgeVariant(status: string) {
   }
 }
 
-function renderIndexStatusBadge(item: KnowledgeFAQ) {
+function renderIndexStatusBadge(item: KnowledgeFAQ, t: TFunction) {
   const badge = (
     <Badge variant={getIndexStatusBadgeVariant(item.indexStatus)}>
-      {item.indexStatusName}
+      {getIndexStatusLabel(item.indexStatus, t)}
     </Badge>
   );
 
@@ -120,6 +126,7 @@ export function FAQList({
   knowledgeBaseId,
   onActionStateChange,
 }: FAQListProps) {
+  const t = useI18n();
   const [keywordInput, setKeywordInput] = useState("");
   const [indexStatusFilterInput, setIndexStatusFilterInput] = useState("all");
   const [keyword, setKeyword] = useState("");
@@ -139,6 +146,7 @@ export function FAQList({
     results: [],
     page: { page: 1, limit: 20, total: 0 },
   });
+  const indexStatusOptions = useMemo(() => getIndexStatusOptions(t), [t]);
 
   const loadData = useCallback(
     async (options?: {
@@ -172,12 +180,12 @@ export function FAQList({
       });
       setResult(data);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载FAQ失败");
+      toast.error(error instanceof Error ? error.message : t("knowledge.loadFAQFailed"));
     } finally {
       setLoading(false);
     }
     },
-    [indexStatusFilter, keyword, knowledgeBaseId, limit, page],
+    [indexStatusFilter, keyword, knowledgeBaseId, limit, page, t],
   );
 
   useEffect(() => {
@@ -221,9 +229,9 @@ export function FAQList({
       setDialogOpen(false);
       setEditingItem(null);
       await loadData();
-      toast.success("FAQ已保存");
+      toast.success(t("knowledge.faqSaved"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "保存FAQ失败");
+      toast.error(error instanceof Error ? error.message : t("knowledge.faqSaveFailed"));
     } finally {
       setSaving(false);
     }
@@ -236,10 +244,10 @@ export function FAQList({
     }));
     try {
       await deleteKnowledgeFAQ(item.id);
-      toast.success("FAQ已删除");
+      toast.success(t("knowledge.faqDeleted"));
       await loadData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "删除FAQ失败");
+      toast.error(error instanceof Error ? error.message : t("knowledge.faqDeleteFailed"));
     } finally {
       setActionLoadingMap((prev) => ({
         ...prev,
@@ -255,10 +263,10 @@ export function FAQList({
     }));
     try {
       await buildKnowledgeFAQIndex(item.id);
-      toast.success("FAQ索引已重建");
+      toast.success(t("knowledge.faqIndexRebuilt"));
       await loadData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "重建FAQ索引失败");
+      toast.error(error instanceof Error ? error.message : t("knowledge.faqIndexRebuildFailed"));
     } finally {
       setActionLoadingMap((prev) => ({
         ...prev,
@@ -270,7 +278,7 @@ export function FAQList({
   if (!knowledgeBaseId) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        请选择一个FAQ知识库查看FAQ
+        {t("knowledge.selectFAQBase")}
       </div>
     );
   }
@@ -289,38 +297,24 @@ export function FAQList({
                   applyFilters();
                 }
               }}
-              placeholder="按问题搜索FAQ"
+              placeholder={t("knowledge.searchFAQ")}
               className="pl-9"
             />
           </div>
-          <Select
+          <OptionCombobox
             value={indexStatusFilterInput}
-            onValueChange={(value) => setIndexStatusFilterInput(value ?? "all")}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue>
-                {indexStatusFilterInput === "all"
-                  ? "全部索引状态"
-                  : getEnumLabel(
-                      KnowledgeDocumentIndexStatusLabels,
-                      indexStatusFilterInput as KnowledgeDocumentIndexStatus,
-                    )}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {indexStatusOptions.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            onChange={(value) => setIndexStatusFilterInput(value ?? "all")}
+            options={indexStatusOptions}
+            placeholder={t("knowledge.allIndexStatus")}
+            searchPlaceholder={t("knowledge.searchStatus")}
+            emptyText={t("knowledge.emptyStatus")}
+          />
           <Button
             variant="outline"
             onClick={applyFilters}
             disabled={loading}
           >
-            查询
+            {t("knowledge.query")}
           </Button>
         </div>
 
@@ -329,11 +323,11 @@ export function FAQList({
             <table className="w-full min-w-max caption-bottom text-sm">
               <TableHeader>
                 <TableRow>
-                  <TableHead>问题</TableHead>
-                  <TableHead>索引状态</TableHead>
-                  <TableHead>相似问题</TableHead>
-                  <TableHead>更新时间</TableHead>
-                  <TableHead className="w-20 text-right">操作</TableHead>
+                  <TableHead>{t("knowledge.question")}</TableHead>
+                  <TableHead>{t("knowledge.indexStatus")}</TableHead>
+                  <TableHead>{t("knowledge.similarQuestions")}</TableHead>
+                  <TableHead>{t("knowledge.updatedAt")}</TableHead>
+                  <TableHead className="w-20 text-right">{t("knowledge.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -345,7 +339,7 @@ export function FAQList({
                         {item.answer}
                       </div>
                     </TableCell>
-                    <TableCell>{renderIndexStatusBadge(item)}</TableCell>
+                    <TableCell>{renderIndexStatusBadge(item, t)}</TableCell>
                     <TableCell>
                       {Array.isArray(item.similarQuestions)
                         ? item.similarQuestions.length
@@ -362,12 +356,12 @@ export function FAQList({
                             setDialogOpen(true);
                           }}
                         >
-                          编辑
+                          {t("knowledge.edit")}
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger
                             render={<Button variant="outline" size="icon-sm" />}
-                            aria-label={`更多操作 ${item.question}`}
+                            aria-label={t("knowledge.moreActions", { name: item.question })}
                           >
                             <MoreHorizontalIcon className="size-4" />
                           </DropdownMenuTrigger>
@@ -377,8 +371,8 @@ export function FAQList({
                             >
                               <WrenchIcon className="mr-2 size-4" />
                               {actionLoadingMap[item.id]?.rebuildIndex
-                                ? "重建中..."
-                                : "重建索引"}
+                                ? t("knowledge.rebuilding")
+                                : t("knowledge.rebuildIndex")}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
@@ -386,8 +380,8 @@ export function FAQList({
                             >
                               <Trash2Icon className="mr-2 size-4" />
                               {actionLoadingMap[item.id]?.delete
-                                ? "删除中..."
-                                : "删除"}
+                                ? t("knowledge.deleting")
+                                : t("knowledge.delete")}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -401,7 +395,7 @@ export function FAQList({
                       colSpan={5}
                       className="py-12 text-center text-sm text-muted-foreground"
                     >
-                      当前知识库还没有FAQ
+                      {t("knowledge.emptyFAQ")}
                     </TableCell>
                   </TableRow>
                 ) : null}

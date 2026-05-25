@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Status } from "@/lib/generated/enums"
+import { useAppLocale, useI18n } from "@/i18n/provider"
+import { getRoleDisplayName } from "@/lib/role-i18n"
 import { cn } from "@/lib/utils"
 
 type AssignRolesDrawerProps = {
@@ -103,6 +105,8 @@ function AssignRolesDrawerBody({
   onOpenChange,
   onSubmit,
 }: AssignRolesDrawerBodyProps) {
+  const t = useI18n()
+  const { locale } = useAppLocale()
   const [keyword, setKeyword] = useState("")
   const form = useForm<
     z.input<typeof assignRolesSchema>,
@@ -135,7 +139,7 @@ function AssignRolesDrawerBody({
   return (
     <DrawerContent className="flex min-w-2xl flex-col overflow-hidden">
       <DrawerHeader>
-        <DrawerTitle>分配角色</DrawerTitle>
+        <DrawerTitle>{t("user.assignRoles")}</DrawerTitle>
       </DrawerHeader>
       <form
         className="flex min-h-0 flex-1 flex-col overflow-hidden"
@@ -161,13 +165,15 @@ function AssignRolesDrawerBody({
                 if (!output) {
                   return true
                 }
-                return `${role.name} ${role.code}`.toLowerCase().includes(output)
+                return `${role.name} ${getRoleDisplayName(role.code, role.name, locale)} ${role.code}`
+                  .toLowerCase()
+                  .includes(output)
               })
 
               return (
                 <div className="space-y-4 px-4 pb-4">
                   <Field>
-                    <FieldLabel>当前已分配</FieldLabel>
+                    <FieldLabel>{t("user.assignedRoles")}</FieldLabel>
                     <FieldContent>
                       <div className="rounded-lg border p-3">
                         {selectedRoles.length > 0 ? (
@@ -183,27 +189,29 @@ function AssignRolesDrawerBody({
                                 ) : (
                                   <ShieldAlertIcon className="size-3" />
                                 )}
-                                {role.name}
-                                {role.status !== Status.Ok ? "（已禁用）" : ""}
+                                {getRoleDisplayName(role.code, role.name, locale)}
+                                {role.status !== Status.Ok ? ` (${t("user.disabled")})` : ""}
                               </Badge>
                             ))}
                           </div>
                         ) : (
-                          <div className="text-sm text-muted-foreground">当前未分配角色</div>
+                          <div className="text-sm text-muted-foreground">
+                            {t("user.unassignedRoles")}
+                          </div>
                         )}
                       </div>
                     </FieldContent>
                   </Field>
 
                   <Field data-invalid={!!errors.roleIds}>
-                    <FieldLabel>角色列表</FieldLabel>
+                    <FieldLabel>{t("user.roleList")}</FieldLabel>
                     <FieldContent>
                       <div className="relative">
                         <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                           value={keyword}
                           onChange={(event) => setKeyword(event.target.value)}
-                          placeholder="搜索角色名称或编码"
+                          placeholder={t("user.searchRoleNameOrCode")}
                           className="pl-9"
                           disabled={loading}
                         />
@@ -211,7 +219,7 @@ function AssignRolesDrawerBody({
                       <div className="mt-2 max-h-[360px] space-y-1 overflow-y-auto rounded-lg border p-2">
                         {loading ? (
                           <div className="py-8 text-center text-sm text-muted-foreground">
-                            正在加载角色列表...
+                            {t("user.loadingRoleList")}
                           </div>
                         ) : filteredRoles.length > 0 ? (
                           filteredRoles.map((role) => {
@@ -244,7 +252,9 @@ function AssignRolesDrawerBody({
                                 />
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2 whitespace-nowrap">
-                                    <span className="truncate font-medium">{role.name}</span>
+                                    <span className="truncate font-medium">
+                                      {getRoleDisplayName(role.code, role.name, locale)}
+                                    </span>
                                     <span className="truncate text-muted-foreground">
                                       {role.code}
                                     </span>
@@ -252,21 +262,21 @@ function AssignRolesDrawerBody({
                                 </div>
                                 {role.isSystem ? (
                                   <Badge variant="outline" className="shrink-0">
-                                    系统
+                                    {t("user.system")}
                                   </Badge>
                                 ) : null}
                                 <Badge
                                   variant={role.status === Status.Ok ? "secondary" : "outline"}
                                   className="shrink-0"
                                 >
-                                  {role.status === Status.Ok ? "启用" : "禁用"}
+                                  {role.status === Status.Ok ? t("user.enabled") : t("user.disabled")}
                                 </Badge>
                               </label>
                             )
                           })
                         ) : (
                           <div className="py-8 text-center text-sm text-muted-foreground">
-                            没有匹配的角色
+                            {t("user.noMatchedRoles")}
                           </div>
                         )}
                       </div>
@@ -275,37 +285,37 @@ function AssignRolesDrawerBody({
                   </Field>
 
                   <Field>
-                    <FieldLabel>本次变更</FieldLabel>
+                    <FieldLabel>{t("user.changes")}</FieldLabel>
                     <FieldContent>
                       <div className="space-y-3 rounded-lg border p-3">
                         <div>
-                          <div className="mb-2 text-sm font-medium">新增角色</div>
+                          <div className="mb-2 text-sm font-medium">{t("user.addedRoles")}</div>
                           {addedRoles.length > 0 ? (
                             <div className="flex flex-wrap gap-2">
                               {addedRoles.map((role) => (
                                 <Badge key={role.id} variant="secondary" className="gap-1">
                                   <ShieldIcon className="size-3" />
-                                  {role.name}
+                                  {getRoleDisplayName(role.code, role.name, locale)}
                                 </Badge>
                               ))}
                             </div>
                           ) : (
-                            <div className="text-sm text-muted-foreground">无新增</div>
+                            <div className="text-sm text-muted-foreground">{t("user.noneAdded")}</div>
                           )}
                         </div>
                         <div>
-                          <div className="mb-2 text-sm font-medium">移除角色</div>
+                          <div className="mb-2 text-sm font-medium">{t("user.removedRoles")}</div>
                           {removedRoles.length > 0 ? (
                             <div className="flex flex-wrap gap-2">
                               {removedRoles.map((role) => (
                                 <Badge key={role.id} variant="outline" className="gap-1">
                                   <ShieldIcon className="size-3" />
-                                  {role.name}
+                                  {getRoleDisplayName(role.code, role.name, locale)}
                                 </Badge>
                               ))}
                             </div>
                           ) : (
-                            <div className="text-sm text-muted-foreground">无移除</div>
+                            <div className="text-sm text-muted-foreground">{t("user.noneRemoved")}</div>
                           )}
                         </div>
                       </div>
@@ -318,7 +328,7 @@ function AssignRolesDrawerBody({
         </div>
         <DrawerFooter className="border-t">
           <Button type="submit" disabled={saving || loading || !item}>
-            {saving ? "保存中..." : "确认分配"}
+            {saving ? t("user.saving") : t("user.confirmAssign")}
           </Button>
           <Button
             type="button"
@@ -326,7 +336,7 @@ function AssignRolesDrawerBody({
             onClick={() => onOpenChange(false)}
             disabled={saving}
           >
-            取消
+            {t("user.cancel")}
           </Button>
         </DrawerFooter>
       </form>

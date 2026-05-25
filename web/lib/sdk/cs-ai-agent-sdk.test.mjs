@@ -54,7 +54,7 @@ async function loadSdk(config) {
       json: async () => ({
         success: true,
         data: {
-          title: "在线客服",
+          title: "\u5728\u7ebf\u5ba2\u670d",
           themeColor: "#2563eb",
         },
       }),

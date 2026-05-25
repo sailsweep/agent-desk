@@ -1,6 +1,7 @@
 package httpx
 
 import (
+	"cs-agent/internal/pkg/i18nx"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -64,6 +65,22 @@ func TestWriteJSONWrapsCommonResultTypes(t *testing.T) {
 				t.Fatalf("result = %+v, want %+v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestWriteJSONLocalizesKnownErrorMessages(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	ctx, recorder := testContext()
+	i18nx.SetLocale(ctx, i18nx.LocaleEnUS)
+
+	WriteJSON(ctx, web.JsonErrorMsg("会话不存在"))
+
+	var got web.JsonResult
+	if err := json.Unmarshal(recorder.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if got.Message != "Conversation not found." {
+		t.Fatalf("message = %q, want %q", got.Message, "Conversation not found.")
 	}
 }
 

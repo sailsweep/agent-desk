@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import type { Resolver } from "react-hook-form"
 import { useForm } from "react-hook-form"
@@ -21,6 +21,7 @@ import {
   type AdminCompany,
   type CreateAdminCompanyPayload,
 } from "@/lib/api/company"
+import { useI18n } from "@/i18n/provider"
 
 type CompanyEditDialogProps = {
   open: boolean
@@ -31,19 +32,19 @@ type CompanyEditDialogProps = {
   onSubmit: (payload: CreateAdminCompanyPayload) => Promise<void>
 }
 
-const companyFormSchema = z.object({
-  name: z.string().trim().min(1, "公司名称不能为空"),
-  code: z.string().trim(),
-  remark: z.string().trim(),
-})
+type EditForm = {
+  name: string
+  code: string
+  remark: string
+}
 
-type EditForm = z.infer<typeof companyFormSchema>
-
-const editFormResolver = zodResolver(companyFormSchema as never) as Resolver<
-  z.input<typeof companyFormSchema>,
-  undefined,
-  z.output<typeof companyFormSchema>
->
+function createSchema(t: (key: string) => string) {
+  return z.object({
+    name: z.string().trim().min(1, t("company.nameRequired")),
+    code: z.string().trim(),
+    remark: z.string().trim(),
+  })
+}
 
 const emptyForm: EditForm = {
   name: "",
@@ -112,8 +113,19 @@ function CompanyEditDialogBody({
   onOpenChange,
   onSubmit,
 }: CompanyEditDialogBodyProps) {
+  const t = useI18n()
   const formId = "company-edit-form"
   const [loading, setLoading] = useState(false)
+  const companyFormSchema = useMemo(() => createSchema(t), [t])
+  const editFormResolver = useMemo(
+    () =>
+      zodResolver(companyFormSchema as never) as Resolver<
+        z.input<typeof companyFormSchema>,
+        undefined,
+        z.output<typeof companyFormSchema>
+      >,
+    [companyFormSchema]
+  )
   const form = useForm<
     z.input<typeof companyFormSchema>,
     undefined,
@@ -154,7 +166,7 @@ function CompanyEditDialogBody({
     <ProjectDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={itemId ? "编辑公司" : "新建公司"}
+      title={itemId ? t("company.editTitle") : t("company.createTitle")}
       size="md"
       allowFullscreen
       footer={
@@ -165,26 +177,26 @@ function CompanyEditDialogBody({
             onClick={() => onOpenChange(false)}
             disabled={saving}
           >
-            取消
+            {t("company.cancel")}
           </Button>
           <Button type="submit" form={formId} disabled={saving || loading}>
-            {saving ? "保存中..." : itemId ? "保存" : "创建"}
+            {saving ? t("company.saving") : itemId ? t("company.save") : t("company.create")}
           </Button>
         </>
       }
     >
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="text-muted-foreground">加载中...</div>
+          <div className="text-muted-foreground">{t("company.loadingDetail")}</div>
         </div>
       ) : (
         <form id={formId} onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
           <Field data-invalid={!!errors.name}>
-            <FieldLabel htmlFor="company-name">公司名称</FieldLabel>
+            <FieldLabel htmlFor="company-name">{t("company.columnName")}</FieldLabel>
             <FieldContent>
               <Input
                 id="company-name"
-                placeholder="请输入公司名称"
+                placeholder={t("company.namePlaceholder")}
                 aria-invalid={!!errors.name}
                 {...register("name")}
               />
@@ -192,11 +204,11 @@ function CompanyEditDialogBody({
             </FieldContent>
           </Field>
           <Field data-invalid={!!errors.code}>
-            <FieldLabel htmlFor="company-code">公司编码</FieldLabel>
+            <FieldLabel htmlFor="company-code">{t("company.columnCode")}</FieldLabel>
             <FieldContent>
               <Input
                 id="company-code"
-                placeholder="可选"
+                placeholder={t("company.optional")}
                 aria-invalid={!!errors.code}
                 {...register("code")}
               />
@@ -204,11 +216,11 @@ function CompanyEditDialogBody({
             </FieldContent>
           </Field>
           <Field data-invalid={!!errors.remark}>
-            <FieldLabel htmlFor="company-remark">备注</FieldLabel>
+            <FieldLabel htmlFor="company-remark">{t("company.columnRemark")}</FieldLabel>
             <FieldContent>
               <Textarea
                 id="company-remark"
-                placeholder="可选"
+                placeholder={t("company.remarkPlaceholder")}
                 rows={4}
                 aria-invalid={!!errors.remark}
                 {...register("remark")}

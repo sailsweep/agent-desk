@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react"
 import { LaptopIcon, MoonIcon, SunIcon } from "lucide-react"
 import { useTheme } from "next-themes"
 
+import { useI18n } from "@/i18n/provider"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -17,15 +18,16 @@ type ThemeMode = "light" | "dark" | "system"
 
 const themeOptions: Array<{
   value: ThemeMode
-  label: string
+  labelKey: string
   icon: typeof SunIcon
 }> = [
-  { value: "light", label: "浅色模式", icon: SunIcon },
-  { value: "dark", label: "深色模式", icon: MoonIcon },
-  { value: "system", label: "跟随系统", icon: LaptopIcon },
+  { value: "light", labelKey: "theme.light", icon: SunIcon },
+  { value: "dark", labelKey: "theme.dark", icon: MoonIcon },
+  { value: "system", labelKey: "theme.system", icon: LaptopIcon },
 ]
 
 export function ThemeToggle() {
+  const t = useI18n()
   const { theme, setTheme } = useTheme()
   const mounted = useSyncExternalStore(
     () => () => {},
@@ -39,9 +41,11 @@ export function ThemeToggle() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="outline" size="sm" />} aria-label="切换主题">
+      <DropdownMenuTrigger
+        render={<Button variant="outline" size="sm" />}
+        aria-label={t("theme.toggle")}
+      >
         <ActiveIcon />
-        {/* <span className="hidden sm:inline">主题</span> */}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40 min-w-40">
         <DropdownMenuRadioGroup
@@ -53,7 +57,7 @@ export function ThemeToggle() {
             return (
               <DropdownMenuRadioItem key={option.value} value={option.value}>
                 <Icon />
-                {option.label}
+                {t(option.labelKey)}
               </DropdownMenuRadioItem>
             )
           })}

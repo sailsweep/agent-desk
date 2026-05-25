@@ -15,6 +15,7 @@ import "./markdown-editor.css"
 
 import { EditorModeSwitch } from "./editor-mode-switch"
 import type { ContentMode, UploadImageHandler } from "./types"
+import { useI18n } from "@/i18n/provider"
 
 export type MarkdownEditorRef = {
   focus: () => void
@@ -51,6 +52,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
     },
     ref
   ) {
+    const t = useI18n()
     const editorId = useId()
     const editorRef = useRef<ExposeParam>(null)
     const { resolvedTheme } = useTheme()
@@ -65,7 +67,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
         />,
         <NormalToolbar
           key="toggle-fullscreen"
-          title={fullscreen ? "退出全屏" : "全屏"}
+          title={fullscreen ? t("editor.exitFullscreen") : t("editor.fullscreen")}
           disabled={disabled}
           onClick={onToggleFullscreen}
         >
@@ -76,7 +78,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
           )}
         </NormalToolbar>,
       ],
-      [allowedModes, disabled, fullscreen, mode, onModeChange, onToggleFullscreen]
+      [allowedModes, disabled, fullscreen, mode, onModeChange, onToggleFullscreen, t]
     )
 
     useImperativeHandle(ref, () => ({

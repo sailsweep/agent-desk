@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"cs-agent/internal/pkg/enums"
+	"cs-agent/internal/pkg/i18nx"
 )
 
 type ToolSpec struct {
@@ -218,12 +219,82 @@ func GetRegisteredToolTitle(toolCode string) string {
 	return spec.Title
 }
 
+func GetRegisteredToolTitleLocale(toolCode string, locale string) string {
+	spec, ok := GetRegisteredToolSpec(toolCode)
+	if !ok {
+		return ""
+	}
+	if i18nx.NormalizeLocale(locale) != i18nx.LocaleEnUS {
+		return spec.Title
+	}
+	if text := registeredToolEnglishTitle(spec.Code); text != "" {
+		return text
+	}
+	return spec.Title
+}
+
 func GetRegisteredToolDescription(toolCode string) string {
 	spec, ok := GetRegisteredToolSpec(toolCode)
 	if !ok {
 		return ""
 	}
 	return spec.Description
+}
+
+func GetRegisteredToolDescriptionLocale(toolCode string, locale string) string {
+	spec, ok := GetRegisteredToolSpec(toolCode)
+	if !ok {
+		return ""
+	}
+	if i18nx.NormalizeLocale(locale) != i18nx.LocaleEnUS {
+		return spec.Description
+	}
+	if text := registeredToolEnglishDescription(spec.Code); text != "" {
+		return text
+	}
+	return spec.Description
+}
+
+func registeredToolEnglishTitle(toolCode string) string {
+	switch toolCode {
+	case BuiltinToolSearch.Code:
+		return "Search and Run Dynamic Tools"
+	case BuiltinSkill.Code:
+		return "Load Skill Instructions"
+	case GraphTriageServiceRequest.Code:
+		return "Route Service Request"
+	case GraphAnalyzeConversation.Code:
+		return "Analyze Conversation Risk and Summary"
+	case GraphPrepareTicketDraft.Code:
+		return "Prepare Ticket Draft"
+	case GraphCreateTicketConfirm.Code:
+		return "Create Ticket With Confirmation"
+	case GraphHandoffConversation.Code:
+		return "Handoff to Human With Confirmation"
+	default:
+		return ""
+	}
+}
+
+func registeredToolEnglishDescription(toolCode string) string {
+	switch toolCode {
+	case BuiltinToolSearch.Code:
+		return "Searches the MCP tools currently available to the agent and runs the selected tool after its toolCode is confirmed. Best for long-tail tools; it should not replace fixed built-in workflow tools."
+	case BuiltinSkill.Code:
+		return "Loads specialized skill instructions for the current agent when extra task-specific guidance is needed."
+	case GraphTriageServiceRequest.Code:
+		return "Analyzes the current conversation to decide whether to keep answering, prepare a ticket draft, or hand off to a human, including a ticket draft when ticket creation is appropriate."
+	case GraphAnalyzeConversation.Code:
+		return "Summarizes the current conversation, identifies risk signals, and recommends whether to keep answering, create a ticket, or hand off to a human."
+	case GraphPrepareTicketDraft.Code:
+		return "Turns the current conversation and collected details into a ticket draft with a suggested title, description, missing fields, and follow-up questions."
+	case GraphCreateTicketConfirm.Code:
+		return "Guides ticket creation with parameter preparation, customer confirmation, actual ticket creation, and final result delivery."
+	case GraphHandoffConversation.Code:
+		return "Guides human handoff with reason preparation, customer confirmation, actual transfer, and final result delivery."
+	default:
+		return ""
+	}
 }
 
 func GetRegisteredToolIdentity(toolCode string) (serverCode, toolName string, ok bool) {

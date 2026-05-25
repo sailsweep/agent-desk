@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"cs-agent/internal/pkg/i18nx"
 	"cs-agent/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +17,9 @@ func AuthMiddleware(ctx *gin.Context) {
 
 func authenticateRequest(ctx *gin.Context) bool {
 	if _, err := services.AuthService.Authenticate(ctx); err != nil {
-		ctx.JSON(200, web.JsonError(err))
+		result := web.JsonError(err)
+		result.Message = i18nx.T(ctx, "error.auth.expired", nil)
+		ctx.JSON(200, result)
 		ctx.Abort()
 		return false
 	}

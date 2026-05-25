@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Maximize2Icon, Minimize2Icon, XIcon } from "lucide-react";
+import { useI18n } from "@/i18n/provider";
 
 const dialogSizeClassName = {
   sm: "max-w-md sm:max-w-md",
@@ -61,6 +62,7 @@ function ProjectDialog({
   defaultFullscreen = false,
   bodyScrollable = true,
 }: ProjectDialogProps) {
+  const t = useI18n();
   const [fullscreen, setFullscreen] = useState(defaultFullscreen);
 
   function handleOpenChange(nextOpen: boolean, eventDetails: unknown) {
@@ -129,7 +131,7 @@ function ProjectDialog({
               >
                 {fullscreen ? <Minimize2Icon /> : <Maximize2Icon />}
                 <span className="sr-only">
-                  {fullscreen ? "退出全屏" : "全屏显示"}
+                  {fullscreen ? t("common.exitFullscreen") : t("common.fullscreen")}
                 </span>
               </Button>
             ) : null}
@@ -138,7 +140,7 @@ function ProjectDialog({
                 render={<Button type="button" variant="ghost" size="icon-sm" />}
               >
                 <XIcon />
-                <span className="sr-only">关闭</span>
+                <span className="sr-only">{t("common.close")}</span>
               </DialogClose>
             ) : null}
           </div>

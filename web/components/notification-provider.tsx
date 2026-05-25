@@ -24,6 +24,8 @@ import {
   createRealtimeConnectionManager,
   type RealtimeConnectionStatus,
 } from "@/lib/realtime-connection"
+import { useAppLocale, useI18n } from "@/i18n/provider"
+import { localizeNotificationItem } from "@/lib/notification-i18n"
 
 type NotificationRealtimeEnvelope = {
   eventId?: string
@@ -43,6 +45,8 @@ type NotificationContextValue = {
 const NotificationContext = createContext<NotificationContextValue | null>(null)
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
+  const t = useI18n()
+  const { locale } = useAppLocale()
   const router = useRouter()
   const [unreadCount, setUnreadCount] = useState(0)
   const [realtimeStatus, setRealtimeStatus] =
@@ -106,14 +110,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           if (!notification || notification.recipientUserId !== currentUserIdRef.current) {
             return
           }
+          const localizedNotification = localizeNotificationItem(notification, locale)
           setUnreadCount((current) => current + 1)
-          toast(notification.title || "新通知", {
-            description: notification.content,
+          toast(localizedNotification.title || t("notification.new"), {
+            description: localizedNotification.content,
             action: {
-              label: "查看",
+              label: t("notification.view"),
               onClick: () => {
-                void markReadAndNavigate(notification).catch((error) => {
-                  toast.error(error instanceof Error ? error.message : "打开通知失败")
+                void markReadAndNavigate(localizedNotification).catch((error) => {
+                  toast.error(error instanceof Error ? error.message : t("notification.openFailed"))
                 })
               },
             },
@@ -123,7 +128,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         }
       },
       onConnectError: (error) => {
-        toast.error(error instanceof Error ? error.message : "连接通知服务失败")
+        toast.error(error instanceof Error ? error.message : t("notification.connectFailed"))
       },
     })
 
@@ -131,7 +136,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     return () => {
       realtime.disconnect()
     }
-  }, [markReadAndNavigate, refreshUnreadCount])
+  }, [locale, markReadAndNavigate, refreshUnreadCount, t])
 
   const value = useMemo<NotificationContextValue>(
     () => ({

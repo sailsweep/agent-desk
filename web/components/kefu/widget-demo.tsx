@@ -5,6 +5,7 @@ import { CheckIcon, CopyIcon } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import type { CSAgentConfig } from "@/lib/sdk/config-types"
+import { useI18n } from "@/i18n/provider"
 
 const STORAGE_KEY = "cs-agent-web-widget-test-config"
 const DEFAULT_JWT_TTL_MINUTES = "30"
@@ -24,7 +25,7 @@ type WidgetDemoConfig = CSAgentConfig & {
   jwtTtlMinutes?: string
 }
 
-function getDefaultConfig(): WidgetDemoConfig {
+function getDefaultConfig(defaultName: string): WidgetDemoConfig {
   if (typeof window === "undefined") {
     return INITIAL_CONFIG
   }
@@ -42,7 +43,7 @@ function getDefaultConfig(): WidgetDemoConfig {
     authMode: (query.get("authMode") as AuthMode | null) ?? savedConfig.authMode ?? "guest",
     jwtSecret: savedConfig.jwtSecret ?? "",
     jwtUserId: query.get("userId") ?? savedConfig.jwtUserId ?? "demo-user-001",
-    jwtName: query.get("name") ?? savedConfig.jwtName ?? "测试用户",
+    jwtName: query.get("name") ?? savedConfig.jwtName ?? defaultName,
     jwtTtlMinutes: savedConfig.jwtTtlMinutes ?? DEFAULT_JWT_TTL_MINUTES,
   }
 }
@@ -83,28 +84,28 @@ function buildWidgetConfig(config: WidgetDemoConfig): CSAgentConfig {
     apiBaseUrl: "",
   }
   if (config.authMode === "jwt") {
-    nextConfig.getUserToken = () => signUserToken(config)
+    nextConfig.getUserToken = undefined
   }
   return nextConfig
 }
 
-async function signUserToken(config: WidgetDemoConfig) {
+async function signUserToken(config: WidgetDemoConfig, t: (key: string) => string) {
   const userId = (config.jwtUserId || "").trim()
   const name = (config.jwtName || "").trim()
   const secret = (config.jwtSecret || "").trim()
   const ttl = Number(config.jwtTtlMinutes || DEFAULT_JWT_TTL_MINUTES)
 
   if (!userId) {
-    throw new Error("请填写 userId")
+    throw new Error(t("widgetDemo.missingUserId"))
   }
   if (!name) {
-    throw new Error("请填写用户名称")
+    throw new Error(t("widgetDemo.missingName"))
   }
   if (!secret) {
-    throw new Error("请填写 JWT Secret")
+    throw new Error(t("widgetDemo.missingSecret"))
   }
   if (!Number.isFinite(ttl) || ttl <= 0) {
-    throw new Error("有效期必须大于 0")
+    throw new Error(t("widgetDemo.invalidTtl"))
   }
 
   return new SignJWT({ userId, name })
@@ -115,15 +116,16 @@ async function signUserToken(config: WidgetDemoConfig) {
 }
 
 export function KefuWidgetDemo() {
+  const t = useI18n()
   const [config, setConfig] = useState<WidgetDemoConfig>({
     ...INITIAL_CONFIG,
     authMode: "guest",
     jwtSecret: "",
     jwtUserId: "demo-user-001",
-    jwtName: "测试用户",
+    jwtName: t("widgetDemo.defaultName"),
     jwtTtlMinutes: DEFAULT_JWT_TTL_MINUTES,
   })
-  const [status, setStatus] = useState("请填写 channelId")
+  const [status, setStatus] = useState(t("widgetDemo.missingChannel"))
   const [origin, setOrigin] = useState("")
   const [generatedToken, setGeneratedToken] = useState("")
   const [latestDirectChatUrl, setLatestDirectChatUrl] = useState("")
@@ -139,6 +141,9 @@ export function KefuWidgetDemo() {
       getUserToken: undefined,
     }
     const nextConfig = buildWidgetConfig(cleanConfig)
+    if (cleanConfig.authMode === "jwt") {
+      nextConfig.getUserToken = () => signUserToken(cleanConfig, t)
+    }
     setConfig(cleanConfig)
     setGeneratedToken("")
     setLatestDirectChatUrl("")
@@ -146,30 +151,30 @@ export function KefuWidgetDemo() {
 
     if (!nextConfig.channelId) {
       removeMountedWidget()
-      setStatus("请填写 channelId")
+      setStatus(t("widgetDemo.missingChannel"))
       return
     }
 
     injectWidget(nextConfig)
     setStatus(
       cleanConfig.authMode === "jwt"
-        ? "Widget 已挂载：JWT 用户模式"
-        : "Widget 已挂载：访客模式"
+        ? t("widgetDemo.mountedJwt")
+        : t("widgetDemo.mountedGuest")
     )
   }
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      const initialConfig = getDefaultConfig()
+      const initialConfig = getDefaultConfig(t("widgetDemo.defaultName"))
       setOrigin(window.location.origin)
       setConfig(initialConfig)
-      setStatus(initialConfig.channelId ? "Widget 已挂载" : "请填写 channelId")
+      setStatus(initialConfig.channelId ? t("widgetDemo.mounted") : t("widgetDemo.missingChannel"))
 
       if (initialConfig.channelId) {
         void mountWidget(initialConfig).catch((error) => {
           removeMountedWidget()
           setGeneratedToken("")
-          setStatus(error instanceof Error ? error.message : "挂载 Widget 失败")
+          setStatus(error instanceof Error ? error.message : t("widgetDemo.mountFailed"))
         })
       }
     }, 0)
@@ -178,7 +183,7 @@ export function KefuWidgetDemo() {
       window.clearTimeout(timer)
       removeMountedWidget()
     }
-  }, [])
+  }, [t])
 
   const snippet = useMemo(() => {
     const scriptSrc = origin
@@ -215,7 +220,7 @@ ${configLines.join(",\n")}
     } catch (error) {
       removeMountedWidget()
       setGeneratedToken("")
-      setStatus(error instanceof Error ? error.message : "挂载 Widget 失败")
+      setStatus(error instanceof Error ? error.message : t("widgetDemo.mountFailed"))
     }
   }
 
@@ -233,7 +238,7 @@ ${configLines.join(",\n")}
       setCopied(true)
       window.setTimeout(() => setCopied(false), 1600)
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "生成客服链接失败")
+      setStatus(error instanceof Error ? error.message : t("widgetDemo.linkFailed"))
     }
   }
 
@@ -249,7 +254,7 @@ ${configLines.join(",\n")}
       }
       window.open(url, "_blank", "noopener,noreferrer")
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "生成客服链接失败")
+      setStatus(error instanceof Error ? error.message : t("widgetDemo.linkFailed"))
     }
   }
 
@@ -266,7 +271,7 @@ ${configLines.join(",\n")}
     <main className="min-h-svh bg-slate-50 px-6 py-8 text-slate-950">
       <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="text-base font-semibold">Widget 挂载测试</div>
+          <div className="text-base font-semibold">{t("widgetDemo.title")}</div>
           <div className="mt-1 text-sm text-slate-500">{status}</div>
 
           <div className="mt-5 grid gap-3">
@@ -276,12 +281,12 @@ ${configLines.join(",\n")}
               onChange={(value) => updateField("channelId", value)}
             />
             <SegmentedControl
-              label="鉴权模式"
+              label={t("widgetDemo.authMode")}
               value={config.authMode || "guest"}
               onChange={(value) => updateField("authMode", value)}
               options={[
-                { label: "访客", value: "guest" },
-                { label: "JWT 用户", value: "jwt" },
+                { label: t("widgetDemo.guest"), value: "guest" },
+                { label: t("widgetDemo.jwtUser"), value: "jwt" },
               ]}
             />
             {config.authMode === "jwt" ? (
@@ -303,7 +308,7 @@ ${configLines.join(",\n")}
                   type="password"
                 />
                 <TextField
-                  label="有效期（分钟）"
+                  label={t("widgetDemo.ttlMinutes")}
                   value={config.jwtTtlMinutes}
                   onChange={(value) => updateField("jwtTtlMinutes", value)}
                   type="number"
@@ -318,26 +323,26 @@ ${configLines.join(",\n")}
               onClick={() => void handleMount()}
               className="rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white"
             >
-              挂载
+              {t("widgetDemo.mount")}
             </button>
             <button
               type="button"
               onClick={() => {
                 removeMountedWidget()
-                setStatus("Widget 已卸载")
+                setStatus(t("widgetDemo.unmounted"))
               }}
               className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium"
             >
-              卸载
+              {t("widgetDemo.unmount")}
             </button>
           </div>
         </section>
 
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="text-base font-semibold">接入代码</div>
+          <div className="text-base font-semibold">{t("widgetDemo.snippetTitle")}</div>
           {config.authMode === "jwt" ? (
             <div className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              当前页面仅用于本地模拟。正式接入时，userToken 应由业务系统后端签发。
+              {t("widgetDemo.jwtNotice")}
             </div>
           ) : null}
           <div className="relative mt-4">
@@ -345,8 +350,8 @@ ${configLines.join(",\n")}
               type="button"
               onClick={() => void handleCopySnippet()}
               className="absolute right-2 top-2 inline-flex size-8 items-center justify-center rounded-md border border-white/10 bg-white/10 text-slate-200 transition hover:bg-white/20 hover:text-white"
-              aria-label={snippetCopied ? "已复制接入代码" : "复制接入代码"}
-              title={snippetCopied ? "已复制" : "复制代码"}
+              aria-label={snippetCopied ? t("widgetDemo.copiedSnippet") : t("widgetDemo.copySnippet")}
+              title={snippetCopied ? t("widgetDemo.copied") : t("widgetDemo.copyCode")}
             >
               {snippetCopied ? (
                 <CheckIcon className="size-4" />
@@ -359,11 +364,11 @@ ${configLines.join(",\n")}
             </pre>
           </div>
           <div className="mt-5">
-            <div className="text-sm font-medium text-slate-700">直接访问客户对话</div>
+            <div className="text-sm font-medium text-slate-700">{t("widgetDemo.directChat")}</div>
             <div className="mt-2 flex flex-col gap-2 sm:flex-row">
               <input
                 readOnly
-                value={latestDirectChatUrl || "点击复制或新窗口打开时生成最新链接"}
+                value={latestDirectChatUrl || t("widgetDemo.directChatPlaceholder")}
                 className="h-9 min-w-0 flex-1 rounded-md border border-slate-200 px-3 font-mono text-xs outline-none"
               />
               <div className="flex gap-2">
@@ -373,7 +378,7 @@ ${configLines.join(",\n")}
                   onClick={() => void handleCopyDirectUrl()}
                   className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {copied ? "已复制" : "复制"}
+                  {copied ? t("widgetDemo.copied") : t("widgetDemo.copy")}
                 </button>
                 <button
                   type="button"
@@ -381,14 +386,14 @@ ${configLines.join(",\n")}
                   onClick={() => void handleOpenDirectChat()}
                   className="rounded-md bg-slate-950 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  新窗口打开
+                  {t("widgetDemo.openNewWindow")}
                 </button>
               </div>
             </div>
           </div>
           {generatedToken ? (
             <div className="mt-4">
-              <div className="text-sm font-medium text-slate-700">当前 userToken</div>
+              <div className="text-sm font-medium text-slate-700">{t("widgetDemo.currentToken")}</div>
               <textarea
                 readOnly
                 value={generatedToken}

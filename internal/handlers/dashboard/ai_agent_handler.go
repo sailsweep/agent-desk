@@ -10,6 +10,7 @@ import (
 	"cs-agent/internal/pkg/dto/request"
 	"cs-agent/internal/pkg/dto/response"
 	"cs-agent/internal/pkg/enums"
+	"cs-agent/internal/pkg/i18nx"
 	"cs-agent/internal/pkg/toolx"
 	"cs-agent/internal/pkg/utils"
 	"cs-agent/internal/services"
@@ -34,7 +35,7 @@ func AIAgentAnyList(ctx *gin.Context) {
 	list, paging := services.AIAgentService.FindPageByCnd(cnd)
 	results := make([]response.AIAgentResponse, 0, len(list))
 	for _, item := range list {
-		results = append(results, buildAIAgentResponse(&item))
+		results = append(results, buildAIAgentResponseWithLocale(&item, i18nx.Locale(ctx)))
 	}
 	httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
 }
@@ -47,7 +48,7 @@ func AIAgentGetList_all(ctx *gin.Context) {
 	list := services.AIAgentService.Find(sqls.NewCnd().Where("status = ?", enums.StatusOk).Desc("sort_no").Desc("id"))
 	results := make([]response.AIAgentResponse, 0, len(list))
 	for _, item := range list {
-		results = append(results, buildAIAgentResponse(&item))
+		results = append(results, buildAIAgentResponseWithLocale(&item, i18nx.Locale(ctx)))
 	}
 	httpx.WriteJSON(ctx, results)
 }
@@ -66,7 +67,7 @@ func AIAgentGetBy(ctx *gin.Context) {
 		httpx.WriteJSON(ctx, web.JsonErrorMsg("AI Agent 不存在"))
 		return
 	}
-	httpx.WriteJSON(ctx, buildAIAgentResponse(item))
+	httpx.WriteJSON(ctx, buildAIAgentResponseWithLocale(item, i18nx.Locale(ctx)))
 }
 
 func AIAgentPostCreate(ctx *gin.Context) {
@@ -85,7 +86,7 @@ func AIAgentPostCreate(ctx *gin.Context) {
 		httpx.WriteJSON(ctx, err)
 		return
 	}
-	httpx.WriteJSON(ctx, buildAIAgentResponse(item))
+	httpx.WriteJSON(ctx, buildAIAgentResponseWithLocale(item, i18nx.Locale(ctx)))
 }
 
 func AIAgentPostUpdate(ctx *gin.Context) {
@@ -160,6 +161,10 @@ func AIAgentPostUpdate_status(ctx *gin.Context) {
 }
 
 func buildAIAgentResponse(item *models.AIAgent) response.AIAgentResponse {
+	return buildAIAgentResponseWithLocale(item, i18nx.LocaleZhCN)
+}
+
+func buildAIAgentResponseWithLocale(item *models.AIAgent, locale string) response.AIAgentResponse {
 	ret := response.AIAgentResponse{
 		ID:                  item.ID,
 		Name:                item.Name,
@@ -242,13 +247,13 @@ func buildAIAgentResponse(item *models.AIAgent) response.AIAgentResponse {
 				}
 				title := strings.TrimSpace(tool.Title)
 				if title == "" {
-					if registeredTitle := toolx.GetRegisteredToolTitle(toolCode); registeredTitle != "" {
+					if registeredTitle := toolx.GetRegisteredToolTitleLocale(toolCode, locale); registeredTitle != "" {
 						title = registeredTitle
 					}
 				}
 				description := strings.TrimSpace(tool.Description)
 				if description == "" {
-					if registeredDescription := toolx.GetRegisteredToolDescription(toolCode); registeredDescription != "" {
+					if registeredDescription := toolx.GetRegisteredToolDescriptionLocale(toolCode, locale); registeredDescription != "" {
 						description = registeredDescription
 					}
 				}

@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Controller, Resolver, useForm } from "react-hook-form"
+import { Controller, type Resolver, useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod/v4"
 
@@ -21,20 +21,22 @@ import {
   fetchAgentProfilesAll,
   type AdminAgentProfile,
 } from "@/lib/api/admin"
+import { useI18n } from "@/i18n/provider"
 import { assignTicket } from "@/lib/api/ticket"
 
-const schema = z.object({
-  toUserId: z.string().trim().min(1, "请选择处理人"),
+type TFunction = (key: string, values?: Record<string, string | number>) => string
+
+function createSchema(t: TFunction) {
+  return z.object({
+  toUserId: z.string().trim().min(1, t("ticket.assigneeRequired")),
   reason: z.string().trim(),
-})
+  })
+}
 
-type FormValues = z.infer<typeof schema>
-
-const resolver = zodResolver(schema as never) as Resolver<
-  z.input<typeof schema>,
-  undefined,
-  z.output<typeof schema>
->
+type FormValues = {
+  toUserId: string
+  reason: string
+}
 
 const emptyForm: FormValues = {
   toUserId: "",
@@ -77,16 +79,18 @@ function TicketAssignDialogBody({
   onOpenChange,
   onSuccess,
 }: Omit<TicketAssignDialogProps, "open">) {
+  const t = useI18n()
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(false)
   const [agents, setAgents] = useState<AdminAgentProfile[]>([])
   const activeRef = useRef(false)
 
-  const form = useForm<
-    z.input<typeof schema>,
-    undefined,
-    z.output<typeof schema>
-  >({
+  const schema = useMemo(() => createSchema(t), [t])
+  const resolver = useMemo(
+    () => zodResolver(schema) as Resolver<FormValues>,
+    [schema],
+  )
+  const form = useForm<FormValues>({
     resolver,
     defaultValues: emptyForm,
   })
@@ -126,18 +130,18 @@ function TicketAssignDialogBody({
         if (!activeRef.current) {
           return
         }
-        toast.error(error instanceof Error ? error.message : "加载处理人失败")
+        toast.error(error instanceof Error ? error.message : t("ticket.loadAssigneesFailed"))
       })
       .finally(() => {
         if (activeRef.current) {
           setLoading(false)
         }
       })
-  }, [])
+  }, [t])
 
   async function onFormSubmit(values: FormValues) {
     if (!ticketId) {
-      toast.error("请选择工单")
+      toast.error(t("ticket.selectTicket"))
       return
     }
     setSaving(true)
@@ -150,7 +154,7 @@ function TicketAssignDialogBody({
       if (!activeRef.current) {
         return
       }
-      toast.success("处理人已更新")
+      toast.success(t("ticket.assigneeUpdated"))
       if (!activeRef.current) {
         return
       }
@@ -160,7 +164,7 @@ function TicketAssignDialogBody({
       if (!activeRef.current) {
         return
       }
-      toast.error(error instanceof Error ? error.message : "指派工单失败")
+      toast.error(error instanceof Error ? error.message : t("ticket.assignFailed"))
     } finally {
       if (activeRef.current) {
         setSaving(false)
@@ -171,12 +175,12 @@ function TicketAssignDialogBody({
   return (
     <DialogContent className="max-w-lg gap-0 p-0 sm:max-w-lg">
       <DialogHeader className="px-6 pt-6">
-        <DialogTitle>指派工单</DialogTitle>
+        <DialogTitle>{t("ticket.assignTitle")}</DialogTitle>
       </DialogHeader>
       <form onSubmit={handleSubmit(onFormSubmit)}>
         <div className="space-y-4 p-6">
           <Field data-invalid={!!errors.toUserId}>
-            <FieldLabel>处理人</FieldLabel>
+            <FieldLabel>{t("ticket.assignee")}</FieldLabel>
             <FieldContent>
               <Controller
                 control={control}
@@ -185,14 +189,14 @@ function TicketAssignDialogBody({
                   <OptionCombobox
                     value={field.value}
                     onChange={field.onChange}
-                    placeholder={loading ? "加载中..." : "选择处理人"}
+                    placeholder={loading ? t("ticket.loading") : t("ticket.selectHandler")}
                     options={agents.map((agent) => ({
                       value: String(agent.userId),
                       label:
                         agent.displayName ||
                         agent.nickname ||
                         agent.username ||
-                        `客服#${agent.userId}`,
+                        t("ticket.agentFallback", { id: agent.userId }),
                     }))}
                   />
                 )}
@@ -201,19 +205,19 @@ function TicketAssignDialogBody({
             </FieldContent>
           </Field>
           <Field data-invalid={!!errors.reason}>
-            <FieldLabel>说明</FieldLabel>
+            <FieldLabel>{t("ticket.assignReason")}</FieldLabel>
             <FieldContent>
-              <Textarea rows={4} placeholder="填写指派说明" {...register("reason")} />
+              <Textarea rows={4} placeholder={t("ticket.assignReasonPlaceholder")} {...register("reason")} />
               <FieldError errors={[errors.reason]} />
             </FieldContent>
           </Field>
         </div>
         <DialogFooter className="mx-0 mb-0 px-6 py-4">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            取消
+            {t("ticket.cancel")}
           </Button>
           <Button type="submit" disabled={saving}>
-            {saving ? "提交中..." : "确认指派"}
+            {saving ? t("ticket.submitting") : t("ticket.confirmAssign")}
           </Button>
         </DialogFooter>
       </form>

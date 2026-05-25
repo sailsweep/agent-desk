@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Resolver, useForm } from "react-hook-form"
 import { z } from "zod/v4"
@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -24,6 +23,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Textarea } from "@/components/ui/textarea"
+import { useI18n } from "@/i18n/provider"
 
 type ConversationCloseDialogProps = {
   open: boolean
@@ -32,17 +32,9 @@ type ConversationCloseDialogProps = {
   onSuccess?: () => Promise<void> | void
 }
 
-const closeSchema = z.object({
-  closeReason: z.string().trim().min(1, "请输入关闭原因"),
-})
-
-type CloseForm = z.infer<typeof closeSchema>
-
-const closeResolver = zodResolver(closeSchema as never) as Resolver<
-  z.input<typeof closeSchema>,
-  undefined,
-  z.output<typeof closeSchema>
->
+type CloseForm = {
+  closeReason: string
+}
 
 const emptyForm: CloseForm = {
   closeReason: "",
@@ -79,12 +71,22 @@ function ConversationCloseDialogBody({
   onOpenChange,
   onSuccess,
 }: ConversationCloseDialogBodyProps) {
+  const t = useI18n()
   const [saving, setSaving] = useState(false)
-  const form = useForm<
-    z.input<typeof closeSchema>,
-    undefined,
-    z.output<typeof closeSchema>
-  >({
+
+  const closeSchema = useMemo(
+    () =>
+      z.object({
+        closeReason: z.string().trim().min(1, t("conversationAction.closeReasonRequired")),
+      }),
+    [t]
+  )
+  const closeResolver = useMemo(
+    () => zodResolver(closeSchema as never) as Resolver<CloseForm>,
+    [closeSchema]
+  )
+
+  const form = useForm<CloseForm>({
     resolver: closeResolver,
     defaultValues: emptyForm,
   })
@@ -101,19 +103,19 @@ function ConversationCloseDialogBody({
 
   async function onFormSubmit(values: CloseForm) {
     if (!conversationId) {
-      toast.error("会话不存在")
+      toast.error(t("conversationAction.conversationMissing"))
       return
     }
 
     setSaving(true)
     try {
       await closeConversation(conversationId, values.closeReason.trim())
-      toast.success(`已关闭会话：#${conversationId}`)
+      toast.success(t("conversationAction.closed", { id: conversationId }))
       reset(emptyForm)
       onOpenChange(false)
       await onSuccess?.()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "关闭会话失败")
+      toast.error(error instanceof Error ? error.message : t("conversationAction.closeFailed"))
     } finally {
       setSaving(false)
     }
@@ -122,20 +124,19 @@ function ConversationCloseDialogBody({
   return (
     <DialogContent className="max-w-lg gap-0 p-0 sm:max-w-lg">
       <DialogHeader className="px-6 pt-6">
-        <DialogTitle>关闭会话</DialogTitle>
-        {/* <DialogDescription>
-          当前会话：{conversationId ? `#${conversationId}` : "-"}
-        </DialogDescription> */}
+        <DialogTitle>{t("conversationAction.closeTitle")}</DialogTitle>
       </DialogHeader>
       <form onSubmit={handleSubmit(onFormSubmit)}>
         <div className="space-y-4 p-6">
           <Field data-invalid={!!errors.closeReason}>
-            <FieldLabel htmlFor="conversation-close-reason">关闭原因</FieldLabel>
+            <FieldLabel htmlFor="conversation-close-reason">
+              {t("conversationAction.closeReason")}
+            </FieldLabel>
             <FieldContent>
               <Textarea
                 id="conversation-close-reason"
                 rows={4}
-                placeholder="填写关闭原因，关闭后会写入操作记录"
+                placeholder={t("conversationAction.closeReasonPlaceholder")}
                 aria-invalid={!!errors.closeReason}
                 {...register("closeReason")}
               />
@@ -150,11 +151,11 @@ function ConversationCloseDialogBody({
             onClick={() => onOpenChange(false)}
             disabled={saving}
           >
-            取消
+            {t("conversationAction.cancel")}
           </Button>
           <Button type="submit" disabled={saving}>
             <CircleXIcon />
-            {saving ? "关闭中..." : "确认关闭"}
+            {saving ? t("conversationAction.closing") : t("conversationAction.confirmClose")}
           </Button>
         </DialogFooter>
       </form>

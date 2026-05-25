@@ -38,6 +38,24 @@ type WidgetConfigResponse = {
   >>
 }
 
+function getWidgetLocale() {
+  try {
+    const stored = window.localStorage?.getItem("cs_ai_agent_locale")
+    const language = stored || document.documentElement.lang || window.navigator?.language || ""
+    return language.toLowerCase().startsWith("en") ? "en-US" : "zh-CN"
+  } catch {
+    return "zh-CN"
+  }
+}
+
+function getDefaultWidgetTitle() {
+  return getWidgetLocale() === "en-US" ? "Support" : "\u5728\u7ebf\u5ba2\u670d"
+}
+
+function getLauncherText() {
+  return getWidgetLocale() === "en-US" ? "Support" : "\u5ba2\u670d"
+}
+
 type FrameMessage =
   | { type: "cs-agent:init"; payload: KefuChatRuntimeConfig }
   | { type: "cs-agent:open" }
@@ -351,7 +369,7 @@ type FrameMessage =
 
     state.frame = document.createElement("iframe")
     state.frame.dataset.csAgentWidget = "frame"
-    state.frame.title = state.config.title || "在线客服"
+    state.frame.title = state.config.title || getDefaultWidgetTitle()
     state.frame.src = state.frameUrl.toString()
     applyFrameLayout()
     state.frame.style.display = "block"
@@ -417,7 +435,7 @@ type FrameMessage =
     const text = document.createElement("span")
     button.type = "button"
     button.dataset.csAgentWidget = "launcher"
-    button.setAttribute("aria-label", config.title || "在线客服")
+    button.setAttribute("aria-label", config.title || getDefaultWidgetTitle())
     icon.setAttribute("viewBox", "0 0 24 24")
     icon.setAttribute("fill", "none")
     icon.setAttribute("stroke", "currentColor")
@@ -433,7 +451,7 @@ type FrameMessage =
       path.setAttribute("d", pathData)
       icon.appendChild(path)
     })
-    text.textContent = "客服"
+    text.textContent = getLauncherText()
     text.style.display = "block"
     button.style.position = "fixed"
     button.style.bottom = "24px"

@@ -20,6 +20,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { MoreHorizontalIcon, FolderIcon, ShareIcon, Trash2Icon } from "lucide-react"
+import { useI18n } from "@/i18n/provider"
 
 export function NavDocuments({
   items,
@@ -32,9 +33,10 @@ export function NavDocuments({
 }) {
   const pathname = usePathname()
   const { isMobile } = useSidebar()
+  const t = useI18n()
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-      <SidebarGroupLabel>业务模块</SidebarGroupLabel>
+      <SidebarGroupLabel>{t("scaffold.businessModules")}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => (
           <SidebarMenuItem key={item.name}>
@@ -66,18 +68,18 @@ export function NavDocuments({
                 <DropdownMenuItem>
                   <FolderIcon
                   />
-                  <span>打开</span>
+                  <span>{t("scaffold.open")}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <ShareIcon
                   />
-                  <span>分享</span>
+                  <span>{t("scaffold.share")}</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive">
                   <Trash2Icon
                   />
-                  <span>删除</span>
+                  <span>{t("scaffold.delete")}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -86,7 +88,7 @@ export function NavDocuments({
         <SidebarMenuItem>
           <SidebarMenuButton className="text-sidebar-foreground/70">
             <MoreHorizontalIcon className="text-sidebar-foreground/70" />
-            <span>更多</span>
+            <span>{t("scaffold.more")}</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>

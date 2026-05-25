@@ -33,10 +33,12 @@ import {
   type MCPToolCallResult,
   type MCPToolInfo,
 } from "@/lib/api/admin";
+import { useI18n } from "@/i18n/provider";
 
 const defaultServerCode = "";
 
 export default function MCPDashboardPage() {
+  const t = useI18n();
   const [serverCode, setServerCode] = useState(defaultServerCode);
   const [servers, setServers] = useState<MCPServerInfo[]>([]);
   const [connection, setConnection] = useState<MCPConnectionResult | null>(
@@ -59,9 +61,9 @@ export default function MCPDashboardPage() {
         value: server.code,
         label: server.enabled
           ? `${server.code} (${server.endpoint})`
-          : `${server.code} (disabled)`,
+          : `${server.code} (${t("mcp.disabled")})`,
       })),
-    [servers],
+    [servers, t],
   );
 
   useEffect(() => {
@@ -76,7 +78,7 @@ export default function MCPDashboardPage() {
         }
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : "加载 MCP 服务失败",
+          error instanceof Error ? error.message : t("mcp.loadServersFailed"),
         );
       } finally {
         setLoadingServers(false);
@@ -84,16 +86,16 @@ export default function MCPDashboardPage() {
     }
 
     void loadServers();
-  }, []);
+  }, [t]);
 
   async function handleTestConnection() {
     setTesting(true);
     try {
       const result = await testMCPConnection(serverCode.trim());
       setConnection(result);
-      toast.success("MCP 连接成功");
+      toast.success(t("mcp.connectSuccess"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "MCP 连接失败");
+      toast.error(error instanceof Error ? error.message : t("mcp.connectFailed"));
     } finally {
       setTesting(false);
     }
@@ -104,9 +106,9 @@ export default function MCPDashboardPage() {
     try {
       const result = await listMCPTools(serverCode.trim());
       setTools(result);
-      toast.success(`已加载 ${result.length} 个工具`);
+      toast.success(t("mcp.toolsLoaded", { count: result.length }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载工具失败");
+      toast.error(error instanceof Error ? error.message : t("mcp.loadToolsFailed"));
     } finally {
       setLoadingTools(false);
     }
@@ -114,11 +116,11 @@ export default function MCPDashboardPage() {
 
   async function handleCallTool() {
     if (!activeTool) {
-      toast.error("请先选择一个工具");
+      toast.error(t("mcp.selectToolFirst"));
       return;
     }
     if (argumentsError) {
-      toast.error("Arguments JSON 格式不合法");
+      toast.error(t("mcp.argumentsInvalid"));
       return;
     }
 
@@ -128,7 +130,7 @@ export default function MCPDashboardPage() {
         ? (JSON.parse(argumentsText) as Record<string, unknown>)
         : {};
     } catch {
-      toast.error("arguments 必须是合法 JSON");
+      toast.error(t("mcp.argumentsMustBeJson"));
       return;
     }
 
@@ -140,9 +142,9 @@ export default function MCPDashboardPage() {
         arguments: parsedArguments,
       });
       setToolResult(result);
-      toast.success(result.isError ? "工具返回错误结果" : "工具调用成功");
+      toast.success(result.isError ? t("mcp.toolReturnedError") : t("mcp.toolCallSuccess"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "工具调用失败");
+      toast.error(error instanceof Error ? error.message : t("mcp.toolCallFailed"));
     } finally {
       setCallingTool(false);
     }
@@ -164,25 +166,6 @@ export default function MCPDashboardPage() {
   return (
     <>
       <DashboardPage className="gap-6">
-        {/* <div className="flex flex-col gap-2">
-          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setConnection(null)
-                  setTools([])
-                  setToolResult(null)
-                  setActiveTool(null)
-                }}
-              >
-                <RefreshCwIcon className="mr-2 size-4" />
-                清空结果
-              </Button>
-            </div>
-          </div>
-        </div> */}
-
         <DashboardToolbar
           actions={
             <>
@@ -195,7 +178,7 @@ export default function MCPDashboardPage() {
                 ) : (
                   <PlugZapIcon className="mr-2 size-4" />
                 )}
-                测试连接
+                {t("mcp.testConnection")}
               </Button>
               <Button
                 variant="outline"
@@ -207,20 +190,20 @@ export default function MCPDashboardPage() {
                 ) : (
                   <WrenchIcon className="mr-2 size-4" />
                 )}
-                列出工具
+                {t("mcp.listTools")}
               </Button>
             </>
           }
         >
           <div className="flex min-w-0 flex-1 items-center gap-3">
-            <span className="shrink-0 text-sm font-medium">服务配置</span>
+            <span className="shrink-0 text-sm font-medium">{t("mcp.serverConfig")}</span>
             <div className="min-w-[280px] max-w-[520px] flex-1">
               <OptionCombobox
                 value={serverCode}
                 options={serverOptions}
-                placeholder="选择一个 MCP Server"
-                searchPlaceholder="搜索 serverCode"
-                emptyText="没有可用的 MCP Server"
+                placeholder={t("mcp.selectServer")}
+                searchPlaceholder={t("mcp.searchServer")}
+                emptyText={t("mcp.emptyServer")}
                 disabled={loadingServers}
                 onChange={(value) => {
                   setServerCode(value);
@@ -235,7 +218,7 @@ export default function MCPDashboardPage() {
           {connection ? (
             <div className="w-full rounded-lg border bg-muted/30 p-4 text-sm">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge>已连接</Badge>
+                <Badge>{t("mcp.connected")}</Badge>
                 <span className="font-medium">
                   {connection.serverName || "-"}
                 </span>
@@ -254,15 +237,15 @@ export default function MCPDashboardPage() {
 
         {tools.length === 0 ? (
           <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-            暂无工具结果，先点击上方“列出工具”。
+            {t("mcp.emptyToolsHint")}
           </div>
         ) : (
           <DashboardTableShell>
             <div>
               <div className="grid grid-cols-[minmax(0,220px)_minmax(0,1fr)_88px] gap-4 border-b bg-muted/40 px-4 py-3 text-sm font-medium text-muted-foreground">
-                <div>工具名</div>
-                <div>描述</div>
-                <div className="text-right">操作</div>
+                <div>{t("mcp.toolName")}</div>
+                <div>{t("mcp.description")}</div>
+                <div className="text-right">{t("mcp.actions")}</div>
               </div>
               {tools.map((tool) => (
                 <div
@@ -280,7 +263,7 @@ export default function MCPDashboardPage() {
                       size="sm"
                       onClick={() => openToolDrawer(tool)}
                     >
-                      查看
+                      {t("mcp.view")}
                     </Button>
                   </div>
                 </div>
@@ -293,10 +276,9 @@ export default function MCPDashboardPage() {
       <Drawer open={drawerOpen} direction="right" onOpenChange={setDrawerOpen}>
         <DrawerContent className="min-w-3xl">
           <DrawerHeader>
-            <DrawerTitle>{activeTool?.name || "工具详情"}</DrawerTitle>
+            <DrawerTitle>{activeTool?.name || t("mcp.toolDetail")}</DrawerTitle>
             <DrawerDescription>
-              在这里查看工具详细信息，并使用当前选择的 MCP Server
-              直接做一次真实调用测试。
+              {t("mcp.detailDescription")}
             </DrawerDescription>
           </DrawerHeader>
           <div className="flex-1 space-y-4 overflow-y-auto px-4 pb-4">
@@ -312,7 +294,7 @@ export default function MCPDashboardPage() {
                     ) : null}
                   </div>
                   <p className="mt-3 text-sm text-muted-foreground">
-                    {activeTool.description || "暂无描述"}
+                    {activeTool.description || t("mcp.noDescription")}
                   </p>
                 </div>
 
@@ -354,7 +336,7 @@ export default function MCPDashboardPage() {
                     ) : (
                       <WrenchIcon className="mr-2 size-4" />
                     )}
-                    测试工具
+                    {t("mcp.testTool")}
                   </Button>
                   {toolResult ? (
                     <div className="space-y-4 rounded-lg border p-4">
@@ -364,7 +346,7 @@ export default function MCPDashboardPage() {
                             toolResult.isError ? "destructive" : "default"
                           }
                         >
-                          {toolResult.isError ? "返回错误" : "调用成功"}
+                          {toolResult.isError ? t("mcp.returnedError") : t("mcp.callSuccess")}
                         </Badge>
                         <span className="text-sm font-medium">
                           {toolResult.toolName}
@@ -390,7 +372,7 @@ export default function MCPDashboardPage() {
           </div>
           <DrawerFooter>
             <Button variant="outline" onClick={() => setDrawerOpen(false)}>
-              关闭
+              {t("mcp.close")}
             </Button>
           </DrawerFooter>
         </DrawerContent>

@@ -9,6 +9,7 @@ import (
 	"cs-agent/internal/pkg/config"
 	"cs-agent/internal/pkg/enums"
 	"cs-agent/internal/pkg/errorsx"
+	"cs-agent/internal/pkg/i18nx"
 	"cs-agent/internal/pkg/toolx"
 )
 
@@ -33,6 +34,10 @@ type MCPToolCatalogItem struct {
 }
 
 func (s *toolCatalogService) ListMCPTools(ctx context.Context) ([]MCPToolCatalogItem, error) {
+	return s.ListMCPToolsWithLocale(ctx, i18nx.LocaleZhCN)
+}
+
+func (s *toolCatalogService) ListMCPToolsWithLocale(ctx context.Context, locale string) ([]MCPToolCatalogItem, error) {
 	cfg := config.Current()
 	ret := make([]MCPToolCatalogItem, 0, 3)
 	for _, spec := range toolx.ListAgentDirectToolSpecs() {
@@ -45,8 +50,8 @@ func (s *toolCatalogService) ListMCPTools(ctx context.Context) ([]MCPToolCatalog
 			ToolName:     spec.Name,
 			SourceType:   spec.SourceType,
 			AutoInjected: spec.AutoInjected,
-			Title:        spec.Title,
-			Description:  spec.Description,
+			Title:        toolx.GetRegisteredToolTitleLocale(spec.Code, locale),
+			Description:  toolx.GetRegisteredToolDescriptionLocale(spec.Code, locale),
 		})
 	}
 	if !cfg.MCP.Enabled {

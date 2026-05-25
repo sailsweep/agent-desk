@@ -5,6 +5,7 @@ import { CopyIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import { type AdminUser } from "@/lib/api/admin"
+import { useI18n } from "@/i18n/provider"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -32,6 +33,7 @@ export function ResetPasswordDialogs({
   onOpenChange,
   onConfirm,
 }: ResetPasswordDialogsProps) {
+  const t = useI18n()
   const [copying, setCopying] = useState(false)
   const showingResult = password.trim().length > 0
 
@@ -43,9 +45,9 @@ export function ResetPasswordDialogs({
     setCopying(true)
     try {
       await navigator.clipboard.writeText(password)
-      toast.success("密码已复制")
+      toast.success(t("user.copied"))
     } catch {
-      toast.error("复制失败，请手动复制")
+      toast.error(t("user.copyFailed"))
     } finally {
       setCopying(false)
     }
@@ -56,14 +58,14 @@ export function ResetPasswordDialogs({
       <Dialog open={open && !showingResult} onOpenChange={onOpenChange}>
         <DialogContent showCloseButton={!saving}>
           <DialogHeader>
-            <DialogTitle>确认重置密码</DialogTitle>
+            <DialogTitle>{t("user.confirmResetTitle")}</DialogTitle>
             <DialogDescription>
-              确认后将为 {item?.username || "-"} 生成新的随机密码，并使该用户当前登录会话失效。
+              {t("user.confirmResetDescription", { username: item?.username || "-" })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button onClick={() => void onConfirm()} disabled={saving}>
-              {saving ? "重置中..." : "确认重置"}
+              {saving ? t("user.resetting") : t("user.confirmReset")}
             </Button>
             <Button
               type="button"
@@ -71,7 +73,7 @@ export function ResetPasswordDialogs({
               onClick={() => onOpenChange(false)}
               disabled={saving}
             >
-              取消
+              {t("user.cancel")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -79,22 +81,22 @@ export function ResetPasswordDialogs({
       <Dialog open={open && showingResult} onOpenChange={onOpenChange}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>重置密码成功</DialogTitle>
+            <DialogTitle>{t("user.resetSuccessTitle")}</DialogTitle>
             <DialogDescription>
-              {item?.username || "-"} 的新密码已生成，请及时复制并安全传达。
+              {t("user.resetSuccessDescription", { username: item?.username || "-" })}
             </DialogDescription>
           </DialogHeader>
           <div className="rounded-xl border bg-muted/40 p-4">
-            <div className="text-xs text-muted-foreground">新密码</div>
+            <div className="text-xs text-muted-foreground">{t("user.newPassword")}</div>
             <div className="mt-2 break-all font-mono text-base">{password}</div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => void handleCopy()} disabled={copying}>
               <CopyIcon />
-              {copying ? "复制中..." : "复制密码"}
+              {copying ? t("user.copying") : t("user.copyPassword")}
             </Button>
             <Button type="button" onClick={() => onOpenChange(false)}>
-              关闭
+              {t("user.close")}
             </Button>
           </DialogFooter>
         </DialogContent>

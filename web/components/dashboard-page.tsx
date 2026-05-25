@@ -1,7 +1,10 @@
+"use client"
+
 import type { ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
 import { TableCell, TableRow } from "@/components/ui/table"
+import { useI18n } from "@/i18n/provider"
 
 export function DashboardPage({
   className,
@@ -65,18 +68,20 @@ export function DashboardTableShell({
 export function DashboardTableStateRow({
   colSpan,
   loading,
-  loadingText = "正在加载数据...",
-  emptyText = "暂无数据",
+  loadingText,
+  emptyText,
 }: {
   colSpan: number
   loading?: boolean
   loadingText?: string
   emptyText?: string
 }) {
+  const t = useI18n()
+
   return (
     <TableRow>
       <TableCell colSpan={colSpan} className="py-12 text-center text-muted-foreground">
-        {loading ? loadingText : emptyText}
+        {loading ? (loadingText ?? t("common.loadingData")) : (emptyText ?? t("common.emptyData"))}
       </TableCell>
     </TableRow>
   )

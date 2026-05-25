@@ -1,6 +1,7 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
+import { useI18n } from "@/i18n/provider"
 import {
   Card,
   CardContent,
@@ -25,18 +26,24 @@ function getLoadTone(loadRate: number) {
 }
 
 export function TeamLoadPanel({ agentStats }: TeamLoadPanelProps) {
+  const t = useI18n()
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>客服组负载</CardTitle>
+        <CardTitle>{t("dashboardHome.teamLoad")}</CardTitle>
         <CardDescription>
-          在线 {agentStats.onlineAgents}，忙碌 {agentStats.busyAgents}，离线 {agentStats.offlineAgents}
+          {t("dashboardHome.teamLoadDescription", {
+            online: agentStats.onlineAgents,
+            busy: agentStats.busyAgents,
+            offline: agentStats.offlineAgents,
+          })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {agentStats.teamLoads.length === 0 ? (
           <div className="rounded-xl border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
-            暂无客服组数据
+            {t("dashboardHome.noTeamData")}
           </div>
         ) : (
           agentStats.teamLoads.map((item) => (
@@ -46,20 +53,27 @@ export function TeamLoadPanel({ agentStats }: TeamLoadPanelProps) {
                   <div className="flex items-center gap-2">
                     <div className="font-medium">{item.teamName}</div>
                     {item.hasScheduleNow ? (
-                      <Badge variant="secondary">排班中</Badge>
+                      <Badge variant="secondary">{t("dashboardHome.scheduled")}</Badge>
                     ) : (
-                      <Badge variant="outline">无当前排班</Badge>
+                      <Badge variant="outline">{t("dashboardHome.notScheduled")}</Badge>
                     )}
                   </div>
                   <div className="mt-1 text-sm text-muted-foreground">
-                    总客服 {item.totalAgents}，在线 {item.onlineAgents}，忙碌 {item.busyAgents}，离线{" "}
-                    {item.offlineAgents}
+                    {t("dashboardHome.teamStats", {
+                      total: item.totalAgents,
+                      online: item.onlineAgents,
+                      busy: item.busyAgents,
+                      offline: item.offlineAgents,
+                    })}
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-2xl font-semibold">{item.loadRate.toFixed(1)}%</div>
                   <div className="text-xs text-muted-foreground">
-                    负载 {item.processingConversations}/{item.maxConcurrentCapacity || 0}
+                    {t("dashboardHome.load", {
+                      processing: item.processingConversations,
+                      capacity: item.maxConcurrentCapacity || 0,
+                    })}
                   </div>
                 </div>
               </div>
@@ -73,19 +87,19 @@ export function TeamLoadPanel({ agentStats }: TeamLoadPanelProps) {
 
               <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-xl bg-muted/40 px-3 py-2">
-                  <div className="text-muted-foreground">待接入</div>
+                  <div className="text-muted-foreground">{t("dashboardHome.waiting")}</div>
                   <div className="mt-1 text-lg font-semibold">{item.waitingConversations}</div>
                 </div>
                 <div className="rounded-xl bg-muted/40 px-3 py-2">
-                  <div className="text-muted-foreground">处理中</div>
+                  <div className="text-muted-foreground">{t("dashboardHome.processing")}</div>
                   <div className="mt-1 text-lg font-semibold">{item.processingConversations}</div>
                 </div>
                 <div className="rounded-xl bg-muted/40 px-3 py-2">
-                  <div className="text-muted-foreground">并发容量</div>
+                  <div className="text-muted-foreground">{t("dashboardHome.capacity")}</div>
                   <div className="mt-1 text-lg font-semibold">{item.maxConcurrentCapacity}</div>
                 </div>
                 <div className="rounded-xl bg-muted/40 px-3 py-2">
-                  <div className="text-muted-foreground">忙碌客服</div>
+                  <div className="text-muted-foreground">{t("dashboardHome.busyAgents")}</div>
                   <div className="mt-1 text-lg font-semibold">{item.busyAgents}</div>
                 </div>
               </div>

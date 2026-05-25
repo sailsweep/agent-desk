@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Controller, Resolver, useForm } from "react-hook-form"
 import { z } from "zod/v4"
@@ -18,11 +18,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { type AIConfig, type CreateAIConfigPayload, fetchAIConfig } from "@/lib/api/admin"
 import {
   AIModelType,
-  AIModelTypeLabels,
   AIProvider,
-  AIProviderLabels,
 } from "@/lib/generated/enums"
-import { getEnumOptions } from "@/lib/enums"
+import { useI18n } from "@/i18n/provider"
 import { OptionCombobox } from "./option-combobox"
 
 type AIConfigEditDialogProps = {
@@ -33,15 +31,19 @@ type AIConfigEditDialogProps = {
   onSubmit: (payload: CreateAIConfigPayload) => Promise<void>
 }
 
-const providerOptions = getEnumOptions(AIProviderLabels).map((option) => ({
-  value: String(option.value),
-  label: option.label,
-}))
+type TFunction = (key: string, values?: Record<string, string | number>) => string
 
-const modelTypeOptions = getEnumOptions(AIModelTypeLabels).map((option) => ({
-  value: String(option.value),
-  label: option.label,
-}))
+function getProviderOptions(t: TFunction) {
+  return [{ value: String(AIProvider.OpenAI), label: t("aiConfig.providerOpenAI") }]
+}
+
+function getModelTypeOptions(t: TFunction) {
+  return [
+    { value: String(AIModelType.LLM), label: t("aiConfig.modelTypeLlm") },
+    { value: String(AIModelType.Embedding), label: t("aiConfig.modelTypeEmbedding") },
+    { value: String(AIModelType.Rerank), label: t("aiConfig.modelTypeRerank") },
+  ]
+}
 
 const emptyForm: EditForm = {
   name: "",
@@ -60,29 +62,22 @@ const emptyForm: EditForm = {
   remark: "",
 }
 
-const aiConfigFormSchema = z.object({
-  name: z.string().trim().min(1, "配置名称不能为空"),
-  provider: z.string().trim().min(1, "供应商不能为空"),
-  baseUrl: z.string().trim().min(1, "基础地址不能为空"),
-  apiKey: z.string().trim(),
-  modelType: z.string().trim().min(1, "模型类型不能为空"),
-  modelName: z.string().trim().min(1, "模型名称不能为空"),
-  dimension: z.string().trim().regex(/^\d+$/, "向量维度必须是大于等于 0 的整数"),
-  maxContextTokens: z.string().trim().regex(/^\d+$/, "最大上下文 Token 必须是大于等于 0 的整数"),
-  maxOutputTokens: z.string().trim().regex(/^\d+$/, "最大输出 Token 必须是大于等于 0 的整数"),
-  timeoutMs: z.string().trim().regex(/^\d+$/, "超时时间必须是大于等于 0 的整数"),
-  maxRetryCount: z.string().trim().regex(/^\d+$/, "最大重试次数必须是大于等于 0 的整数"),
-  rpmLimit: z.string().trim().regex(/^\d+$/, "RPM 限制必须是大于等于 0 的整数"),
-  tpmLimit: z.string().trim().regex(/^\d+$/, "TPM 限制必须是大于等于 0 的整数"),
-  remark: z.string().trim(),
-})
-
-type EditForm = z.infer<typeof aiConfigFormSchema>
-const editFormResolver = zodResolver(aiConfigFormSchema as never) as Resolver<
-  z.input<typeof aiConfigFormSchema>,
-  undefined,
-  z.output<typeof aiConfigFormSchema>
->
+type EditForm = {
+  name: string
+  provider: string
+  baseUrl: string
+  apiKey: string
+  modelType: string
+  modelName: string
+  dimension: string
+  maxContextTokens: string
+  maxOutputTokens: string
+  timeoutMs: string
+  maxRetryCount: string
+  rpmLimit: string
+  tpmLimit: string
+  remark: string
+}
 
 function buildForm(item: AIConfig | null): EditForm {
   if (!item) {
@@ -159,12 +154,35 @@ function AIConfigEditDialogBody({
   onSubmit,
 }: AIConfigEditDialogBodyProps) {
   const formId = "ai-config-edit-form"
+  const t = useI18n()
   const [loading, setLoading] = useState(false)
-  const form = useForm<
-    z.input<typeof aiConfigFormSchema>,
-    undefined,
-    z.output<typeof aiConfigFormSchema>
-  >({
+  const providerOptions = useMemo(() => getProviderOptions(t), [t])
+  const modelTypeOptions = useMemo(() => getModelTypeOptions(t), [t])
+  const aiConfigFormSchema = useMemo(
+    () =>
+      z.object({
+        name: z.string().trim().min(1, t("aiConfig.nameRequired")),
+        provider: z.string().trim().min(1, t("aiConfig.providerRequired")),
+        baseUrl: z.string().trim().min(1, t("aiConfig.baseUrlRequired")),
+        apiKey: z.string().trim(),
+        modelType: z.string().trim().min(1, t("aiConfig.modelTypeRequired")),
+        modelName: z.string().trim().min(1, t("aiConfig.modelNameRequired")),
+        dimension: z.string().trim().regex(/^\d+$/, t("aiConfig.dimensionInvalid")),
+        maxContextTokens: z.string().trim().regex(/^\d+$/, t("aiConfig.maxContextInvalid")),
+        maxOutputTokens: z.string().trim().regex(/^\d+$/, t("aiConfig.maxOutputInvalid")),
+        timeoutMs: z.string().trim().regex(/^\d+$/, t("aiConfig.timeoutInvalid")),
+        maxRetryCount: z.string().trim().regex(/^\d+$/, t("aiConfig.retryInvalid")),
+        rpmLimit: z.string().trim().regex(/^\d+$/, t("aiConfig.rpmInvalid")),
+        tpmLimit: z.string().trim().regex(/^\d+$/, t("aiConfig.tpmInvalid")),
+        remark: z.string().trim(),
+      }),
+    [t],
+  )
+  const editFormResolver = useMemo(
+    () => zodResolver(aiConfigFormSchema as never) as Resolver<EditForm>,
+    [aiConfigFormSchema],
+  )
+  const form = useForm<EditForm>({
     resolver: editFormResolver,
     defaultValues: emptyForm,
   })
@@ -206,7 +224,7 @@ function AIConfigEditDialogBody({
     <ProjectDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={itemId ? "编辑 AI 配置" : "新建 AI 配置"}
+      title={itemId ? t("aiConfig.editTitle") : t("aiConfig.createTitle")}
       size="xl"
       footer={
         <>
@@ -216,26 +234,26 @@ function AIConfigEditDialogBody({
             onClick={() => onOpenChange(false)}
             disabled={saving}
           >
-            取消
+            {t("aiConfig.cancel")}
           </Button>
           <Button type="submit" form={formId} disabled={saving || loading}>
-            {saving ? "保存中..." : itemId ? "保存" : "创建"}
+            {saving ? t("aiConfig.saving") : itemId ? t("aiConfig.save") : t("aiConfig.create")}
           </Button>
         </>
       }
     >
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="text-muted-foreground">加载中...</div>
+          <div className="text-muted-foreground">{t("aiConfig.loading")}</div>
         </div>
       ) : (
         <form id={formId} onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
           <Field data-invalid={!!errors.name}>
-            <FieldLabel htmlFor="ai-config-name">配置名称</FieldLabel>
+            <FieldLabel htmlFor="ai-config-name">{t("aiConfig.name")}</FieldLabel>
             <FieldContent>
               <Input
                 id="ai-config-name"
-                placeholder="例如：OpenAI 主回答模型"
+                placeholder={t("aiConfig.namePlaceholder")}
                 aria-invalid={!!errors.name}
                 {...register("name")}
               />
@@ -245,7 +263,7 @@ function AIConfigEditDialogBody({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field data-invalid={!!errors.provider}>
-              <FieldLabel>供应商</FieldLabel>
+              <FieldLabel>{t("aiConfig.provider")}</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
@@ -254,9 +272,9 @@ function AIConfigEditDialogBody({
                     <OptionCombobox
                       value={field.value}
                       options={providerOptions}
-                      placeholder="请选择供应商"
-                      searchPlaceholder="搜索供应商"
-                      emptyText="未找到供应商"
+                      placeholder={t("aiConfig.selectProvider")}
+                      searchPlaceholder={t("aiConfig.searchProvider")}
+                      emptyText={t("aiConfig.emptyProvider")}
                       onChange={field.onChange}
                     />
                   )}
@@ -266,7 +284,7 @@ function AIConfigEditDialogBody({
             </Field>
 
             <Field data-invalid={!!errors.modelType}>
-              <FieldLabel>模型类型</FieldLabel>
+              <FieldLabel>{t("aiConfig.modelType")}</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
@@ -275,9 +293,9 @@ function AIConfigEditDialogBody({
                     <OptionCombobox
                       value={field.value}
                       options={modelTypeOptions}
-                      placeholder="请选择模型类型"
-                      searchPlaceholder="搜索模型类型"
-                      emptyText="未找到模型类型"
+                      placeholder={t("aiConfig.selectModelType")}
+                      searchPlaceholder={t("aiConfig.searchModelType")}
+                      emptyText={t("aiConfig.emptyModelType")}
                       onChange={field.onChange}
                     />
                   )}
@@ -288,11 +306,11 @@ function AIConfigEditDialogBody({
           </div>
 
           <Field data-invalid={!!errors.baseUrl}>
-            <FieldLabel htmlFor="ai-config-base-url">Base URL</FieldLabel>
+            <FieldLabel htmlFor="ai-config-base-url">{t("aiConfig.baseUrl")}</FieldLabel>
             <FieldContent>
               <Input
                 id="ai-config-base-url"
-                placeholder="例如：https://api.openai.com/v1"
+                placeholder={t("aiConfig.baseUrlPlaceholder")}
                 aria-invalid={!!errors.baseUrl}
                 {...register("baseUrl")}
               />
@@ -306,7 +324,7 @@ function AIConfigEditDialogBody({
               <Input
                 id="ai-config-api-key"
                 type="password"
-                placeholder="请输入 API Key"
+                placeholder={t("aiConfig.apiKeyPlaceholder")}
                 aria-invalid={!!errors.apiKey}
                 {...register("apiKey")}
               />
@@ -316,11 +334,11 @@ function AIConfigEditDialogBody({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field data-invalid={!!errors.modelName}>
-              <FieldLabel htmlFor="ai-config-model-name">模型名称</FieldLabel>
+              <FieldLabel htmlFor="ai-config-model-name">{t("aiConfig.modelName")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="ai-config-model-name"
-                  placeholder="例如：gpt-4o-mini"
+                  placeholder={t("aiConfig.modelNamePlaceholder")}
                   aria-invalid={!!errors.modelName}
                   {...register("modelName")}
                 />
@@ -329,7 +347,7 @@ function AIConfigEditDialogBody({
             </Field>
 
             <Field data-invalid={!!errors.dimension}>
-              <FieldLabel htmlFor="ai-config-dimension">向量维度</FieldLabel>
+              <FieldLabel htmlFor="ai-config-dimension">{t("aiConfig.dimensionLabel")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="ai-config-dimension"
@@ -347,7 +365,7 @@ function AIConfigEditDialogBody({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field data-invalid={!!errors.maxContextTokens}>
-              <FieldLabel htmlFor="ai-config-max-context">最大上下文 Token</FieldLabel>
+              <FieldLabel htmlFor="ai-config-max-context">{t("aiConfig.maxContextTokens")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="ai-config-max-context"
@@ -362,7 +380,7 @@ function AIConfigEditDialogBody({
             </Field>
 
             <Field data-invalid={!!errors.maxOutputTokens}>
-              <FieldLabel htmlFor="ai-config-max-output">最大输出 Token</FieldLabel>
+              <FieldLabel htmlFor="ai-config-max-output">{t("aiConfig.maxOutputTokens")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="ai-config-max-output"
@@ -379,7 +397,7 @@ function AIConfigEditDialogBody({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field data-invalid={!!errors.timeoutMs}>
-              <FieldLabel htmlFor="ai-config-timeout">超时时间 (ms)</FieldLabel>
+              <FieldLabel htmlFor="ai-config-timeout">{t("aiConfig.timeoutMs")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="ai-config-timeout"
@@ -394,7 +412,7 @@ function AIConfigEditDialogBody({
             </Field>
 
             <Field data-invalid={!!errors.maxRetryCount}>
-              <FieldLabel htmlFor="ai-config-retry">最大重试次数</FieldLabel>
+              <FieldLabel htmlFor="ai-config-retry">{t("aiConfig.maxRetryCount")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="ai-config-retry"
@@ -411,7 +429,7 @@ function AIConfigEditDialogBody({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Field data-invalid={!!errors.rpmLimit}>
-              <FieldLabel htmlFor="ai-config-rpm">RPM 限制</FieldLabel>
+              <FieldLabel htmlFor="ai-config-rpm">{t("aiConfig.rpmLimit")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="ai-config-rpm"
@@ -426,7 +444,7 @@ function AIConfigEditDialogBody({
             </Field>
 
             <Field data-invalid={!!errors.tpmLimit}>
-              <FieldLabel htmlFor="ai-config-tpm">TPM 限制</FieldLabel>
+              <FieldLabel htmlFor="ai-config-tpm">{t("aiConfig.tpmLimit")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="ai-config-tpm"
@@ -442,11 +460,11 @@ function AIConfigEditDialogBody({
           </div>
 
           <Field data-invalid={!!errors.remark}>
-            <FieldLabel htmlFor="ai-config-remark">备注</FieldLabel>
+            <FieldLabel htmlFor="ai-config-remark">{t("aiConfig.remark")}</FieldLabel>
             <FieldContent>
               <Textarea
                 id="ai-config-remark"
-                placeholder="记录用途、费用、限制说明等"
+                placeholder={t("aiConfig.remarkPlaceholder")}
                 rows={3}
                 aria-invalid={!!errors.remark}
                 {...register("remark")}

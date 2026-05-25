@@ -9,6 +9,7 @@ import { JsonTreeViewer } from "@/components/json-tree-viewer"
 import { ProjectDialog } from "@/components/project-dialog"
 import { Button } from "@/components/ui/button"
 import { fetchAgentRunLog, type AgentRunLog } from "@/lib/api/admin"
+import { useI18n } from "@/i18n/provider"
 import { formatDateTime } from "@/lib/utils"
 
 type AgentRunLogDetailDialogProps = {
@@ -17,11 +18,14 @@ type AgentRunLogDetailDialogProps = {
   onOpenChange: (open: boolean) => void
 }
 
+type TFunction = (key: string, values?: Record<string, string | number>) => string
+
 export function AgentRunLogDetailDialog({
   open,
   logId,
   onOpenChange,
 }: AgentRunLogDetailDialogProps) {
+  const t = useI18n()
   const [loading, setLoading] = useState(false)
   const [activeLog, setActiveLog] = useState<AgentRunLog | null>(null)
 
@@ -42,7 +46,7 @@ export function AgentRunLogDetailDialog({
         }
       } catch (error) {
         if (!cancelled) {
-          toast.error(error instanceof Error ? error.message : "加载日志详情失败")
+          toast.error(error instanceof Error ? error.message : t("agentRunLog.loadDetailFailed"))
           onOpenChange(false)
         }
       } finally {
@@ -57,7 +61,7 @@ export function AgentRunLogDetailDialog({
     return () => {
       cancelled = true
     }
-  }, [logId, onOpenChange, open])
+  }, [logId, onOpenChange, open, t])
 
   useEffect(() => {
     if (open) {
@@ -87,35 +91,35 @@ export function AgentRunLogDetailDialog({
       title={
         <span className="flex items-center gap-2">
           <WorkflowIcon className="size-4" />
-          Agent 运行详情
+          {t("agentRunLog.detailTitle")}
         </span>
       }
-      description="查看 planner 选择、最终动作、回复内容与错误信息。"
+      description={t("agentRunLog.detailDescription")}
       size="xl"
       allowFullscreen
       defaultFullscreen
       bodyClassName="min-h-0"
       footer={
         <Button variant="outline" onClick={() => onOpenChange(false)}>
-          关闭
+          {t("agentRunLog.close")}
         </Button>
       }
     >
       {loading ? (
-        <div className="py-10 text-sm text-muted-foreground">加载中...</div>
+        <div className="py-10 text-sm text-muted-foreground">{t("agentRunLog.loading")}</div>
       ) : activeLog ? (
         <>
           <MetaStrip
             items={[
-              { label: "日志ID", value: String(activeLog.id) },
-              { label: "会话ID", value: String(activeLog.conversationId || "-") },
-              { label: "消息ID", value: String(activeLog.messageId || "-") },
+              { label: t("agentRunLog.logId"), value: String(activeLog.id) },
+              { label: t("agentRunLog.conversationId"), value: String(activeLog.conversationId || "-") },
+              { label: t("agentRunLog.messageId"), value: String(activeLog.messageId || "-") },
               { label: "AI Agent", value: String(activeLog.aiAgentId || "-") },
             ]}
           />
 
           <InfoBlock
-            title="规划阶段"
+            title={t("agentRunLog.planningStage")}
             lines={[
               `plannedAction: ${activeLog.plannedAction || "-"}`,
               `plannedSkillCode: ${activeLog.plannedSkillCode || "-"}`,
@@ -131,15 +135,15 @@ export function AgentRunLogDetailDialog({
             ]}
           />
           <InfoBlock
-            title="HITL 状态"
+            title={t("agentRunLog.hitlStatus")}
             lines={[
               `hitlStatus: ${activeLog.hitlStatus || "-"}`,
-              `hitlStatusName: ${activeLog.hitlStatusName || "-"}`,
-              `hitlSummary: ${activeLog.hitlSummary || "-"}`,
+              `hitlStatusName: ${getHitlStatusLabel(activeLog.hitlStatus, t) || "-"}`,
+              `hitlSummary: ${getHitlSummary(activeLog.hitlStatus, t) || "-"}`,
             ]}
           />
           <InfoBlock
-            title="执行结果"
+            title={t("agentRunLog.executionResult")}
             lines={[
               `finalAction: ${activeLog.finalAction || "-"}`,
               `finalStatus: ${activeLog.finalStatus || "-"}`,
@@ -151,38 +155,72 @@ export function AgentRunLogDetailDialog({
           />
 
           <JsonBlock
-            title="动态工具选择"
+            title={t("agentRunLog.dynamicTools")}
             jsonValue={activeToolSearchTrace}
             fallbackValue={activeLog.toolSearchTrace}
           />
           <JsonBlock
-            title="Graph Tool 调用"
+            title={t("agentRunLog.graphToolCall")}
             jsonValue={activeGraphToolTrace}
             fallbackValue={activeLog.graphToolTrace}
           />
           <TextBlock
             icon={<BotMessageSquareIcon className="size-4" />}
-            title="用户问题"
+            title={t("agentRunLog.userMessage")}
             value={activeLog.userMessage}
             renderAsHtml
           />
           <TextBlock
             icon={<WorkflowIcon className="size-4" />}
-            title="机器人回复"
+            title={t("agentRunLog.botReply")}
             value={activeLog.replyText}
           />
-          <TextBlock title="错误信息" value={activeLog.errorMessage} tone="danger" />
+          <TextBlock title={t("agentRunLog.errorMessage")} value={activeLog.errorMessage} tone="danger" />
           <JsonBlock
-            title="链路 Trace"
+            title={t("agentRunLog.trace")}
             jsonValue={activeTraceData}
             fallbackValue={activeLog.traceData}
           />
         </>
       ) : (
-        <div className="py-10 text-sm text-muted-foreground">未找到详情数据</div>
+        <div className="py-10 text-sm text-muted-foreground">{t("agentRunLog.notFound")}</div>
       )}
     </ProjectDialog>
   )
+}
+
+function getHitlStatusLabel(status: string | undefined, t: TFunction) {
+  switch (status) {
+    case "pending":
+      return t("agentRunLog.hitlPending")
+    case "confirmed":
+      return t("agentRunLog.hitlConfirmed")
+    case "cancelled":
+      return t("agentRunLog.hitlCancelled")
+    case "expired":
+      return t("agentRunLog.hitlExpired")
+    case "triggered":
+      return t("agentRunLog.hitlTriggered")
+    default:
+      return ""
+  }
+}
+
+function getHitlSummary(status: string | undefined, t: TFunction) {
+  switch (status) {
+    case "pending":
+      return t("agentRunLog.hitlPendingSummary")
+    case "confirmed":
+      return t("agentRunLog.hitlConfirmedSummary")
+    case "cancelled":
+      return t("agentRunLog.hitlCancelledSummary")
+    case "expired":
+      return t("agentRunLog.hitlExpiredSummary")
+    case "triggered":
+      return t("agentRunLog.hitlTriggeredSummary")
+    default:
+      return ""
+  }
 }
 
 function safeParseJSON(value: string) {

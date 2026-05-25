@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { ConversationTransferDialog } from "@/components/conversation-actions/transfer-dialog";
 import { ImMessageHTML } from "@/components/im-message-html";
 import { useImageLightbox } from "@/components/image-lightbox";
+import { useI18n } from "@/i18n/provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +40,7 @@ import { AgentMessageEditor } from "./agent-message-editor";
 const EMPTY_AGENT_MESSAGES: AgentMessage[] = [];
 
 export function ChatPanel() {
+  const t = useI18n();
   const conversation = useAgentConversationsStore(
     agentConversationSelectors.selectedConversation,
   );
@@ -119,8 +121,8 @@ export function ChatPanel() {
   }, [getViewport]);
 
   /**
-   * 与 widget 消息列表一致：在单条调度链内多帧滚底直到 scrollHeight 稳定，
-   * 避免多段滚底叠加导致滚动条抖动。
+   * Match the widget message list: keep scrolling for a few frames until
+   * scrollHeight stabilizes, which prevents stacked scroll jumps.
    */
   const scheduleScrollToBottom = useCallback(
     (attempts = 4) => {
@@ -170,7 +172,7 @@ export function ChatPanel() {
       return;
     }
     void markSelectedConversationRead().catch((error) => {
-      toast.error(error instanceof Error ? error.message : "设置已读失败");
+      toast.error(error instanceof Error ? error.message : t("conversation.markReadFailed"));
     });
   }, [
     conversation,
@@ -178,6 +180,7 @@ export function ChatPanel() {
     isNearBottom,
     loading,
     markSelectedConversationRead,
+    t,
   ]);
 
   useEffect(() => {
@@ -282,7 +285,7 @@ export function ChatPanel() {
       await loadOlderMessages();
     } catch (error) {
       prependScrollAnchorRef.current = null;
-      toast.error(error instanceof Error ? error.message : "加载历史消息失败");
+      toast.error(error instanceof Error ? error.message : t("conversation.loadHistoryFailed"));
     }
   };
 
@@ -292,7 +295,7 @@ export function ChatPanel() {
       shouldStickToBottomRef.current = true;
       await sendMessage(html);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "发送消息失败");
+      toast.error(error instanceof Error ? error.message : t("conversation.sendMessageFailed"));
     }
   };
 
@@ -300,7 +303,7 @@ export function ChatPanel() {
     if (!conversation || claiming) return;
     const session = readSession();
     if (!session?.user?.id) {
-      toast.error("未登录或登录已过期");
+      toast.error(t("conversation.claimRequiresSignIn"));
       return;
     }
 
@@ -309,15 +312,15 @@ export function ChatPanel() {
       await assignAgentConversation(
         conversation.id,
         session.user.id,
-        "认领会话",
+        t("conversation.claimReason"),
       );
 
       switchToMyActiveIfNeeded();
       setClaimDialogOpen(false);
-      toast.success("认领成功");
+      toast.success(t("conversation.claimSuccess"));
       await reloadConversationData(conversation.id);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "认领会话失败");
+      toast.error(error instanceof Error ? error.message : t("conversation.claimFailed"));
     } finally {
       setClaiming(false);
     }
@@ -332,9 +335,13 @@ export function ChatPanel() {
     return (
       <div className="mt-10 flex flex-1 items-center justify-center px-4">
         <div className="text-center text-muted-foreground">
-          <p className="text-lg">暂无会话</p>
-          <p className="mt-1 text-sm lg:hidden">点击左上角菜单打开列表并选择会话</p>
-          <p className="mt-1 hidden text-sm lg:block">请从左侧选择会话开始聊天</p>
+          <p className="text-lg">{t("conversation.empty")}</p>
+          <p className="mt-1 text-sm lg:hidden">
+            {t("conversation.noConversationMobile")}
+          </p>
+          <p className="mt-1 hidden text-sm lg:block">
+            {t("conversation.selectConversationToChat")}
+          </p>
         </div>
       </div>
     );
@@ -355,13 +362,13 @@ export function ChatPanel() {
               disabled={messagesLoadingMore}
               onClick={() => void handleLoadOlder()}
             >
-              {messagesLoadingMore ? "加载中…" : "加载更早的消息"}
+              {messagesLoadingMore ? t("conversation.loading") : t("conversation.loadOlder")}
             </Button>
           </div>
         ) : null}
         {loading ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
-            加载中...
+            {t("conversation.loading")}
           </div>
         ) : messages.length > 0 ? (
           messages.map((message) => (
@@ -378,7 +385,7 @@ export function ChatPanel() {
           ))
         ) : (
           <div className="py-8 text-center text-sm text-muted-foreground">
-            暂无消息
+            {t("conversation.emptyMessages")}
           </div>
         )}
       </div>
@@ -389,11 +396,11 @@ export function ChatPanel() {
     <div className="h-full overflow-auto border-t border-border/80 bg-card">
       {isClosedConversation ? (
         <div className="h-full flex justify-center items-center">
-          当前会话已关闭
+          {t("conversation.closedNotice")}
         </div>
       ) : conversation?.status === 1 ? (
         <div className="h-full flex justify-center items-center">
-          当前会话由 AI 接待中，转人工后才能由客服发送消息
+          {t("conversation.aiServingNotice")}
         </div>
       ) : isPendingConversation ? (
         <div className="h-full flex justify-center items-center">
@@ -403,7 +410,7 @@ export function ChatPanel() {
               disabled={claiming}
               size="sm"
             >
-              {claiming ? "认领中..." : "认领"}
+              {claiming ? t("conversation.claiming") : t("conversation.claim")}
             </Button>
           </div>
         </div>
@@ -424,7 +431,7 @@ export function ChatPanel() {
                 try {
                   await sendAttachment(file);
                 } catch (error) {
-                  toast.error(error instanceof Error ? error.message : "发送附件失败");
+                  toast.error(error instanceof Error ? error.message : t("conversation.sendAttachmentFailed"));
                 }
               }}
             />
@@ -477,11 +484,14 @@ export function ChatPanel() {
       >
         <DialogContent className="max-w-md" showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>确认认领会话</DialogTitle>
+            <DialogTitle>{t("conversation.claimTitle")}</DialogTitle>
             <DialogDescription>
               {conversation
-                ? `确认认领“${conversation.customerName || `客户 #${conversation.customerId || conversation.id}`}”吗？认领后会话会进入我的列表。`
-                : "确认认领当前会话吗？"}
+                ? `${t("conversation.claimConfirmPrefix")}${
+                    conversation.customerName ||
+                    `${t("conversation.customerFallbackPrefix")}${conversation.customerId || conversation.id}`
+                  }${t("conversation.claimConfirmSuffix")}`
+                : t("conversation.claimCurrent")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -491,14 +501,14 @@ export function ChatPanel() {
               disabled={claiming}
               onClick={() => setClaimDialogOpen(false)}
             >
-              取消
+              {t("conversation.cancel")}
             </Button>
             <Button
               type="button"
               disabled={claiming}
               onClick={() => void handleClaim()}
             >
-              {claiming ? "认领中..." : "确认认领"}
+              {claiming ? t("conversation.claiming") : t("conversation.confirmClaim")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -532,22 +542,25 @@ const MessageItem = memo(
     recalling,
     onRecall,
   }: MessageItemProps) {
+    const t = useI18n();
     const { open: openImageLightbox } = useImageLightbox();
     const isCustomer = message.senderType === "customer";
     const isAi = message.senderType === "ai";
     const isAgentSide = message.senderType === "agent" || isAi;
     const isRecalled = Boolean(message.recalledAt) || message.sendStatus === 6;
     const senderName = isCustomer
-      ? message.senderName || "客户"
+      ? message.senderName || t("conversation.customerSender")
       : isAi
         ? "AI"
-        : message.senderName || "客服";
+        : message.senderName || t("conversation.agentSender");
     const agentAvatarSrc =
       isAgentSide && !isAi && message.senderAvatar?.trim()
         ? message.senderAvatar.trim()
         : undefined;
     const avatarFallback = isAi ? "AI" : senderName.charAt(0);
-    const htmlContent = isRecalled ? "<p>该消息已撤回</p>" : buildMessageHTML(message);
+    const htmlContent = isRecalled
+      ? `<p>${t("conversation.messageRecalledHtml")}</p>`
+      : buildMessageHTML(message);
     const bubbleClassName = isAi
       ? "border border-primary/15 bg-primary/5 text-foreground shadow-sm"
       : isAgentSide
@@ -597,9 +610,13 @@ const MessageItem = memo(
               </div>
               <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                 <span>{formatDateTime(message.sentAt || "")}</span>
-                {isRecalled ? <span>已撤回</span> : null}
+                {isRecalled ? <span>{t("conversation.messageRecalled")}</span> : null}
                 {message.sendStatus === 2 && !isRecalled && (
-                  <span>{message.customerRead ? "客户已读" : "客户未读"}</span>
+                  <span>
+                    {message.customerRead
+                      ? t("conversation.customerRead")
+                      : t("conversation.customerUnread")}
+                  </span>
                 )}
                 {showRecallAction ? (
                   <Button
@@ -610,11 +627,11 @@ const MessageItem = memo(
                     disabled={recalling}
                     onClick={() => {
                       void onRecall(message.id).catch((error) => {
-                        toast.error(error instanceof Error ? error.message : "撤回消息失败");
+                        toast.error(error instanceof Error ? error.message : t("conversation.recallFailed"));
                       });
                     }}
                   >
-                    {recalling ? "撤回中..." : "撤回"}
+                    {recalling ? t("conversation.recalling") : t("conversation.recall")}
                   </Button>
                 ) : null}
               </div>
@@ -631,7 +648,7 @@ const MessageItem = memo(
             <Avatar className="size-8 shrink-0">
               <AvatarImage src="" />
               <AvatarFallback className={avatarClassName}>
-                客
+                {t("conversation.customerAvatar")}
               </AvatarFallback>
             </Avatar>
             <div className="max-w-[70%]">
@@ -652,7 +669,7 @@ const MessageItem = memo(
               </div>
               <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                 <span>{formatDateTime(message.sentAt || "")}</span>
-                {isRecalled ? <span>已撤回</span> : null}
+                {isRecalled ? <span>{t("conversation.messageRecalled")}</span> : null}
               </div>
             </div>
           </>

@@ -9,6 +9,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { useAuth } from "@/components/auth-provider"
 import { NotificationProvider } from "@/components/notification-provider"
 import { SiteHeader } from "@/components/site-header"
+import { useI18n } from "@/i18n/provider"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
 export default function DashboardLayout({
@@ -16,6 +17,7 @@ export default function DashboardLayout({
 }: {
   children: ReactNode
 }) {
+  const t = useI18n()
   const { ready, session } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
@@ -39,9 +41,9 @@ export default function DashboardLayout({
             <Loader2Icon className="size-5 animate-spin" />
           </div>
           <div className="space-y-1">
-            <p className="text-base font-medium">正在校验登录态</p>
+            <p className="text-base font-medium">{t("auth.checkingSession")}</p>
             <p className="text-sm text-muted-foreground">
-              将自动同步当前管理员信息与权限数据
+              {t("auth.syncingProfile")}
             </p>
           </div>
         </div>

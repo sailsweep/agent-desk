@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Resolver, useForm } from "react-hook-form";
 import { z } from "zod/v4";
 import { toast } from "sonner";
 
 import { changeSelfPassword } from "@/lib/api/admin";
+import { useI18n } from "@/i18n/provider";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -17,25 +18,22 @@ import {
 import { Input } from "@/components/ui/input";
 import { ProjectDialog } from "@/components/project-dialog";
 
-const changePasswordSchema = z
-  .object({
-    password: z.string().trim().min(1, "新密码不能为空"),
-    confirmPassword: z.string().trim().min(1, "确认密码不能为空"),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    path: ["confirmPassword"],
-    message: "两次输入的密码不一致",
-  });
+function createChangePasswordSchema(t: (key: string) => string) {
+  return z
+    .object({
+      password: z.string().trim().min(1, t("account.passwordRequired")),
+      confirmPassword: z.string().trim().min(1, t("account.confirmPasswordRequired")),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      path: ["confirmPassword"],
+      message: t("account.passwordMismatch"),
+    });
+}
 
-type ChangePasswordForm = z.infer<typeof changePasswordSchema>;
-
-const changePasswordResolver = zodResolver(
-  changePasswordSchema as never,
-) as Resolver<
-  z.input<typeof changePasswordSchema>,
-  undefined,
-  z.output<typeof changePasswordSchema>
->;
+type ChangePasswordForm = {
+  password: string;
+  confirmPassword: string;
+};
 
 const emptyForm: ChangePasswordForm = {
   password: "",
@@ -53,6 +51,17 @@ export function ChangePasswordDialog({
   onOpenChange,
   onSuccess,
 }: ChangePasswordDialogProps) {
+  const t = useI18n();
+  const changePasswordSchema = useMemo(() => createChangePasswordSchema(t), [t]);
+  const changePasswordResolver = useMemo(
+    () =>
+      zodResolver(changePasswordSchema as never) as Resolver<
+        z.input<typeof changePasswordSchema>,
+        undefined,
+        z.output<typeof changePasswordSchema>
+      >,
+    [changePasswordSchema],
+  );
   const form = useForm<
     z.input<typeof changePasswordSchema>,
     undefined,
@@ -77,11 +86,11 @@ export function ChangePasswordDialog({
   async function onSubmit(values: ChangePasswordForm) {
     try {
       await changeSelfPassword(values.password.trim());
-      toast.success("密码已修改，请重新登录");
+      toast.success(t("account.passwordChanged"));
       onOpenChange(false);
       await onSuccess();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "修改密码失败");
+      toast.error(error instanceof Error ? error.message : t("account.changePasswordFailed"));
     }
   }
 
@@ -89,8 +98,8 @@ export function ChangePasswordDialog({
     <ProjectDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="修改密码"
-      description="修改当前登录账号的密码，提交后需要重新登录。"
+      title={t("account.changePassword")}
+      description={t("account.changePasswordDescription")}
       size="sm"
       allowFullscreen
       footer={
@@ -101,10 +110,10 @@ export function ChangePasswordDialog({
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
           >
-            取消
+            {t("account.cancel")}
           </Button>
           <Button type="submit" form="change-password-form" disabled={isSubmitting}>
-            {isSubmitting ? "提交中..." : "确认修改"}
+            {isSubmitting ? t("account.submitting") : t("account.confirmChange")}
           </Button>
         </>
       }
@@ -112,12 +121,12 @@ export function ChangePasswordDialog({
       <form id="change-password-form" onSubmit={handleSubmit(onSubmit)}>
         <div className="space-y-4">
           <Field data-invalid={!!errors.password}>
-            <FieldLabel htmlFor="change-password-password">新密码</FieldLabel>
+            <FieldLabel htmlFor="change-password-password">{t("account.newPassword")}</FieldLabel>
             <FieldContent>
               <Input
                 id="change-password-password"
                 type="password"
-                placeholder="请输入新密码"
+                placeholder={t("account.newPasswordPlaceholder")}
                 autoComplete="new-password"
                 aria-invalid={!!errors.password}
                 {...register("password")}
@@ -126,12 +135,12 @@ export function ChangePasswordDialog({
             </FieldContent>
           </Field>
           <Field data-invalid={!!errors.confirmPassword}>
-            <FieldLabel htmlFor="change-password-confirm">确认密码</FieldLabel>
+            <FieldLabel htmlFor="change-password-confirm">{t("account.confirmPassword")}</FieldLabel>
             <FieldContent>
               <Input
                 id="change-password-confirm"
                 type="password"
-                placeholder="请再次输入新密码"
+                placeholder={t("account.confirmPasswordPlaceholder")}
                 autoComplete="new-password"
                 aria-invalid={!!errors.confirmPassword}
                 {...register("confirmPassword")}

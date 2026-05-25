@@ -8,7 +8,7 @@ import {
   Trash2Icon,
   WrenchIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { ListPagination } from "@/components/list-pagination";
@@ -27,14 +27,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { OptionCombobox } from "@/components/option-combobox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
@@ -51,11 +45,10 @@ import {
   type KnowledgeDocumentListItem,
   type PageResult,
 } from "@/lib/api/admin";
-import { getEnumLabel, getEnumOptions } from "@/lib/enums";
+import { useI18n } from "@/i18n/provider";
 import {
   KnowledgeDocumentIndexStatus,
-  KnowledgeDocumentIndexStatusLabels,
-  StatusLabels
+  Status,
 } from "@/lib/generated/enums";
 import { cn, formatDateTime } from "@/lib/utils";
 import { DocumentEditDialog } from "./document-edit";
@@ -73,15 +66,32 @@ export type DocumentListActionState = {
   loading: boolean;
 };
 
-const statusOptions = [
-  { value: "all", label: "全部状态" },
-  ...getEnumOptions(StatusLabels),
-] as const;
+type TFunction = (key: string, values?: Record<string, string | number>) => string;
 
-const indexStatusOptions = [
-  { value: "all", label: "全部索引状态" },
-  ...getEnumOptions(KnowledgeDocumentIndexStatusLabels),
-] as const;
+function getStatusOptions(t: TFunction) {
+  return [
+    { value: "all", label: t("knowledge.allStatus") },
+    { value: String(Status.Ok), label: t("knowledge.statusOk") },
+    { value: String(Status.Disabled), label: t("knowledge.statusDisabled") },
+    { value: String(Status.Deleted), label: t("knowledge.statusDeleted") },
+  ];
+}
+
+function getIndexStatusOptions(t: TFunction) {
+  return [
+    { value: "all", label: t("knowledge.allIndexStatus") },
+    { value: KnowledgeDocumentIndexStatus.Pending, label: t("knowledge.indexPending") },
+    { value: KnowledgeDocumentIndexStatus.Indexed, label: t("knowledge.indexIndexed") },
+    { value: KnowledgeDocumentIndexStatus.Failed, label: t("knowledge.indexFailed") },
+  ];
+}
+
+function getIndexStatusLabel(status: string, t: TFunction) {
+  if (status === KnowledgeDocumentIndexStatus.Pending) return t("knowledge.indexPending");
+  if (status === KnowledgeDocumentIndexStatus.Indexed) return t("knowledge.indexIndexed");
+  if (status === KnowledgeDocumentIndexStatus.Failed) return t("knowledge.indexFailed");
+  return status || "-";
+}
 
 function getIndexStatusBadgeVariant(status: string) {
   switch (status) {
@@ -94,10 +104,10 @@ function getIndexStatusBadgeVariant(status: string) {
   }
 }
 
-function renderIndexStatusBadge(item: KnowledgeDocumentListItem) {
+function renderIndexStatusBadge(item: KnowledgeDocumentListItem, t: TFunction) {
   const badge = (
     <Badge variant={getIndexStatusBadgeVariant(item.indexStatus)}>
-      {item.indexStatusName}
+      {getIndexStatusLabel(item.indexStatus, t)}
     </Badge>
   )
 
@@ -125,6 +135,7 @@ function renderIndexStatusBadge(item: KnowledgeDocumentListItem) {
 const VIEW_MODE_STORAGE_KEY = "knowledge-document-view-mode";
 
 export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentListProps) {
+  const t = useI18n();
   const [keywordInput, setKeywordInput] = useState("");
   const [statusFilterInput, setStatusFilterInput] = useState("all");
   const [indexStatusFilterInput, setIndexStatusFilterInput] = useState("all");
@@ -149,6 +160,8 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
     results: [],
     page: { page: 1, limit: 20, total: 0 },
   });
+  const statusOptions = useMemo(() => getStatusOptions(t), [t]);
+  const indexStatusOptions = useMemo(() => getIndexStatusOptions(t), [t]);
 
   const loadData = useCallback(async (options?: {
     keyword?: string;
@@ -181,11 +194,11 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
       });
       setDocuments(data);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载文档失败");
+      toast.error(error instanceof Error ? error.message : t("knowledge.loadDocumentsFailed"));
     } finally {
       setLoading(false);
     }
-  }, [indexStatusFilter, keyword, statusFilter, knowledgeBaseId, limit, page]);
+  }, [indexStatusFilter, keyword, statusFilter, knowledgeBaseId, limit, page, t]);
 
   useEffect(() => {
     void loadData();
@@ -277,16 +290,16 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
           id: editingItem.id,
           ...payload,
         });
-        toast.success(`已更新文档：${editingItem.title}`);
+        toast.success(t("knowledge.documentUpdated", { title: editingItem.title }));
       } else {
         await createKnowledgeDocument(payload);
-        toast.success(`已创建文档：${payload.title}`);
+        toast.success(t("knowledge.documentCreated", { title: payload.title }));
       }
       setDialogOpen(false);
       setEditingItem(null);
       await loadData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "保存文档失败");
+      toast.error(error instanceof Error ? error.message : t("knowledge.documentSaveFailed"));
     } finally {
       setSaving(false);
     }
@@ -296,10 +309,10 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
     setActionLoadingMap((prev) => ({ ...prev, [item.id]: { ...prev[item.id], delete: true } }));
     try {
       await deleteKnowledgeDocument(item.id);
-      toast.success(`已删除文档：${item.title}`);
+      toast.success(t("knowledge.documentDeleted", { title: item.title }));
       await loadData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "删除文档失败");
+      toast.error(error instanceof Error ? error.message : t("knowledge.documentDeleteFailed"));
     } finally {
       setActionLoadingMap((prev) => ({ ...prev, [item.id]: { ...prev[item.id], delete: false } }));
     }
@@ -309,10 +322,10 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
     setActionLoadingMap((prev) => ({ ...prev, [item.id]: { ...prev[item.id], rebuildIndex: true } }));
     try {
       await buildKnowledgeDocumentIndex(item.id);
-      toast.success(`已重建索引：${item.title}`);
+      toast.success(t("knowledge.documentIndexRebuilt", { title: item.title }));
       await loadData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "重建索引失败");
+      toast.error(error instanceof Error ? error.message : t("knowledge.documentIndexRebuildFailed"));
     } finally {
       setActionLoadingMap((prev) => ({ ...prev, [item.id]: { ...prev[item.id], rebuildIndex: false } }));
     }
@@ -322,7 +335,7 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
     return (
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
         <FileTextIcon className="mb-2 size-12 opacity-50" />
-        <p>请选择一个知识库查看文档</p>
+        <p>{t("knowledge.selectKnowledgeBaseForDocuments")}</p>
       </div>
     );
   }
@@ -338,57 +351,26 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
                 value={keywordInput}
                 onChange={(event) => setKeywordInput(event.target.value)}
                 onKeyDown={handleFilterKeyDown}
-                placeholder="搜索文档标题"
+                placeholder={t("knowledge.searchDocumentTitle")}
                 className="h-8 pl-8 text-xs"
               />
             </div>
-            <Select
+            <OptionCombobox
               value={statusFilterInput}
-              onValueChange={handleStatusFilterChange}
-            >
-              <SelectTrigger className="h-8 w-32 text-xs">
-                <SelectValue>
-                  {statusFilterInput === "all" ? "全部状态" : getEnumLabel(StatusLabels, Number(statusFilterInput))}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((item) => (
-                  <SelectItem
-                    key={item.value}
-                    value={item.value}
-                    className="text-xs"
-                  >
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
+              onChange={handleStatusFilterChange}
+              options={statusOptions}
+              placeholder={t("knowledge.allStatus")}
+              searchPlaceholder={t("knowledge.searchStatus")}
+              emptyText={t("knowledge.emptyStatus")}
+            />
+            <OptionCombobox
               value={indexStatusFilterInput}
-              onValueChange={handleIndexStatusFilterChange}
-            >
-              <SelectTrigger className="h-8 w-36 text-xs">
-                <SelectValue>
-                  {indexStatusFilterInput === "all"
-                    ? "全部索引状态"
-                    : getEnumLabel(
-                        KnowledgeDocumentIndexStatusLabels,
-                        indexStatusFilterInput as KnowledgeDocumentIndexStatus
-                      )}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {indexStatusOptions.map((item) => (
-                  <SelectItem
-                    key={item.value}
-                    value={item.value}
-                    className="text-xs"
-                  >
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={handleIndexStatusFilterChange}
+              options={indexStatusOptions}
+              placeholder={t("knowledge.allIndexStatus")}
+              searchPlaceholder={t("knowledge.searchStatus")}
+              emptyText={t("knowledge.emptyStatus")}
+            />
           </div>
         </div>
         <div className="min-h-0 flex-1">
@@ -407,15 +389,15 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <div className="text-sm font-medium">{item.title}</div>
-                              {renderIndexStatusBadge(item)}
+                              {renderIndexStatusBadge(item, t)}
                             </div>
                             <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                               <span>{item.createUserName || "-"}</span>
                               <span>{formatDateTime(item.createdAt)}</span>
                               <span className={cn(item.indexStatus === KnowledgeDocumentIndexStatus.Failed && "text-destructive")}>
                                 {item.indexStatus === KnowledgeDocumentIndexStatus.Indexed
-                                  ? `已索引 ${formatDateTime(item.indexedAt)}`
-                                  : item.indexStatusName}
+                                  ? t("knowledge.indexedAt", { time: formatDateTime(item.indexedAt) })
+                                  : getIndexStatusLabel(item.indexStatus, t)}
                               </span>
                             </div>
                           </div>
@@ -429,25 +411,25 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
                                 className="size-6"
                               />
                             }
-                            aria-label={`更多操作 ${item.title}`}
+                            aria-label={t("knowledge.moreActions", { name: item.title })}
                           >
                             <MoreHorizontalIcon className="size-3.5" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-32 min-w-32">
                             <DropdownMenuItem onClick={() => openEditDialog(item)}>
                               <PencilIcon className="mr-2 size-3.5" />
-                              编辑
+                              {t("knowledge.edit")}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => void handleBuildIndex(item)}>
                               <WrenchIcon className="mr-2 size-3.5" />
-                              {actionLoadingMap[item.id]?.rebuildIndex ? "执行中..." : "重建索引"}
+                              {actionLoadingMap[item.id]?.rebuildIndex ? t("knowledge.running") : t("knowledge.rebuildIndex")}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => void handleDelete(item)}
                               className="text-destructive focus:text-destructive"
                             >
                               <Trash2Icon className="mr-2 size-3.5" />
-                              {actionLoadingMap[item.id]?.delete ? "删除中..." : "删除"}
+                              {actionLoadingMap[item.id]?.delete ? t("knowledge.deleting") : t("knowledge.delete")}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -457,11 +439,11 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
                   <ContextMenuContent className="w-40">
                     <ContextMenuItem onClick={() => openEditDialog(item)}>
                       <PencilIcon className="mr-2 size-3.5" />
-                      编辑
+                      {t("knowledge.edit")}
                     </ContextMenuItem>
                     <ContextMenuItem onClick={() => void handleBuildIndex(item)} disabled={actionLoadingMap[item.id]?.rebuildIndex}>
                       <WrenchIcon className="mr-2 size-3.5" />
-                      {actionLoadingMap[item.id]?.rebuildIndex ? "执行中..." : "重建索引"}
+                      {actionLoadingMap[item.id]?.rebuildIndex ? t("knowledge.running") : t("knowledge.rebuildIndex")}
                     </ContextMenuItem>
                     <ContextMenuItem
                       onClick={() => void handleDelete(item)}
@@ -469,7 +451,7 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
                       disabled={actionLoadingMap[item.id]?.delete}
                     >
                       <Trash2Icon className="mr-2 size-3.5" />
-                      {actionLoadingMap[item.id]?.delete ? "删除中..." : "删除"}
+                      {actionLoadingMap[item.id]?.delete ? t("knowledge.deleting") : t("knowledge.delete")}
                     </ContextMenuItem>
                   </ContextMenuContent>
                 </ContextMenu>
@@ -483,12 +465,12 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <div className="truncate text-sm font-medium">{item.title}</div>
-                          {renderIndexStatusBadge(item)}
+                          {renderIndexStatusBadge(item, t)}
                         </div>
                         <div className="mt-1 text-xs text-muted-foreground">
                           {item.indexStatus === KnowledgeDocumentIndexStatus.Indexed
-                            ? `索引时间：${formatDateTime(item.indexedAt)}`
-                            : item.indexError || item.indexStatusName}
+                            ? t("knowledge.indexTime", { time: formatDateTime(item.indexedAt) })
+                            : item.indexError || getIndexStatusLabel(item.indexStatus, t)}
                         </div>
                       </div>
                       <div className="shrink-0 text-xs text-muted-foreground">
@@ -503,25 +485,25 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
                               className="size-6"
                             />
                           }
-                          aria-label={`更多操作 ${item.title}`}
+                          aria-label={t("knowledge.moreActions", { name: item.title })}
                         >
                           <MoreHorizontalIcon className="size-3.5" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-32 min-w-32">
                           <DropdownMenuItem onClick={() => openEditDialog(item)}>
                             <PencilIcon className="mr-2 size-3.5" />
-                            编辑
+                            {t("knowledge.edit")}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => void handleBuildIndex(item)}>
                             <WrenchIcon className="mr-2 size-3.5" />
-                            {actionLoadingMap[item.id]?.rebuildIndex ? "执行中..." : "重建索引"}
+                            {actionLoadingMap[item.id]?.rebuildIndex ? t("knowledge.running") : t("knowledge.rebuildIndex")}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => void handleDelete(item)}
                             className="text-destructive focus:text-destructive"
                           >
                             <Trash2Icon className="mr-2 size-3.5" />
-                            {actionLoadingMap[item.id]?.delete ? "删除中..." : "删除"}
+                            {actionLoadingMap[item.id]?.delete ? t("knowledge.deleting") : t("knowledge.delete")}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -530,11 +512,11 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
                   <ContextMenuContent className="w-40">
                     <ContextMenuItem onClick={() => openEditDialog(item)}>
                       <PencilIcon className="mr-2 size-3.5" />
-                      编辑
+                      {t("knowledge.edit")}
                     </ContextMenuItem>
                     <ContextMenuItem onClick={() => void handleBuildIndex(item)} disabled={actionLoadingMap[item.id]?.rebuildIndex}>
                       <WrenchIcon className="mr-2 size-3.5" />
-                      {actionLoadingMap[item.id]?.rebuildIndex ? "执行中..." : "重建索引"}
+                      {actionLoadingMap[item.id]?.rebuildIndex ? t("knowledge.running") : t("knowledge.rebuildIndex")}
                     </ContextMenuItem>
                     <ContextMenuItem
                       onClick={() => void handleDelete(item)}
@@ -542,7 +524,7 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
                       disabled={actionLoadingMap[item.id]?.delete}
                     >
                       <Trash2Icon className="mr-2 size-3.5" />
-                      {actionLoadingMap[item.id]?.delete ? "删除中..." : "删除"}
+                      {actionLoadingMap[item.id]?.delete ? t("knowledge.deleting") : t("knowledge.delete")}
                     </ContextMenuItem>
                   </ContextMenuContent>
                 </ContextMenu>
@@ -550,7 +532,7 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
             ))}
             {!loading && documents.results.length === 0 ? (
               <div className="py-8 text-center text-sm text-muted-foreground">
-                没有匹配的文档
+                {t("knowledge.emptyDocuments")}
               </div>
             ) : null}
             </div>

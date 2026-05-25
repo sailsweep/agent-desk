@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Resolver, useForm } from "react-hook-form"
 import { z } from "zod/v4"
@@ -10,6 +10,7 @@ import {
   type UpdateAdminUserPayload,
   fetchUserDetail,
 } from "@/lib/api/admin"
+import { useI18n } from "@/i18n/provider"
 import { Button } from "@/components/ui/button"
 import {
   Drawer,
@@ -42,38 +43,12 @@ const emptyForm: EditForm = {
   email: "",
 }
 
-const editFormSchema = z.object({
-  nickname: z.string().trim().min(1, "昵称不能为空"),
-  avatar: z
-    .string()
-    .trim()
-    .refine(
-      (value) => value.length === 0 || /^https?:\/\/\S+$/i.test(value),
-      "头像地址必须是 http 或 https 链接"
-    ),
-  mobile: z
-    .string()
-    .trim()
-    .refine(
-      (value) => value.length === 0 || /^[0-9+\-\s]{6,20}$/.test(value),
-      "手机号格式不正确"
-    ),
-  email: z
-    .string()
-    .trim()
-    .refine(
-      (value) =>
-        value.length === 0 || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
-      "邮箱格式不正确"
-    ),
-})
-
-type EditForm = z.infer<typeof editFormSchema>
-const editFormResolver = zodResolver(editFormSchema as never) as Resolver<
-  z.input<typeof editFormSchema>,
-  undefined,
-  z.output<typeof editFormSchema>
->
+type EditForm = {
+  nickname: string
+  avatar: string
+  mobile: string
+  email: string
+}
 
 function toNullableString(value: string) {
   const output = value.trim()
@@ -139,13 +114,43 @@ function UserEditDrawerBody({
   onOpenChange,
   onSubmit,
 }: UserEditDrawerBodyProps) {
+  const t = useI18n()
   const [loading, setLoading] = useState(false)
   const [item, setItem] = useState<AdminUser | null>(null)
-  const form = useForm<
-    z.input<typeof editFormSchema>,
-    undefined,
-    z.output<typeof editFormSchema>
-  >({
+  const editFormSchema = useMemo(
+    () =>
+      z.object({
+        nickname: z.string().trim().min(1, t("user.nicknameRequired")),
+        avatar: z
+          .string()
+          .trim()
+          .refine(
+            (value) => value.length === 0 || /^https?:\/\/\S+$/i.test(value),
+            t("user.avatarInvalid")
+          ),
+        mobile: z
+          .string()
+          .trim()
+          .refine(
+            (value) => value.length === 0 || /^[0-9+\-\s]{6,20}$/.test(value),
+            t("user.mobileInvalid")
+          ),
+        email: z
+          .string()
+          .trim()
+          .refine(
+            (value) =>
+              value.length === 0 || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
+            t("user.emailInvalid")
+          ),
+      }),
+    [t]
+  )
+  const editFormResolver = useMemo(
+    () => zodResolver(editFormSchema as never) as Resolver<EditForm>,
+    [editFormSchema]
+  )
+  const form = useForm<EditForm>({
     resolver: editFormResolver,
     defaultValues: emptyForm,
   })
@@ -188,12 +193,14 @@ function UserEditDrawerBody({
   return (
     <DrawerContent className="min-w-2xl">
       <DrawerHeader>
-        <DrawerTitle>修改用户</DrawerTitle>
-        <DrawerDescription>当前用户：{item?.username || "-"}</DrawerDescription>
+        <DrawerTitle>{t("user.editTitle")}</DrawerTitle>
+        <DrawerDescription>
+          {t("user.currentUser", { username: item?.username || "-" })}
+        </DrawerDescription>
       </DrawerHeader>
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="text-muted-foreground">加载中...</div>
+          <div className="text-muted-foreground">{t("user.loading")}</div>
         </div>
       ) : (
         <form
@@ -202,11 +209,11 @@ function UserEditDrawerBody({
         >
           <div className="space-y-4 px-4 pb-4">
             <Field data-invalid={!!errors.nickname}>
-              <FieldLabel htmlFor="user-nickname">昵称</FieldLabel>
+              <FieldLabel htmlFor="user-nickname">{t("user.nickname")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="user-nickname"
-                  placeholder="请输入昵称"
+                  placeholder={t("user.nicknamePlaceholder")}
                   aria-invalid={!!errors.nickname}
                   {...register("nickname")}
                 />
@@ -214,11 +221,11 @@ function UserEditDrawerBody({
               </FieldContent>
             </Field>
             <Field data-invalid={!!errors.avatar}>
-              <FieldLabel htmlFor="user-avatar">头像地址</FieldLabel>
+              <FieldLabel htmlFor="user-avatar">{t("user.avatar")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="user-avatar"
-                  placeholder="请输入头像 URL"
+                  placeholder={t("user.avatarPlaceholder")}
                   aria-invalid={!!errors.avatar}
                   {...register("avatar")}
                 />
@@ -226,11 +233,11 @@ function UserEditDrawerBody({
               </FieldContent>
             </Field>
             <Field data-invalid={!!errors.mobile}>
-              <FieldLabel htmlFor="user-mobile">手机号</FieldLabel>
+              <FieldLabel htmlFor="user-mobile">{t("user.mobile")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="user-mobile"
-                  placeholder="请输入手机号"
+                  placeholder={t("user.mobilePlaceholder")}
                   aria-invalid={!!errors.mobile}
                   {...register("mobile")}
                 />
@@ -238,11 +245,11 @@ function UserEditDrawerBody({
               </FieldContent>
             </Field>
             <Field data-invalid={!!errors.email}>
-              <FieldLabel htmlFor="user-email">邮箱</FieldLabel>
+              <FieldLabel htmlFor="user-email">{t("user.email")}</FieldLabel>
               <FieldContent>
                 <Input
                   id="user-email"
-                  placeholder="请输入邮箱"
+                  placeholder={t("user.emailPlaceholder")}
                   aria-invalid={!!errors.email}
                   {...register("email")}
                 />
@@ -252,7 +259,7 @@ function UserEditDrawerBody({
           </div>
           <DrawerFooter className="border-t">
             <Button type="submit" disabled={saving || loading}>
-              {saving ? "保存中..." : "保存修改"}
+              {saving ? t("user.saving") : t("user.saveEdit")}
             </Button>
             <Button
               type="button"
@@ -260,7 +267,7 @@ function UserEditDrawerBody({
               onClick={() => onOpenChange(false)}
               disabled={saving}
             >
-              取消
+              {t("user.cancel")}
             </Button>
           </DrawerFooter>
         </form>

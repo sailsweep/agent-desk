@@ -26,7 +26,7 @@ import {
   SearchIcon,
   Trash2Icon
 } from "lucide-react";
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { toast } from "sonner";
 
 import {
@@ -76,40 +76,52 @@ import {
 } from "@/lib/api/admin";
 import {
   AIModelType,
-  AIModelTypeLabels,
   AIProvider,
-  AIProviderLabels,
   Status,
-  StatusLabels
 } from "@/lib/generated/enums";
-import { getEnumLabel, getEnumOptions } from "@/lib/enums";
+import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import { EditDialog } from "./_components/edit";
 import { OptionCombobox } from "./_components/option-combobox";
 
-const listStatusOptions = [
-  { value: "all", label: "全部状态" },
-  ...getEnumOptions(StatusLabels).map((option) => ({
-    value: String(option.value),
-    label: option.label,
-  })),
-];
+type TFunction = (key: string, values?: Record<string, string | number>) => string;
 
-const providerFilterOptions = [
-  { value: "all", label: "全部供应商" },
-  ...getEnumOptions(AIProviderLabels).map((option) => ({
-    value: String(option.value),
-    label: option.label,
-  })),
-];
+function getStatusOptions(t: TFunction) {
+  return [
+    { value: "all", label: t("aiConfig.allStatuses") },
+    { value: String(Status.Ok), label: t("aiConfig.enabled") },
+    { value: String(Status.Disabled), label: t("aiConfig.disabled") },
+    { value: String(Status.Deleted), label: t("aiConfig.deletedStatus") },
+  ];
+}
 
-const modelTypeFilterOptions = [
-  { value: "all", label: "全部类型" },
-  ...getEnumOptions(AIModelTypeLabels).map((option) => ({
-    value: String(option.value),
-    label: option.label,
-  })),
-];
+function getProviderOptions(t: TFunction, includeAll = true) {
+  const options = [
+    { value: String(AIProvider.OpenAI), label: t("aiConfig.providerOpenAI") },
+  ];
+  return includeAll ? [{ value: "all", label: t("aiConfig.allProviders") }, ...options] : options;
+}
+
+function getModelTypeOptions(t: TFunction, includeAll = true) {
+  const options = [
+    { value: String(AIModelType.LLM), label: t("aiConfig.modelTypeLlm") },
+    { value: String(AIModelType.Embedding), label: t("aiConfig.modelTypeEmbedding") },
+    { value: String(AIModelType.Rerank), label: t("aiConfig.modelTypeRerank") },
+  ];
+  return includeAll ? [{ value: "all", label: t("aiConfig.allTypes") }, ...options] : options;
+}
+
+function getStatusLabel(value: Status, t: TFunction) {
+  return getStatusOptions(t).find((item) => item.value === String(value))?.label ?? String(value);
+}
+
+function getProviderLabel(value: AIProvider, t: TFunction) {
+  return getProviderOptions(t, false).find((item) => item.value === String(value))?.label ?? String(value);
+}
+
+function getModelTypeLabel(value: AIModelType, t: TFunction) {
+  return getModelTypeOptions(t, false).find((item) => item.value === String(value))?.label ?? String(value);
+}
 
 function maskAPIKey(value: string) {
   const text = value.trim();
@@ -126,6 +138,7 @@ type SortableAIConfigRowProps = {
   item: AIConfig;
   disabled: boolean;
   actionLoadingId: number | null;
+  t: TFunction;
   openEditDialog: (item: AIConfig) => void;
   handleToggleStatus: (item: AIConfig) => void;
   handleDelete: (item: AIConfig) => void;
@@ -135,6 +148,7 @@ function SortableAIConfigRow({
   item,
   disabled,
   actionLoadingId,
+  t,
   openEditDialog,
   handleToggleStatus,
   handleDelete,
@@ -172,7 +186,7 @@ function SortableAIConfigRow({
           size="icon"
           className="size-8 cursor-grab active:cursor-grabbing"
           disabled={disabled}
-          aria-label={`拖拽排序 ${item.name}`}
+          aria-label={t("aiConfig.dragSort", { name: item.name })}
           {...attributes}
           {...listeners}
         >
@@ -184,24 +198,18 @@ function SortableAIConfigRow({
       </TableCell>
       <TableCell>
         <Badge variant="outline">
-          {getEnumLabel(
-            AIProviderLabels,
-            item.provider as AIProvider,
-          )}
+          {getProviderLabel(item.provider as AIProvider, t)}
         </Badge>
       </TableCell>
       <TableCell>
         <div className="space-y-1">
           <Badge variant="secondary">
-            {getEnumLabel(
-              AIModelTypeLabels,
-              item.modelType as AIModelType,
-            )}
+            {getModelTypeLabel(item.modelType as AIModelType, t)}
           </Badge>
           <div className="text-sm">{item.modelName}</div>
           {item.dimension > 0 && (
             <div className="text-xs text-muted-foreground">
-              {item.dimension} 维
+              {t("aiConfig.dimension", { count: item.dimension })}
             </div>
           )}
         </div>
@@ -210,16 +218,19 @@ function SortableAIConfigRow({
         <div className="space-y-1 text-sm">
           <div className="line-clamp-1">{item.baseUrl}</div>
           <div className="text-xs text-muted-foreground">
-            Key: {maskAPIKey(item.apiKey)}
+            {t("aiConfig.apiKey", { key: maskAPIKey(item.apiKey) })}
           </div>
         </div>
       </TableCell>
       <TableCell>
         <div className="space-y-1 text-xs text-muted-foreground">
-          <div>上下文 {item.maxContextTokens || 0}</div>
-          <div>输出 {item.maxOutputTokens || 0}</div>
+          <div>{t("aiConfig.contextTokens", { count: item.maxContextTokens || 0 })}</div>
+          <div>{t("aiConfig.outputTokens", { count: item.maxOutputTokens || 0 })}</div>
           <div>
-            超时 {item.timeoutMs}ms / 重试 {item.maxRetryCount}
+            {t("aiConfig.timeoutRetry", {
+              timeout: item.timeoutMs,
+              retries: item.maxRetryCount,
+            })}
           </div>
           <div>
             RPM {item.rpmLimit || 0} / TPM {item.tpmLimit || 0}
@@ -232,17 +243,14 @@ function SortableAIConfigRow({
             checked={item.status === Status.Ok}
             disabled={actionLoadingId === item.id}
             onCheckedChange={() => void handleToggleStatus(item)}
-            aria-label={`${item.name} 状态切换`}
+            aria-label={t("aiConfig.toggleStatus", { name: item.name })}
           />
           <Badge
             variant={
               item.status === Status.Ok ? "default" : "outline"
             }
           >
-            {getEnumLabel(
-              StatusLabels,
-              item.status as keyof typeof StatusLabels,
-            )}
+            {getStatusLabel(item.status as Status, t)}
           </Badge>
         </div>
       </TableCell>
@@ -253,12 +261,12 @@ function SortableAIConfigRow({
             size="sm"
             onClick={() => openEditDialog(item)}
           >
-            编辑
+            {t("aiConfig.edit")}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger
               render={<Button variant="outline" size="icon-sm" />}
-              aria-label={`更多操作 ${item.name}`}
+              aria-label={t("aiConfig.moreActions", { name: item.name })}
             >
               <MoreHorizontalIcon />
             </DropdownMenuTrigger>
@@ -273,10 +281,10 @@ function SortableAIConfigRow({
               >
                 <Trash2Icon />
                 {item.status === Status.Ok
-                  ? "启用中不可删"
+                  ? t("aiConfig.deleteDisabledActive")
                   : actionLoadingId === item.id
-                    ? "删除中..."
-                    : "删除"}
+                    ? t("aiConfig.deleting")
+                    : t("aiConfig.delete")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -287,6 +295,10 @@ function SortableAIConfigRow({
 }
 
 export default function DashboardAIConfigsPage() {
+  const t = useI18n();
+  const listStatusOptions = useMemo(() => getStatusOptions(t), [t]);
+  const providerFilterOptions = useMemo(() => getProviderOptions(t), [t]);
+  const modelTypeFilterOptions = useMemo(() => getModelTypeOptions(t), [t]);
   const [keywordInput, setKeywordInput] = useState("");
   const [statusFilterInput, setStatusFilterInput] = useState("all");
   const [providerFilterInput, setProviderFilterInput] = useState("all");
@@ -335,11 +347,11 @@ export default function DashboardAIConfigsPage() {
       });
       setResult(data);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载 AI 配置失败");
+      toast.error(error instanceof Error ? error.message : t("aiConfig.loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [keyword, statusFilter, providerFilter, modelTypeFilter, page, limit]);
+  }, [keyword, statusFilter, providerFilter, modelTypeFilter, page, limit, t]);
 
   useEffect(() => {
     void loadData();
@@ -405,16 +417,16 @@ export default function DashboardAIConfigsPage() {
     try {
       if (editingItem) {
         await updateAIConfig({ id: editingItem.id, ...payload });
-        toast.success(`已更新 AI 配置：${editingItem.name}`);
+        toast.success(t("aiConfig.updated", { name: editingItem.name }));
       } else {
         await createAIConfig(payload);
-        toast.success(`已创建 AI 配置：${payload.name}`);
+        toast.success(t("aiConfig.created", { name: payload.name }));
       }
       setDialogOpen(false);
       setEditingItem(null);
       await loadData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "保存 AI 配置失败");
+      toast.error(error instanceof Error ? error.message : t("aiConfig.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -429,11 +441,14 @@ export default function DashboardAIConfigsPage() {
           : Status.Ok;
       await updateAIConfigStatus(item.id, nextStatus);
       toast.success(
-        `已${nextStatus === Status.Ok ? "启用" : "禁用"}：${item.name}`,
+        t("aiConfig.statusChanged", {
+          name: item.name,
+          status: nextStatus === Status.Ok ? t("aiConfig.enabled") : t("aiConfig.disabled"),
+        }),
       );
       await loadData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "更新状态失败");
+      toast.error(error instanceof Error ? error.message : t("aiConfig.statusUpdateFailed"));
     } finally {
       setActionLoadingId(null);
     }
@@ -441,7 +456,7 @@ export default function DashboardAIConfigsPage() {
 
   async function handleDelete(item: AIConfig) {
     if (item.status === Status.Ok) {
-      toast.error("启用中的 AI 配置不允许删除");
+      toast.error(t("aiConfig.activeDeleteBlocked"));
       return;
     }
     setDeletingItem(item);
@@ -456,12 +471,12 @@ export default function DashboardAIConfigsPage() {
     setActionLoadingId(item.id);
     try {
       await deleteAIConfig(item.id);
-      toast.success(`已删除 AI 配置：${item.name}`);
+      toast.success(t("aiConfig.deleted", { name: item.name }));
       setDeleteDialogOpen(false);
       setDeletingItem(null);
       await loadData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "删除 AI 配置失败");
+      toast.error(error instanceof Error ? error.message : t("aiConfig.deleteFailed"));
     } finally {
       setActionLoadingId(null);
     }
@@ -489,14 +504,14 @@ export default function DashboardAIConfigsPage() {
 
     try {
       await updateAIConfigSort(nextResults.map((item) => item.id));
-      toast.success("AI 配置排序已更新");
+      toast.success(t("aiConfig.sortUpdated"));
       await loadData();
     } catch (error) {
       setResult((current) => ({
         ...current,
         results: previousResults,
       }));
-      toast.error(error instanceof Error ? error.message : "更新排序失败");
+      toast.error(error instanceof Error ? error.message : t("aiConfig.sortUpdateFailed"));
     } finally {
       setSorting(false);
     }
@@ -514,11 +529,11 @@ export default function DashboardAIConfigsPage() {
                 disabled={loading}
               >
                 <RefreshCwIcon className={loading ? "animate-spin" : ""} />
-                刷新
+                {t("aiConfig.refresh")}
               </Button>
               <Button onClick={openCreateDialog}>
                 <PlusIcon />
-                新建
+                {t("aiConfig.new")}
               </Button>
             </>
           }
@@ -529,7 +544,7 @@ export default function DashboardAIConfigsPage() {
               value={keywordInput}
               onChange={(event) => setKeywordInput(event.target.value)}
               onKeyDown={handleFilterKeyDown}
-              placeholder="按配置名称筛选"
+              placeholder={t("aiConfig.filterName")}
               className="pl-9"
             />
           </div>
@@ -537,9 +552,9 @@ export default function DashboardAIConfigsPage() {
             <OptionCombobox
               value={modelTypeFilterInput}
               options={modelTypeFilterOptions}
-              placeholder="全部类型"
-              searchPlaceholder="搜索模型类型"
-              emptyText="未找到模型类型"
+              placeholder={t("aiConfig.allTypes")}
+              searchPlaceholder={t("aiConfig.searchModelType")}
+              emptyText={t("aiConfig.emptyModelType")}
               onChange={setModelTypeFilterInput}
             />
           </div>
@@ -547,9 +562,9 @@ export default function DashboardAIConfigsPage() {
             <OptionCombobox
               value={providerFilterInput}
               options={providerFilterOptions}
-              placeholder="全部供应商"
-              searchPlaceholder="搜索供应商"
-              emptyText="未找到供应商"
+              placeholder={t("aiConfig.allProviders")}
+              searchPlaceholder={t("aiConfig.searchProvider")}
+              emptyText={t("aiConfig.emptyProvider")}
               onChange={setProviderFilterInput}
             />
           </div>
@@ -557,15 +572,15 @@ export default function DashboardAIConfigsPage() {
             <OptionCombobox
               value={statusFilterInput}
               options={listStatusOptions}
-              placeholder="全部状态"
-              searchPlaceholder="搜索状态"
-              emptyText="未找到状态"
+              placeholder={t("aiConfig.allStatuses")}
+              searchPlaceholder={t("aiConfig.searchStatus")}
+              emptyText={t("aiConfig.emptyStatus")}
               onChange={setStatusFilterInput}
             />
           </div>
           <Button variant="outline" onClick={applyFilters} disabled={loading}>
             <SearchIcon />
-            查询
+            {t("aiConfig.query")}
           </Button>
         </DashboardToolbar>
 
@@ -589,13 +604,13 @@ export default function DashboardAIConfigsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-14"></TableHead>
-                  <TableHead>配置</TableHead>
-                  <TableHead>供应商</TableHead>
-                  <TableHead>模型</TableHead>
-                  <TableHead>接入信息</TableHead>
-                  <TableHead>限制</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
+                  <TableHead>{t("aiConfig.columnConfig")}</TableHead>
+                  <TableHead>{t("aiConfig.columnProvider")}</TableHead>
+                  <TableHead>{t("aiConfig.columnModel")}</TableHead>
+                  <TableHead>{t("aiConfig.columnAccess")}</TableHead>
+                  <TableHead>{t("aiConfig.columnLimits")}</TableHead>
+                  <TableHead>{t("aiConfig.columnStatus")}</TableHead>
+                  <TableHead className="text-right">{t("aiConfig.columnActions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -603,8 +618,8 @@ export default function DashboardAIConfigsPage() {
                   <DashboardTableStateRow
                     colSpan={8}
                     loading={loading}
-                    loadingText="正在加载 AI 配置..."
-                    emptyText="暂无 AI 配置数据"
+                    loadingText={t("aiConfig.loadingRows")}
+                    emptyText={t("aiConfig.emptyRows")}
                   />
                 ) : (
                   <SortableContext
@@ -617,6 +632,7 @@ export default function DashboardAIConfigsPage() {
                         item={item}
                         disabled={sorting}
                         actionLoadingId={actionLoadingId}
+                        t={t}
                         openEditDialog={openEditDialog}
                         handleToggleStatus={handleToggleStatus}
                         handleDelete={handleDelete}
@@ -652,11 +668,11 @@ export default function DashboardAIConfigsPage() {
       >
         <DialogContent className="max-w-md" showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>确认删除 AI 配置</DialogTitle>
+            <DialogTitle>{t("aiConfig.confirmDeleteTitle")}</DialogTitle>
             <DialogDescription>
               {deletingItem
-                ? `确认删除“${deletingItem.name}”吗？此操作不可撤销。`
-                : "此操作不可撤销。"}
+                ? t("aiConfig.confirmDeleteDescription", { name: deletingItem.name })
+                : t("aiConfig.deleteIrreversible")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -669,7 +685,7 @@ export default function DashboardAIConfigsPage() {
                 setDeletingItem(null);
               }}
             >
-              取消
+              {t("aiConfig.cancel")}
             </Button>
             <Button
               type="button"
@@ -677,7 +693,7 @@ export default function DashboardAIConfigsPage() {
               disabled={!!actionLoadingId}
               onClick={() => void handleConfirmDelete()}
             >
-              {actionLoadingId ? "删除中..." : "确认删除"}
+              {actionLoadingId ? t("aiConfig.deleting") : t("aiConfig.confirmDelete")}
             </Button>
           </DialogFooter>
         </DialogContent>

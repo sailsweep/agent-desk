@@ -16,6 +16,7 @@ import {
 
 import { EditorToolbar } from "./toolbar"
 import type { BaseEditorProps } from "./types"
+import { useI18n } from "@/i18n/provider"
 
 export type HtmlEditorProps = BaseEditorProps & {
   value: string
@@ -25,9 +26,11 @@ export type HtmlEditorProps = BaseEditorProps & {
 export function HtmlEditor({
   value,
   onChange,
-  placeholder = "请输入内容...",
+  placeholder,
   disabled = false,
 }: HtmlEditorProps) {
+  const t = useI18n()
+  const editorPlaceholder = placeholder ?? t("editor.placeholder")
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -45,7 +48,7 @@ export function HtmlEditor({
         },
       }),
       Placeholder.configure({
-        placeholder,
+        placeholder: editorPlaceholder,
       }),
     ],
     content: value,
@@ -80,14 +83,14 @@ export function HtmlEditor({
   const toolbarActions = [
     {
       key: "undo",
-      label: "撤销",
+      label: t("editor.undo"),
       icon: UndoIcon,
       disabled: !editor.can().undo() || disabled,
       onClick: () => editor.chain().focus().undo().run(),
     },
     {
       key: "redo",
-      label: "重做",
+      label: t("editor.redo"),
       icon: RedoIcon,
       disabled: !editor.can().redo() || disabled,
       onClick: () => editor.chain().focus().redo().run(),
@@ -95,7 +98,7 @@ export function HtmlEditor({
     { key: "separator-1", type: "separator" as const },
     {
       key: "bold",
-      label: "粗体",
+      label: t("editor.bold"),
       icon: BoldIcon,
       disabled,
       pressed: editor.isActive("bold"),
@@ -103,7 +106,7 @@ export function HtmlEditor({
     },
     {
       key: "italic",
-      label: "斜体",
+      label: t("editor.italic"),
       icon: ItalicIcon,
       disabled,
       pressed: editor.isActive("italic"),
@@ -112,7 +115,7 @@ export function HtmlEditor({
     { key: "separator-2", type: "separator" as const },
     {
       key: "bulletList",
-      label: "无序列表",
+      label: t("editor.bulletList"),
       icon: ListIcon,
       disabled,
       pressed: editor.isActive("bulletList"),
@@ -120,7 +123,7 @@ export function HtmlEditor({
     },
     {
       key: "orderedList",
-      label: "有序列表",
+      label: t("editor.orderedList"),
       icon: ListOrderedIcon,
       disabled,
       pressed: editor.isActive("orderedList"),
@@ -128,7 +131,7 @@ export function HtmlEditor({
     },
     {
       key: "blockquote",
-      label: "引用",
+      label: t("editor.quote"),
       icon: QuoteIcon,
       disabled,
       pressed: editor.isActive("blockquote"),
@@ -145,4 +148,3 @@ export function HtmlEditor({
     </div>
   )
 }
-

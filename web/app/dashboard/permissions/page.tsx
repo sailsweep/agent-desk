@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { KeyRoundIcon, RefreshCwIcon, RouteIcon, SearchIcon } from "lucide-react"
 import { toast } from "sonner"
 
@@ -28,16 +28,13 @@ import {
   type AdminPermission,
   type PageResult,
 } from "@/lib/api/admin"
-import { Status, StatusLabels } from "@/lib/generated/enums"
-
-const listStatusOptions = [
-  { value: "all", label: "全部状态" },
-  { value: String(Status.Ok), label: StatusLabels[Status.Ok] },
-  { value: String(Status.Disabled), label: StatusLabels[Status.Disabled] },
-  { value: String(Status.Deleted), label: StatusLabels[Status.Deleted] },
-] as const
+import { Status } from "@/lib/generated/enums"
+import { useAppLocale, useI18n } from "@/i18n/provider"
+import { getPermissionDisplayName, getPermissionGroupName } from "@/lib/permission-i18n"
 
 export default function DashboardPermissionsPage() {
+  const t = useI18n()
+  const { locale } = useAppLocale()
   const [keywordInput, setKeywordInput] = useState("")
   const [groupNameInput, setGroupNameInput] = useState("")
   const [statusFilterInput, setStatusFilterInput] = useState("all")
@@ -51,6 +48,15 @@ export default function DashboardPermissionsPage() {
     results: [],
     page: { page: 1, limit: 20, total: 0 },
   })
+  const listStatusOptions = useMemo(
+    () => [
+      { value: "all", label: t("status.all") },
+      { value: String(Status.Ok), label: t("status.ok") },
+      { value: String(Status.Disabled), label: t("status.disabled") },
+      { value: String(Status.Deleted), label: t("status.deleted") },
+    ],
+    [t]
+  )
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -64,11 +70,11 @@ export default function DashboardPermissionsPage() {
       })
       setResult(data)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载权限失败")
+      toast.error(error instanceof Error ? error.message : t("permission.loadFailed"))
     } finally {
       setLoading(false)
     }
-  }, [groupName, keyword, limit, page, statusFilter])
+  }, [groupName, keyword, limit, page, statusFilter, t])
 
   useEffect(() => {
     void loadData()
@@ -103,7 +109,7 @@ export default function DashboardPermissionsPage() {
         actions={
           <Button variant="outline" onClick={() => void loadData()} disabled={loading}>
             <RefreshCwIcon className={loading ? "animate-spin" : ""} />
-            刷新
+            {t("permission.refresh")}
           </Button>
         }
       >
@@ -113,7 +119,7 @@ export default function DashboardPermissionsPage() {
             value={keywordInput}
             onChange={(event) => setKeywordInput(event.target.value)}
             onKeyDown={handleFilterKeyDown}
-            placeholder="按权限名称/编码筛选"
+            placeholder={t("permission.filterKeyword")}
             className="pl-9"
           />
         </div>
@@ -121,20 +127,20 @@ export default function DashboardPermissionsPage() {
           value={groupNameInput}
           onChange={(event) => setGroupNameInput(event.target.value)}
           onKeyDown={handleFilterKeyDown}
-          placeholder="按分组筛选"
+          placeholder={t("permission.filterGroup")}
           className="w-full sm:w-44"
         />
         <div className="w-full sm:w-36">
           <OptionCombobox
             value={statusFilterInput}
             onChange={setStatusFilterInput}
-            placeholder="全部状态"
+            placeholder={t("status.all")}
             options={[...listStatusOptions]}
           />
         </div>
         <Button variant="outline" onClick={applyFilters} disabled={loading}>
           <SearchIcon />
-          查询
+          {t("permission.query")}
         </Button>
       </DashboardToolbar>
       <DashboardTableShell
@@ -155,11 +161,11 @@ export default function DashboardPermissionsPage() {
           <Table>
             <TableHeader className="bg-muted/40">
               <TableRow>
-                <TableHead>权限</TableHead>
-                <TableHead>编码</TableHead>
-                <TableHead>分组</TableHead>
-                <TableHead>接口</TableHead>
-                <TableHead>状态</TableHead>
+                <TableHead>{t("permission.columnPermission")}</TableHead>
+                <TableHead>{t("permission.columnCode")}</TableHead>
+                <TableHead>{t("permission.columnGroup")}</TableHead>
+                <TableHead>{t("permission.columnApi")}</TableHead>
+                <TableHead>{t("permission.columnStatus")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -171,7 +177,9 @@ export default function DashboardPermissionsPage() {
                         <KeyRoundIcon className="size-4" />
                       </div>
                       <div>
-                        <div className="font-medium">{item.name}</div>
+                        <div className="font-medium">
+                          {getPermissionDisplayName(item.code, item.name, locale)}
+                        </div>
                         <div className="text-xs text-muted-foreground">{item.type}</div>
                       </div>
                     </div>
@@ -179,7 +187,7 @@ export default function DashboardPermissionsPage() {
                   <TableCell>
                     <Badge variant="outline">{item.code}</Badge>
                   </TableCell>
-                  <TableCell>{item.groupName}</TableCell>
+                  <TableCell>{getPermissionGroupName(item.groupName, locale)}</TableCell>
                   <TableCell>
                     <div className="flex items-start gap-2">
                       <Badge variant="secondary">{item.method || "ANY"}</Badge>
@@ -195,7 +203,7 @@ export default function DashboardPermissionsPage() {
                     <Badge
                       variant={item.status === Status.Ok ? "secondary" : "outline"}
                     >
-                      {StatusLabels[item.status as Status] ?? String(item.status)}
+                      {getStatusLabel(item.status, t)}
                     </Badge>
                   </TableCell>
                 </TableRow>
@@ -204,8 +212,8 @@ export default function DashboardPermissionsPage() {
                 <DashboardTableStateRow
                   colSpan={5}
                   loading={loading}
-                  loadingText="正在加载权限数据..."
-                  emptyText="没有匹配的权限数据"
+                  loadingText={t("permission.loading")}
+                  emptyText={t("permission.empty")}
                 />
               ) : null}
             </TableBody>
@@ -213,4 +221,20 @@ export default function DashboardPermissionsPage() {
       </DashboardTableShell>
     </DashboardPage>
   )
+}
+
+function getStatusLabel(
+  status: number,
+  t: (key: string, values?: Record<string, string | number>) => string
+) {
+  if (status === Status.Ok) {
+    return t("status.ok")
+  }
+  if (status === Status.Disabled) {
+    return t("status.disabled")
+  }
+  if (status === Status.Deleted) {
+    return t("status.deleted")
+  }
+  return String(status)
 }

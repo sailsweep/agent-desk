@@ -2,6 +2,7 @@ import { readSession } from "@/lib/auth"
 import { request } from "@/lib/api/client"
 import { createWebSocketBaseUrl } from "@/lib/api/websocket"
 import type { PageResult } from "@/lib/api/admin"
+import { translateCurrentMessage } from "@/i18n/messages"
 
 export type NotificationReadStatus = "all" | "unread" | "read"
 
@@ -71,7 +72,7 @@ export function markAllNotificationsRead() {
 export function createNotificationWebSocketUrl() {
   const session = readSession()
   if (!session?.accessToken) {
-    throw new Error("未登录或登录已过期")
+    throw new Error(translateCurrentMessage("api.authExpired"))
   }
 
   const params = new URLSearchParams({

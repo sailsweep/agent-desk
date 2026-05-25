@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ArrowRightLeftIcon } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Controller, Resolver, useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod/v4"
@@ -29,6 +29,7 @@ import {
   fetchAgentProfilesAll,
   type AdminAgentProfile,
 } from "@/lib/api/admin"
+import { useI18n } from "@/i18n/provider"
 
 type ConversationTransferDialogProps = {
   open: boolean
@@ -38,23 +39,15 @@ type ConversationTransferDialogProps = {
   onSuccess?: () => Promise<void> | void
 }
 
-const transferSchema = z.object({
-  toUserId: z.string().trim().min(1, "请选择目标客服"),
-  reason: z.string().trim(),
-})
-
-type TransferForm = z.infer<typeof transferSchema>
+type TransferForm = {
+  toUserId: string
+  reason: string
+}
 
 const emptyForm: TransferForm = {
   toUserId: "",
   reason: "",
 }
-
-const transferResolver = zodResolver(transferSchema as never) as Resolver<
-  z.input<typeof transferSchema>,
-  undefined,
-  z.output<typeof transferSchema>
->
 
 export function ConversationTransferDialog({
   open,
@@ -91,19 +84,29 @@ function ConversationTransferDialogBody({
   onOpenChange,
   onSuccess,
 }: ConversationTransferDialogBodyProps) {
+  const t = useI18n()
   const [saving, setSaving] = useState(false)
   const [loadingAgents, setLoadingAgents] = useState(false)
   const [agents, setAgents] = useState<AdminAgentProfile[]>([])
   const userOptions = agents.map((agent) => ({
     value: String(agent.userId),
-    label: agent.displayName || agent.nickname || agent.username || `客服 #${agent.userId}`,
+    label: agent.displayName || agent.nickname || agent.username || t("conversationAction.agentFallback", { id: agent.userId }),
   }))
 
-  const form = useForm<
-    z.input<typeof transferSchema>,
-    undefined,
-    z.output<typeof transferSchema>
-  >({
+  const transferSchema = useMemo(
+    () =>
+      z.object({
+        toUserId: z.string().trim().min(1, t("conversationAction.targetAgentRequired")),
+        reason: z.string().trim(),
+      }),
+    [t]
+  )
+  const transferResolver = useMemo(
+    () => zodResolver(transferSchema as never) as Resolver<TransferForm>,
+    [transferSchema]
+  )
+
+  const form = useForm<TransferForm>({
     resolver: transferResolver,
     defaultValues: emptyForm,
   })
@@ -126,16 +129,16 @@ function ConversationTransferDialogBody({
         setAgents(data.filter((item) => item.serviceStatus === 0))
       })
       .catch((error) => {
-        toast.error(error instanceof Error ? error.message : "加载客服列表失败")
+        toast.error(error instanceof Error ? error.message : t("conversationAction.loadAgentsFailed"))
       })
       .finally(() => {
         setLoadingAgents(false)
       })
-  }, [])
+  }, [t])
 
   async function onFormSubmit(values: TransferForm) {
     if (!conversationId) {
-      toast.error("会话不存在")
+      toast.error(t("conversationAction.conversationMissing"))
       return
     }
 
@@ -146,16 +149,22 @@ function ConversationTransferDialogBody({
     try {
       if (mode === "assign") {
         await assignConversation(conversationId, toUserId, reason)
-        toast.success(`已分配会话：#${conversationId}`)
+        toast.success(t("conversationAction.assigned", { id: conversationId }))
       } else {
         await transferConversation(conversationId, toUserId, reason)
-        toast.success(`已转接会话：#${conversationId}`)
+        toast.success(t("conversationAction.transferred", { id: conversationId }))
       }
       reset(emptyForm)
       onOpenChange(false)
       await onSuccess?.()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : mode === "assign" ? "分配会话失败" : "转接会话失败")
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : mode === "assign"
+            ? t("conversationAction.assignFailed")
+            : t("conversationAction.transferFailed")
+      )
     } finally {
       setSaving(false)
     }
@@ -166,15 +175,16 @@ function ConversationTransferDialogBody({
   return (
     <DialogContent className="max-w-lg gap-0 p-0 sm:max-w-lg">
       <DialogHeader className="px-6 pt-6">
-        <DialogTitle>{isAssign ? "分配会话" : "转接会话"}</DialogTitle>
-        {/* <DialogDescription>
-          当前会话：{conversationId ? `#${conversationId}` : "-"}
-        </DialogDescription> */}
+        <DialogTitle>
+          {isAssign ? t("conversationAction.assignTitle") : t("conversationAction.transferTitle")}
+        </DialogTitle>
       </DialogHeader>
       <form onSubmit={handleSubmit(onFormSubmit)}>
         <div className="space-y-4 p-6">
           <Field data-invalid={!!errors.toUserId}>
-            <FieldLabel htmlFor="conversation-transfer-user">目标客服</FieldLabel>
+            <FieldLabel htmlFor="conversation-transfer-user">
+              {t("conversationAction.targetAgent")}
+            </FieldLabel>
             <FieldContent>
               <Controller
                 control={control}
@@ -183,9 +193,13 @@ function ConversationTransferDialogBody({
                   <OptionCombobox
                     value={field.value}
                     options={userOptions}
-                    placeholder={loadingAgents ? "加载中..." : "选择目标客服"}
-                    searchPlaceholder="搜索客服"
-                    emptyText="暂无可选客服"
+                    placeholder={
+                      loadingAgents
+                        ? t("conversationAction.loading")
+                        : t("conversationAction.selectTargetAgent")
+                    }
+                    searchPlaceholder={t("conversationAction.searchAgent")}
+                    emptyText={t("conversationAction.emptyAgents")}
                     disabled={saving || loadingAgents}
                     onChange={field.onChange}
                   />
@@ -196,13 +210,17 @@ function ConversationTransferDialogBody({
           </Field>
           <Field data-invalid={!!errors.reason}>
             <FieldLabel htmlFor="conversation-transfer-reason">
-              {isAssign ? "分配说明" : "转接原因"}
+              {isAssign ? t("conversationAction.assignNote") : t("conversationAction.transferReason")}
             </FieldLabel>
             <FieldContent>
               <Textarea
                 id="conversation-transfer-reason"
                 rows={4}
-                placeholder={isAssign ? "填写分配说明，便于后续追踪" : "填写转接原因，便于后续追踪"}
+                placeholder={
+                  isAssign
+                    ? t("conversationAction.assignPlaceholder")
+                    : t("conversationAction.transferPlaceholder")
+                }
                 aria-invalid={!!errors.reason}
                 {...register("reason")}
               />
@@ -217,11 +235,17 @@ function ConversationTransferDialogBody({
             onClick={() => onOpenChange(false)}
             disabled={saving}
           >
-            取消
+            {t("conversationAction.cancel")}
           </Button>
           <Button type="submit" disabled={saving}>
             <ArrowRightLeftIcon />
-            {saving ? (isAssign ? "分配中..." : "转接中...") : isAssign ? "确认分配" : "确认转接"}
+            {saving
+              ? isAssign
+                ? t("conversationAction.assigning")
+                : t("conversationAction.transferring")
+              : isAssign
+                ? t("conversationAction.confirmAssign")
+                : t("conversationAction.confirmTransfer")}
           </Button>
         </DialogFooter>
       </form>

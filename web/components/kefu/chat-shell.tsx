@@ -50,6 +50,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
+import { useI18n } from "@/i18n/provider"
 
 const windowActionButtonClass =
   "size-8 rounded-md border-0 bg-transparent text-muted-foreground shadow-none hover:bg-foreground/[0.06] hover:text-foreground focus-visible:ring-primary/20 dark:hover:bg-white/10"
@@ -119,6 +120,7 @@ function isEmbeddedInHost() {
 }
 
 export function KefuChatShell() {
+  const t = useI18n()
   useKefuSystemTheme()
 
   const messageListRef = useRef<KefuMessageListHandle | null>(null)
@@ -271,7 +273,7 @@ export function KefuChatShell() {
         window.location.replace(getStandaloneClosedUrl())
       }
     } catch (closeError) {
-      window.alert(closeError instanceof Error ? closeError.message : "关闭会话失败")
+      window.alert(closeError instanceof Error ? closeError.message : t("kefu.closeConversationFailed"))
     } finally {
       setIsClosingConversation(false)
     }
@@ -324,8 +326,8 @@ export function KefuChatShell() {
               {!isEmbedded && status !== "connected" ? (
                 <WindowActionButton
                   onClick={retry}
-                  aria-label="重新连接"
-                  title="重新连接"
+                  aria-label={t("kefu.retry")}
+                  title={t("kefu.retry")}
                 >
                   <RotateCwIcon className="size-4" />
                 </WindowActionButton>
@@ -333,18 +335,18 @@ export function KefuChatShell() {
               {isEmbedded ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger
-                    render={<WindowActionButton aria-label="更多操作" title="更多操作" />}
+                    render={<WindowActionButton aria-label={t("kefu.moreActions")} title={t("kefu.moreActions")} />}
                   >
                     <MoreHorizontalIcon className="size-4" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-36">
                     <DropdownMenuItem onClick={retry}>
                       <RotateCwIcon className="size-4" />
-                      重新连接
+                      {t("kefu.retry")}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleMinimize}>
                       <MinusIcon className="size-4" />
-                      收起窗口
+                      {t("kefu.minimize")}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleToggleMaximize}>
                       {isMaximized ? (
@@ -352,22 +354,22 @@ export function KefuChatShell() {
                       ) : (
                         <Maximize2Icon className="size-4" />
                       )}
-                      {isMaximized ? "取消最大化" : "最大化"}
+                      {isMaximized ? t("kefu.restoreWindow") : t("kefu.maximize")}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       variant="destructive"
                       onClick={() => setIsCloseDialogOpen(true)}
                     >
                       <XIcon className="size-4" />
-                      关闭窗口
+                      {t("kefu.closeWindow")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
                 <WindowActionButton
                   onClick={() => setIsCloseDialogOpen(true)}
-                  aria-label="关闭聊天窗口"
-                  title="关闭聊天窗口"
+                  aria-label={t("kefu.closeChatWindow")}
+                  title={t("kefu.closeChatWindow")}
                   className="hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/45 dark:hover:text-rose-300"
                 >
                   <XIcon className="size-4" />
@@ -381,8 +383,8 @@ export function KefuChatShell() {
               <div className="flex items-center gap-0.5 rounded-lg bg-background/55 p-0.5 shadow-sm ring-1 ring-border/70 dark:bg-background/25 dark:ring-white/10">
                 <WindowActionButton
                   onClick={retry}
-                  aria-label="重新连接"
-                  title="重新连接"
+                  aria-label={t("kefu.retry")}
+                  title={t("kefu.retry")}
                 >
                   <RotateCwIcon className="size-4" />
                 </WindowActionButton>
@@ -390,15 +392,15 @@ export function KefuChatShell() {
                   <>
                     <WindowActionButton
                       onClick={handleMinimize}
-                      aria-label="收起聊天窗口"
-                      title="收起聊天窗口"
+                      aria-label={t("kefu.minimize")}
+                      title={t("kefu.minimize")}
                     >
                       <MinusIcon className="size-4" />
                     </WindowActionButton>
                     <WindowActionButton
                       onClick={handleToggleMaximize}
-                      aria-label={isMaximized ? "取消最大化" : "最大化聊天窗口"}
-                      title={isMaximized ? "取消最大化" : "最大化聊天窗口"}
+                      aria-label={isMaximized ? t("kefu.restoreWindow") : t("kefu.maximizeWindow")}
+                      title={isMaximized ? t("kefu.restoreWindow") : t("kefu.maximizeWindow")}
                     >
                       {isMaximized ? (
                         <Minimize2Icon className="size-4" />
@@ -410,8 +412,8 @@ export function KefuChatShell() {
                 ) : null}
                 <WindowActionButton
                   onClick={() => setIsCloseDialogOpen(true)}
-                  aria-label="关闭聊天窗口"
-                  title="关闭聊天窗口"
+                  aria-label={t("kefu.closeChatWindow")}
+                  title={t("kefu.closeChatWindow")}
                   className="hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/45 dark:hover:text-rose-300"
                 >
                   <XIcon className="size-4" />
@@ -457,9 +459,9 @@ export function KefuChatShell() {
       >
         <DialogContent className="max-w-[320px]" showCloseButton={!isClosingConversation}>
           <DialogHeader>
-            <DialogTitle>结束当前对话？</DialogTitle>
+            <DialogTitle>{t("kefu.closeDialogTitle")}</DialogTitle>
             <DialogDescription className="text-xs leading-5">
-              结束会话，客服将无法再查看您的消息记录，如需再次联系请重新发起对话。
+              {t("kefu.closeDialogDescription")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -469,7 +471,7 @@ export function KefuChatShell() {
               disabled={isClosingConversation}
               onClick={() => setIsCloseDialogOpen(false)}
             >
-              继续对话
+              {t("kefu.continueConversation")}
             </Button>
             <Button
               type="button"
@@ -477,7 +479,7 @@ export function KefuChatShell() {
               disabled={isClosingConversation}
               onClick={() => void confirmCloseConversation()}
             >
-              {isClosingConversation ? "结束中..." : "确认结束"}
+              {isClosingConversation ? t("kefu.closing") : t("kefu.confirmClose")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { createKnowledgeFAQ, type CreateKnowledgeFAQPayload } from "@/lib/api/admin";
+import { useI18n } from "@/i18n/provider";
 
 type FAQImportDialogProps = {
   open: boolean;
@@ -39,24 +40,20 @@ type ParseResult = {
   warnings: string[];
 };
 
-const templateContent = [
-  "question,answer,similarQuestions,remark",
-  '"如何重置密码?","进入个人设置后点击重置密码。","忘记密码|密码重置在哪里","账号类FAQ"',
-  '"支持哪些接入渠道?","目前支持网站组件、企业微信等渠道接入。","有哪些渠道|支持什么渠道","渠道说明"',
-].join("\n");
+type TFunction = (key: string, values?: Record<string, string | number>) => string;
 
 const acceptedHeaderMap: Record<string, keyof Omit<ParsedFAQRow, "rowNo">> = {
   question: "question",
-  "标准问题": "question",
-  "问题": "question",
   answer: "answer",
-  "答案": "answer",
   similarquestions: "similarQuestions",
   "similarQuestions": "similarQuestions",
-  "相似问": "similarQuestions",
-  "相似问题": "similarQuestions",
   remark: "remark",
-  "备注": "remark",
+  "\u6807\u51c6\u95ee\u9898": "question",
+  "\u95ee\u9898": "question",
+  "\u7b54\u6848": "answer",
+  "\u76f8\u4f3c\u95ee": "similarQuestions",
+  "\u76f8\u4f3c\u95ee\u9898": "similarQuestions",
+  "\u5907\u6ce8": "remark",
 };
 
 function normalizeHeader(value: string) {
@@ -134,10 +131,10 @@ function parseSimilarQuestions(value: string) {
     .filter(Boolean);
 }
 
-function parseFAQFileContent(input: string): ParseResult {
+function parseFAQFileContent(input: string, t: TFunction): ParseResult {
   const table = parseDelimitedText(input);
   if (table.length === 0) {
-    throw new Error("文件内容为空");
+    throw new Error(t("knowledge.fileEmpty"));
   }
 
   const headerRow = table[0];
@@ -150,7 +147,7 @@ function parseFAQFileContent(input: string): ParseResult {
   }
 
   if (!headerMap.has("question") || !headerMap.has("answer")) {
-    throw new Error("导入模板缺少 question/answer 列");
+    throw new Error(t("knowledge.missingFAQColumns"));
   }
 
   const rows: ParsedFAQRow[] = [];
@@ -168,7 +165,7 @@ function parseFAQFileContent(input: string): ParseResult {
       continue;
     }
     if (!question || !answer) {
-      warnings.push(`第 ${rowNo} 行缺少问题或答案，已跳过`);
+      warnings.push(t("knowledge.skipRowMissingFAQ", { row: rowNo }));
       continue;
     }
 
@@ -185,6 +182,11 @@ function parseFAQFileContent(input: string): ParseResult {
 }
 
 function downloadTemplate() {
+  const templateContent = [
+    "question,answer,similarQuestions,remark",
+    '"How do I reset my password?","Open profile settings and choose Reset Password.","forgot password|where is reset password","Account FAQ"',
+    '"Which channels are supported?","Web chat and WeCom customer service channels are currently supported.","available channels|supported channels","Channel guide"',
+  ].join("\n");
   const blob = new Blob([templateContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -212,6 +214,7 @@ export function FAQImportDialog({
   onImportingChange,
   onImported,
 }: FAQImportDialogProps) {
+  const t = useI18n();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [fileName, setFileName] = useState("");
   const [rows, setRows] = useState<ParsedFAQRow[]>([]);
@@ -236,18 +239,18 @@ export function FAQImportDialog({
 
     try {
       const content = await file.text();
-      const parsed = parseFAQFileContent(content);
+      const parsed = parseFAQFileContent(content, t);
       setFileName(file.name);
       setRows(parsed.rows);
       setWarnings(parsed.warnings);
       if (parsed.rows.length === 0) {
-        toast.error("没有可导入的FAQ记录");
+        toast.error(t("knowledge.importNoRows"));
       } else {
-        toast.success(`已解析 ${parsed.rows.length} 条FAQ`);
+        toast.success(t("knowledge.parsedFAQRows", { count: parsed.rows.length }));
       }
     } catch (error) {
       resetState();
-      toast.error(error instanceof Error ? error.message : "解析导入文件失败");
+      toast.error(error instanceof Error ? error.message : t("knowledge.parseImportFailed"));
     }
   }
 
@@ -267,7 +270,10 @@ export function FAQImportDialog({
           successCount += 1;
         } catch (error) {
           failedRows.push(
-            `第 ${row.rowNo} 行：${error instanceof Error ? error.message : "导入失败"}`
+            t("knowledge.importRowFailed", {
+              row: row.rowNo,
+              message: error instanceof Error ? error.message : t("knowledge.importFailed"),
+            })
           );
         }
       }
@@ -275,10 +281,10 @@ export function FAQImportDialog({
       await onImported();
 
       if (successCount > 0) {
-        toast.success(`成功导入 ${successCount} 条FAQ`);
+        toast.success(t("knowledge.importSuccess", { count: successCount }));
       }
       if (failedRows.length > 0) {
-        toast.error(`有 ${failedRows.length} 条FAQ导入失败`);
+        toast.error(t("knowledge.importSomeFailed", { count: failedRows.length }));
         setWarnings((current) => [...current, ...failedRows]);
         return;
       }
@@ -299,27 +305,31 @@ export function FAQImportDialog({
         }
         onOpenChange(nextOpen);
       }}
-      title="导入FAQ"
-      description="上传 CSV 文件批量导入 FAQ。必填列为 question、answer；similarQuestions 使用 | 或换行分隔。"
+      title={t("knowledge.importFAQTitle")}
+      description={t("knowledge.importFAQDescription")}
       size="lg"
       footer={
         <>
           <Button type="button" variant="outline" onClick={() => downloadTemplate()}>
             <DownloadIcon className="size-4" />
-            下载模板
+            {t("knowledge.downloadTemplate")}
           </Button>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={importing}>
-            取消
+            {t("knowledge.cancel")}
           </Button>
           <Button type="button" onClick={() => void handleImport()} disabled={importing || rows.length === 0}>
-            {importing ? "导入中..." : `开始导入${rows.length > 0 ? ` (${rows.length})` : ""}`}
+            {importing
+              ? t("knowledge.importing")
+              : rows.length > 0
+                ? t("knowledge.startImportWithCount", { count: rows.length })
+                : t("knowledge.startImport")}
           </Button>
         </>
       }
     >
       <FieldGroup>
         <Field>
-          <FieldLabel htmlFor="faq-import-file">导入文件</FieldLabel>
+          <FieldLabel htmlFor="faq-import-file">{t("knowledge.importFile")}</FieldLabel>
           <FieldContent>
             <div className="flex items-center gap-2">
               <Input
@@ -335,18 +345,18 @@ export function FAQImportDialog({
                 onClick={() => fileInputRef.current?.click()}
               >
                 <FileUpIcon className="size-4" />
-                选择文件
+                {t("knowledge.chooseFile")}
               </Button>
             </div>
             <FieldDescription>
-              支持 UTF-8 编码的 CSV 或制表符文本文件。
+              {t("knowledge.importFileDescription")}
             </FieldDescription>
           </FieldContent>
         </Field>
 
         {fileName ? (
           <div className="rounded-md border bg-muted/20 px-3 py-2 text-sm">
-            当前文件：{fileName}
+            {t("knowledge.currentFile", { name: fileName })}
           </div>
         ) : null}
 
@@ -354,7 +364,7 @@ export function FAQImportDialog({
           <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             <div className="mb-2 flex items-center gap-2 font-medium">
               <InfoIcon className="size-4" />
-              导入提示
+              {t("knowledge.importHint")}
             </div>
             <ul className="space-y-1">
               {warnings.map((item, index) => (
@@ -366,7 +376,7 @@ export function FAQImportDialog({
 
         <div className="rounded-md border">
           <div className="border-b px-4 py-3 text-sm font-medium">
-            导入预览
+            {t("knowledge.importPreview")}
           </div>
           {previewRows.length > 0 ? (
             <ScrollArea className="max-h-80">
@@ -374,7 +384,7 @@ export function FAQImportDialog({
                 {previewRows.map((row) => (
                   <div key={row.rowNo} className="space-y-2 px-4 py-3 text-sm">
                     <div>
-                      <span className="text-muted-foreground">第 {row.rowNo} 行</span>
+                      <span className="text-muted-foreground">{t("knowledge.rowNumber", { row: row.rowNo })}</span>
                     </div>
                     <div>
                       <div className="font-medium">{row.question}</div>
@@ -383,16 +393,18 @@ export function FAQImportDialog({
                       </div>
                     </div>
                     <div className="text-muted-foreground">
-                      相似问：{row.similarQuestions.length > 0 ? row.similarQuestions.join(" / ") : "无"}
+                      {t("knowledge.similarQuestionShort", {
+                        value: row.similarQuestions.length > 0 ? row.similarQuestions.join(" / ") : t("knowledge.none"),
+                      })}
                     </div>
-                    <div className="text-muted-foreground">备注：{row.remark || "无"}</div>
+                    <div className="text-muted-foreground">{t("knowledge.remark")}：{row.remark || t("knowledge.none")}</div>
                   </div>
                 ))}
               </div>
             </ScrollArea>
           ) : (
             <div className="px-4 py-12 text-center text-sm text-muted-foreground">
-              上传文件后可预览前 5 条FAQ
+              {t("knowledge.previewAfterUpload")}
             </div>
           )}
         </div>

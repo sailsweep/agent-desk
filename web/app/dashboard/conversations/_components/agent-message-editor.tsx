@@ -7,6 +7,7 @@ import {
   SharedMessageEditor,
   type UploadedMessageEditorImage,
 } from "@/components/chat/shared-message-editor"
+import { useI18n } from "@/i18n/provider"
 import { fetchQuickReplyListAll, type AdminQuickReply } from "@/lib/api/admin"
 
 type AgentMessageEditorProps = {
@@ -24,6 +25,7 @@ export function AgentMessageEditor({
   onUploadImage,
   onSendAttachment,
 }: AgentMessageEditorProps) {
+  const t = useI18n()
   const [quickReplies, setQuickReplies] = useState<AdminQuickReply[]>([])
   const [loadingQuickReplies, setLoadingQuickReplies] = useState(true)
   const [quickReplyPickerOpen, setQuickReplyPickerOpen] = useState(false)
@@ -38,7 +40,7 @@ export function AgentMessageEditor({
       })
       .catch((error) => {
         if (!cancelled) {
-          toast.error(error instanceof Error ? error.message : "加载快捷回复失败")
+          toast.error(error instanceof Error ? error.message : t("conversation.loadQuickRepliesFailed"))
         }
       })
       .finally(() => {
@@ -49,7 +51,7 @@ export function AgentMessageEditor({
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [t])
 
   return (
     <SharedMessageEditor

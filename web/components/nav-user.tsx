@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 import { useAuth } from "@/components/auth-provider"
+import { useI18n } from "@/i18n/provider"
 import { ChangePasswordDialog } from "@/components/change-password-dialog"
 import { useNotifications } from "@/components/notification-provider"
 import { Badge } from "@/components/ui/badge"
@@ -43,6 +44,7 @@ export function NavUser({
     avatar: string
   }
 }) {
+  const t = useI18n()
   const { signOut } = useAuth()
   const { unreadCount } = useNotifications()
   const { isMobile } = useSidebar()
@@ -102,7 +104,7 @@ export function NavUser({
                   className="gap-2"
                 >
                   <BellIcon />
-                  <span className="flex-1">通知中心</span>
+                  <span className="flex-1">{t("nav.notifications")}</span>
                   {unreadCount > 0 ? (
                     <Badge className="h-5 min-w-5 px-1.5">
                       {unreadCount > 99 ? "99+" : unreadCount}
@@ -115,7 +117,7 @@ export function NavUser({
                   }}
                 >
                   <KeyRoundIcon />
-                  修改密码
+                  {t("nav.changePassword")}
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
@@ -125,7 +127,7 @@ export function NavUser({
                 }}
               >
                 <LogOutIcon />
-                退出登录
+                {t("nav.signOut")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

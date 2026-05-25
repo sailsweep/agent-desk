@@ -1,6 +1,7 @@
 package httpx
 
 import (
+	"cs-agent/internal/pkg/i18nx"
 	"net/http"
 	"strconv"
 
@@ -11,7 +12,7 @@ import (
 func GetPathInt64(ctx *gin.Context, name string) (int64, bool) {
 	value, err := strconv.ParseInt(ctx.Param(name), 10, 64)
 	if err != nil {
-		WriteHttpStatusJSON(ctx, http.StatusBadRequest, web.JsonErrorMsg("路径参数错误"))
+		WriteHttpStatusJSON(ctx, http.StatusBadRequest, web.JsonErrorMsg(i18nx.T(ctx, "error.path.invalid", nil)))
 		return 0, false
 	}
 	return value, true

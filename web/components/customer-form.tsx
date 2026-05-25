@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
   Controller,
@@ -13,6 +13,7 @@ import { PlusIcon, Trash2Icon } from "lucide-react"
 import { z } from "zod/v4"
 
 import { CompanyPicker } from "@/components/company-picker"
+import { OptionCombobox } from "@/components/option-combobox"
 import { Button } from "@/components/ui/button"
 import {
   Field,
@@ -21,13 +22,6 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { fetchCustomerContacts, type AdminCustomerContact } from "@/lib/api/customer-contact"
 import {
@@ -35,15 +29,8 @@ import {
   type AdminCustomer,
   type SaveCustomerProfilePayload,
 } from "@/lib/api/customer"
-import { getEnumLabel, getEnumOptions } from "@/lib/enums"
-import { ContactType, ContactTypeLabels, Gender, GenderLabels } from "@/lib/generated/enums"
-
-const genderOptions = [
-  ...getEnumOptions(GenderLabels).map((item) => ({
-    value: String(item.value),
-    label: item.label,
-  })),
-] as const
+import { ContactType, Gender } from "@/lib/generated/enums"
+import { useI18n } from "@/i18n/provider"
 
 const genderValueOptions = [
   String(Gender.Unknown),
@@ -65,15 +52,13 @@ const contactRowSchema = z.object({
   isPrimary: z.boolean(),
 })
 
-const customerFormSchema = z.object({
-  name: z.string().trim().min(1, "客户名称不能为空"),
-  gender: z.enum(genderValueOptions, { message: "请选择性别" }),
-  companyId: z.string().trim().regex(/^\d+$/, "请选择所属公司"),
-  remark: z.string().trim(),
-  contacts: z.array(contactRowSchema),
-})
-
-export type CustomerFormValues = z.infer<typeof customerFormSchema>
+export type CustomerFormValues = {
+  name: string
+  gender: (typeof genderValueOptions)[number]
+  companyId: string
+  remark: string
+  contacts: CustomerContactFormRow[]
+}
 
 export type CustomerContactFormRow = {
   id?: number
@@ -82,12 +67,6 @@ export type CustomerContactFormRow = {
   remark: string
   isPrimary: boolean
 }
-
-const customerFormResolver = zodResolver(customerFormSchema as never) as Resolver<
-  z.input<typeof customerFormSchema>,
-  undefined,
-  z.output<typeof customerFormSchema>
->
 
 function defaultContactRow(isPrimary: boolean): CustomerContactFormRow {
   return {
@@ -136,7 +115,7 @@ function buildContactsFromApi(list: AdminCustomerContact[]): CustomerContactForm
   }))
 }
 
-/** 过滤空行并保证至多一条主联系方式（有一条有值时至少一条主） */
+/** Filters empty rows and keeps at most one primary contact. */
 export function normalizeContactsForSubmit(rows: CustomerContactFormRow[]): CustomerContactFormRow[] {
   const withValue = rows.filter((r) => r.contactValue.trim() !== "")
   if (withValue.length === 0) {
@@ -154,14 +133,6 @@ export function normalizeContactsForSubmit(rows: CustomerContactFormRow[]): Cust
 
 export type CustomerFormSavePayload = SaveCustomerProfilePayload
 
-function getGenderLabel(value: string) {
-  return getEnumLabel(GenderLabels, Number(value) as Gender)
-}
-
-function getContactTypeLabel(value: string) {
-  return ContactTypeLabels[value as ContactType] ?? value
-}
-
 type CustomerFormFieldsProps = {
   form: UseFormReturn<CustomerFormValues>
   fieldIdPrefix?: string
@@ -173,6 +144,7 @@ function CustomerFormFields({
   fieldIdPrefix = "customer",
   remarkRows = 4,
 }: CustomerFormFieldsProps) {
+  const t = useI18n()
   const {
     control,
     register,
@@ -182,6 +154,22 @@ function CustomerFormFields({
     getValues,
   } = form
   const { fields, append, remove } = useFieldArray({ control, name: "contacts" })
+  const genderOptions = useMemo(
+    () => [
+      { value: String(Gender.Unknown), label: t("customerForm.genderUnknown") },
+      { value: String(Gender.Male), label: t("customerForm.genderMale") },
+      { value: String(Gender.Female), label: t("customerForm.genderFemale") },
+    ],
+    [t]
+  )
+  const contactTypeOptions = useMemo(
+    () => [
+      { value: ContactType.Mobile, label: t("customerForm.contactMobile") },
+      { value: ContactType.Email, label: t("customerForm.contactEmail") },
+      { value: ContactType.Other, label: t("customerForm.contactOther") },
+    ],
+    [t]
+  )
 
   const id = (suffix: string) => `${fieldIdPrefix}-${suffix}`
 
@@ -211,14 +199,14 @@ function CustomerFormFields({
   return (
     <div className="space-y-8">
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-muted-foreground">客户信息</h3>
+        <h3 className="text-sm font-semibold text-muted-foreground">{t("customerForm.sectionCustomer")}</h3>
         <div className="space-y-4">
           <Field data-invalid={!!errors.name}>
-            <FieldLabel htmlFor={id("name")}>客户名称</FieldLabel>
+            <FieldLabel htmlFor={id("name")}>{t("customerForm.name")}</FieldLabel>
             <FieldContent>
               <Input
                 id={id("name")}
-                placeholder="请输入客户名称"
+                placeholder={t("customerForm.namePlaceholder")}
                 aria-invalid={!!errors.name}
                 autoComplete="off"
                 {...register("name")}
@@ -229,24 +217,18 @@ function CustomerFormFields({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field data-invalid={!!errors.gender}>
-              <FieldLabel htmlFor={id("gender")}>性别</FieldLabel>
+              <FieldLabel htmlFor={id("gender")}>{t("customerForm.gender")}</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
                   name="gender"
                   render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange} modal={false}>
-                      <SelectTrigger id={id("gender")}>
-                        <SelectValue>{getGenderLabel(field.value)}</SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {genderOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <OptionCombobox
+                      value={field.value}
+                      options={genderOptions}
+                      placeholder={t("customerForm.gender")}
+                      onChange={field.onChange}
+                    />
                   )}
                 />
                 <FieldError errors={[errors.gender]} />
@@ -254,7 +236,7 @@ function CustomerFormFields({
             </Field>
 
             <Field data-invalid={!!errors.companyId}>
-              <FieldLabel htmlFor={id("company")}>所属公司</FieldLabel>
+              <FieldLabel htmlFor={id("company")}>{t("customerForm.company")}</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
@@ -272,11 +254,11 @@ function CustomerFormFields({
           </div>
 
           <Field data-invalid={!!errors.remark}>
-            <FieldLabel htmlFor={id("remark")}>备注</FieldLabel>
+            <FieldLabel htmlFor={id("remark")}>{t("customerForm.remark")}</FieldLabel>
             <FieldContent>
               <Textarea
                 id={id("remark")}
-                placeholder="可选"
+                placeholder={t("customerForm.optional")}
                 rows={remarkRows}
                 aria-invalid={!!errors.remark}
                 {...register("remark")}
@@ -288,13 +270,13 @@ function CustomerFormFields({
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-muted-foreground">联系方式</h3>
+        <h3 className="text-sm font-semibold text-muted-foreground">{t("customerForm.sectionContacts")}</h3>
         <div className="hidden gap-2 border-b border-border pb-2 text-xs font-medium text-muted-foreground sm:grid sm:grid-cols-[108px_minmax(0,1fr)_minmax(0,1fr)_5.5rem_2.25rem] sm:items-center sm:gap-x-2">
-          <span>类型</span>
-          <span>联系方式</span>
-          <span>备注</span>
-          <span className="text-center">主</span>
-          <span className="sr-only">操作</span>
+          <span>{t("customerForm.type")}</span>
+          <span>{t("customerForm.contact")}</span>
+          <span>{t("customerForm.remark")}</span>
+          <span className="text-center">{t("customerForm.primary")}</span>
+          <span className="sr-only">{t("customerForm.actions")}</span>
         </div>
 
         <div className="space-y-1">
@@ -306,35 +288,29 @@ function CustomerFormFields({
                 className="grid grid-cols-1 gap-2 border-b border-border py-2 last:border-b-0 sm:grid-cols-[108px_minmax(0,1fr)_minmax(0,1fr)_5.5rem_2.25rem] sm:items-center sm:gap-x-2"
               >
                 <div className="min-w-0 space-y-1 sm:space-y-0">
-                  <span className="text-xs text-muted-foreground sm:hidden">类型</span>
+                  <span className="text-xs text-muted-foreground sm:hidden">{t("customerForm.type")}</span>
                   <Controller
                     control={control}
                     name={`contacts.${index}.contactType`}
                     render={({ field: f }) => (
-                      <Select value={f.value} onValueChange={f.onChange} modal={false}>
-                        <SelectTrigger className="w-full" id={id(`ct-${index}`)}>
-                          <SelectValue>{getContactTypeLabel(f.value)}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {contactTypeValues.map((v) => (
-                            <SelectItem key={v} value={v}>
-                              {getContactTypeLabel(v)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <OptionCombobox
+                        value={f.value}
+                        options={contactTypeOptions}
+                        placeholder={t("customerForm.type")}
+                        onChange={f.onChange}
+                      />
                     )}
                   />
                 </div>
 
                 <Field data-invalid={!!err?.contactValue} className="min-w-0 gap-1 sm:gap-0">
-                  <FieldLabel className="text-xs text-muted-foreground sm:sr-only">联系方式</FieldLabel>
+                  <FieldLabel className="text-xs text-muted-foreground sm:sr-only">{t("customerForm.contact")}</FieldLabel>
                   <FieldContent>
                     <Input
                       placeholder={
                         watch(`contacts.${index}.contactType`) === ContactType.Email
-                          ? "邮箱"
-                          : "号码 / 账号"
+                          ? t("customerForm.emailPlaceholder")
+                          : t("customerForm.contactPlaceholder")
                       }
                       aria-invalid={!!err?.contactValue}
                       {...register(`contacts.${index}.contactValue`)}
@@ -345,19 +321,19 @@ function CustomerFormFields({
 
                 <Field className="min-w-0 gap-1 sm:gap-0">
                   <FieldLabel htmlFor={id(`tag-${index}`)} className="text-xs text-muted-foreground sm:sr-only">
-                    备注
+                    {t("customerForm.remark")}
                   </FieldLabel>
                   <FieldContent>
                     <Input
                       id={id(`tag-${index}`)}
-                      placeholder="可选"
+                      placeholder={t("customerForm.optional")}
                       {...register(`contacts.${index}.remark`)}
                     />
                   </FieldContent>
                 </Field>
 
                 <div className="flex items-center justify-start gap-2 sm:justify-center">
-                  <span className="text-xs text-muted-foreground sm:hidden">主联系方式</span>
+                  <span className="text-xs text-muted-foreground sm:hidden">{t("customerForm.primaryContact")}</span>
                   <input
                     type="radio"
                     className="size-4 shrink-0 accent-primary"
@@ -365,10 +341,10 @@ function CustomerFormFields({
                     checked={watch(`contacts.${index}.isPrimary`)}
                     onChange={() => setPrimaryIndex(index)}
                     id={id(`primary-${index}`)}
-                    aria-label="设为主联系方式"
+                    aria-label={t("customerForm.setPrimary")}
                   />
                   <label htmlFor={id(`primary-${index}`)} className="hidden cursor-pointer text-sm sm:inline">
-                    主
+                    {t("customerForm.primary")}
                   </label>
                 </div>
 
@@ -379,7 +355,7 @@ function CustomerFormFields({
                     size="icon"
                     className="text-muted-foreground hover:text-destructive"
                     onClick={() => removeContactRow(index)}
-                    aria-label="删除此条联系方式"
+                    aria-label={t("customerForm.deleteContact")}
                   >
                     <Trash2Icon className="size-4" />
                   </Button>
@@ -391,7 +367,7 @@ function CustomerFormFields({
 
         <Button type="button" variant="outline" size="sm" className="gap-1" onClick={addContactRow}>
           <PlusIcon className="size-4" />
-          添加联系方式
+          {t("customerForm.addContact")}
         </Button>
       </div>
     </div>
@@ -417,7 +393,23 @@ export function CustomerForm({
   className,
   onLoadingDetailChange,
 }: CustomerFormProps) {
+  const t = useI18n()
   const [loadingDetail, setLoadingDetail] = useState(() => Boolean(itemId))
+  const customerFormSchema = useMemo(
+    () =>
+      z.object({
+        name: z.string().trim().min(1, t("customerForm.nameRequired")),
+        gender: z.enum(genderValueOptions, { message: t("customerForm.genderRequired") }),
+        companyId: z.string().trim().regex(/^\d+$/, t("customerForm.companyRequired")),
+        remark: z.string().trim(),
+        contacts: z.array(contactRowSchema),
+      }),
+    [t]
+  )
+  const customerFormResolver = useMemo(
+    () => zodResolver(customerFormSchema as never) as Resolver<CustomerFormValues>,
+    [customerFormSchema]
+  )
 
   const form = useForm<CustomerFormValues>({
     resolver: customerFormResolver,
@@ -481,7 +473,7 @@ export function CustomerForm({
   if (loadingDetail) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-muted-foreground">加载中...</div>
+        <div className="text-muted-foreground">{t("customerForm.loading")}</div>
       </div>
     )
   }

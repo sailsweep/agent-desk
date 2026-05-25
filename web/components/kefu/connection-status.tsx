@@ -2,18 +2,14 @@
 
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { useI18n } from "@/i18n/provider"
 
 type KefuConnectionStatusProps = {
   status: "connecting" | "connected" | "disconnected"
 }
 
-const statusText: Record<KefuConnectionStatusProps["status"], string> = {
-  connecting: "连接中",
-  connected: "在线服务",
-  disconnected: "连接已断开",
-}
-
 export function KefuConnectionStatus({ status }: KefuConnectionStatusProps) {
+  const t = useI18n()
   const toneClass =
     status === "connected"
       ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/50 dark:text-emerald-300"
@@ -36,7 +32,7 @@ export function KefuConnectionStatus({ status }: KefuConnectionStatusProps) {
               : "bg-muted-foreground shadow-[0_0_0_4px_rgba(148,163,184,0.14)]"
         )}
       />
-      <span>{statusText[status]}</span>
+      <span>{t(`kefu.${status}`)}</span>
     </Badge>
   )
 }

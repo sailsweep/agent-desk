@@ -7,6 +7,7 @@ import (
 	"cs-agent/internal/pkg/constants"
 	"cs-agent/internal/pkg/dto/request"
 	"cs-agent/internal/pkg/dto/response"
+	"cs-agent/internal/pkg/i18nx"
 	"cs-agent/internal/services"
 
 	"cs-agent/internal/pkg/httpx/params"
@@ -27,7 +28,7 @@ func MCPAnyCatalog(ctx *gin.Context) {
 		httpx.WriteJSON(ctx, err)
 		return
 	}
-	items, err := services.ToolCatalogService.ListMCPTools(context.Background())
+	items, err := services.ToolCatalogService.ListMCPToolsWithLocale(context.Background(), i18nx.Locale(ctx))
 	if err != nil {
 		httpx.WriteJSON(ctx, err)
 		return

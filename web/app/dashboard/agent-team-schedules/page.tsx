@@ -49,6 +49,7 @@ import {
   type PageResult,
   type UpdateAdminAgentTeamSchedulePayload,
 } from "@/lib/api/admin"
+import { useI18n } from "@/i18n/provider"
 import { formatDateTime } from "@/lib/utils"
 import { BatchScheduleDialog } from "./_components/batch-schedule-dialog"
 import { ScheduleCalendar } from "./_components/calendar"
@@ -56,7 +57,6 @@ import {
   addDays,
   addMonths,
   formatDateTimeValue,
-  formatMonthTitle,
   formatWeekTitle,
   startOfDay,
   startOfMonth,
@@ -79,6 +79,7 @@ function isHistoricalSchedule(item: AdminAgentTeamSchedule) {
 }
 
 export default function DashboardAgentTeamSchedulesPage() {
+  const t = useI18n()
   const [viewMode, setViewMode] = useState<ViewMode>("month")
   const [teamFilterInput, setTeamFilterInput] = useState("all")
   const [teamFilter, setTeamFilter] = useState("all")
@@ -120,11 +121,11 @@ export default function DashboardAgentTeamSchedulesPage() {
       })
       setResult(data)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载客服组排班失败")
+      toast.error(error instanceof Error ? error.message : t("agentTeamSchedule.loadFailed"))
     } finally {
       setLoading(false)
     }
-  }, [limit, page, teamFilter])
+  }, [limit, page, t, teamFilter])
 
   const loadCalendarData = useCallback(async () => {
     setCalendarLoading(true)
@@ -138,20 +139,20 @@ export default function DashboardAgentTeamSchedulesPage() {
       })
       setCalendarItems(data)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载客服组排班日历失败")
+      toast.error(error instanceof Error ? error.message : t("agentTeamSchedule.loadCalendarFailed"))
     } finally {
       setCalendarLoading(false)
     }
-  }, [monthStart, teamFilter, viewMode, weekStart])
+  }, [monthStart, t, teamFilter, viewMode, weekStart])
 
   const loadTeams = useCallback(async () => {
     try {
       const data = await fetchAgentTeamsAll()
       setTeams(data)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载客服组选项失败")
+      toast.error(error instanceof Error ? error.message : t("agentTeamSchedule.loadTeamsFailed"))
     }
-  }, [])
+  }, [t])
 
   const refreshActiveView = useCallback(async () => {
     await Promise.all([
@@ -194,7 +195,7 @@ export default function DashboardAgentTeamSchedulesPage() {
 
   function openEditDialog(item: AdminAgentTeamSchedule) {
     if (isHistoricalSchedule(item)) {
-      toast.error("不能修改历史日期的排班")
+      toast.error(t("agentTeamSchedule.historyReadonly"))
       return
     }
     setDialogDefaults(null)
@@ -221,17 +222,17 @@ export default function DashboardAgentTeamSchedulesPage() {
     try {
       if (editingItem) {
         await updateAgentTeamSchedule({ id: editingItem.id, ...payload })
-        toast.success("已更新客服组排班")
+        toast.success(t("agentTeamSchedule.updated"))
       } else {
         await createAgentTeamSchedule(payload)
-        toast.success("已创建客服组排班")
+        toast.success(t("agentTeamSchedule.created"))
       }
       setDialogOpen(false)
       setEditingItem(null)
       setDialogDefaults(null)
       await refreshActiveView()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "保存客服组排班失败")
+      toast.error(error instanceof Error ? error.message : t("agentTeamSchedule.saveFailed"))
     } finally {
       setSaving(false)
     }
@@ -245,13 +246,13 @@ export default function DashboardAgentTeamSchedulesPage() {
     setActionLoadingId(id)
     try {
       await deleteAgentTeamSchedule(id)
-      toast.success("已删除客服组排班")
+      toast.success(t("agentTeamSchedule.deleted"))
       setDialogOpen(false)
       setEditingItem(null)
       setDialogDefaults(null)
       await refreshActiveView()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "删除客服组排班失败")
+      toast.error(error instanceof Error ? error.message : t("agentTeamSchedule.deleteFailed"))
     } finally {
       setActionLoadingId(null)
     }
@@ -264,16 +265,16 @@ export default function DashboardAgentTeamSchedulesPage() {
   async function handleCalendarUpdate(payload: UpdateAdminAgentTeamSchedulePayload) {
     const startAt = parseLocalDateTime(payload.startAt)
     if (startAt && startAt < startOfDay(new Date())) {
-      toast.error("不能修改历史日期的排班")
+      toast.error(t("agentTeamSchedule.historyReadonly"))
       return
     }
     setActionLoadingId(payload.id)
     try {
       await updateAgentTeamSchedule(payload)
-      toast.success("已更新客服组排班")
+      toast.success(t("agentTeamSchedule.updated"))
       await loadCalendarData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "更新客服组排班失败")
+      toast.error(error instanceof Error ? error.message : t("agentTeamSchedule.updateFailed"))
       await loadCalendarData()
     } finally {
       setActionLoadingId(null)
@@ -298,7 +299,7 @@ export default function DashboardAgentTeamSchedulesPage() {
                 onClick={() => setViewMode("month")}
               >
                 <CalendarDaysIcon />
-                月
+                {t("agentTeamSchedule.month")}
               </Button>
               <Button
                 variant={viewMode === "week" ? "default" : "outline"}
@@ -306,7 +307,7 @@ export default function DashboardAgentTeamSchedulesPage() {
                 onClick={() => setViewMode("week")}
               >
                 <CalendarRangeIcon />
-                周
+                {t("agentTeamSchedule.week")}
               </Button>
               <Button
                 variant={viewMode === "list" ? "default" : "outline"}
@@ -314,37 +315,42 @@ export default function DashboardAgentTeamSchedulesPage() {
                 onClick={() => setViewMode("list")}
               >
                 <ListIcon />
-                列表
+                {t("agentTeamSchedule.list")}
               </Button>
             </ButtonGroup>
             {viewMode === "month" ? (
               <ButtonGroup>
-                <Button variant="outline" size="icon-sm" onClick={() => setMonthStart(addMonths(monthStart, -1))} aria-label="上一月">
+                <Button variant="outline" size="icon-sm" onClick={() => setMonthStart(addMonths(monthStart, -1))} aria-label={t("agentTeamSchedule.prevMonth")}>
                   <ChevronLeftIcon />
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => setMonthStart(startOfMonth(new Date()))}>
-                  本月
+                  {t("agentTeamSchedule.thisMonth")}
                 </Button>
-                <Button variant="outline" size="icon-sm" onClick={() => setMonthStart(addMonths(monthStart, 1))} aria-label="下一月">
+                <Button variant="outline" size="icon-sm" onClick={() => setMonthStart(addMonths(monthStart, 1))} aria-label={t("agentTeamSchedule.nextMonth")}>
                   <ChevronRightIcon />
                 </Button>
               </ButtonGroup>
             ) : null}
             {viewMode === "week" ? (
               <ButtonGroup>
-                <Button variant="outline" size="icon-sm" onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="上一周">
+                <Button variant="outline" size="icon-sm" onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label={t("agentTeamSchedule.prevWeek")}>
                   <ChevronLeftIcon />
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => setWeekStart(startOfWeek(new Date()))}>
-                  本周
+                  {t("agentTeamSchedule.thisWeek")}
                 </Button>
-                <Button variant="outline" size="icon-sm" onClick={() => setWeekStart(addDays(weekStart, 7))} aria-label="下一周">
+                <Button variant="outline" size="icon-sm" onClick={() => setWeekStart(addDays(weekStart, 7))} aria-label={t("agentTeamSchedule.nextWeek")}>
                   <ChevronRightIcon />
                 </Button>
               </ButtonGroup>
             ) : null}
             {viewMode === "month" ? (
-              <div className="text-sm text-muted-foreground">{formatMonthTitle(monthStart)}</div>
+              <div className="text-sm text-muted-foreground">
+                {t("agentTeamSchedule.monthTitle", {
+                  year: monthStart.getFullYear(),
+                  month: String(monthStart.getMonth() + 1).padStart(2, "0"),
+                })}
+              </div>
             ) : null}
             {viewMode === "week" ? (
               <div className="text-sm text-muted-foreground">{formatWeekTitle(weekStart)}</div>
@@ -352,7 +358,7 @@ export default function DashboardAgentTeamSchedulesPage() {
             {viewMode !== "list" ? (
               <Button variant="outline" size="sm" onClick={goToToday}>
                 <CalendarSearchIcon />
-                今天
+                {t("agentTeamSchedule.today")}
               </Button>
             ) : null}
           </div>
@@ -362,18 +368,18 @@ export default function DashboardAgentTeamSchedulesPage() {
               <OptionCombobox
                 value={teamFilterInput}
                 options={[
-                  { value: "all", label: "全部客服组" },
+                  { value: "all", label: t("agentTeamSchedule.allTeams") },
                   ...teams.map((team) => ({ value: String(team.id), label: team.name })),
                 ]}
-                placeholder="筛选客服组"
-                searchPlaceholder="搜索客服组"
-                emptyText="未找到客服组"
+                placeholder={t("agentTeamSchedule.filterTeam")}
+                searchPlaceholder={t("agentTeamSchedule.searchTeam")}
+                emptyText={t("agentTeamSchedule.emptyTeam")}
                 onChange={(value) => setTeamFilterInput(value)}
               />
             </div>
             <Button variant="outline" onClick={applyFilters} disabled={refreshing}>
               <SearchIcon />
-              查询
+              {t("agentTeamSchedule.query")}
             </Button>
             <Button
               variant="outline"
@@ -381,15 +387,15 @@ export default function DashboardAgentTeamSchedulesPage() {
               disabled={refreshing}
             >
               <RefreshCwIcon className={refreshing ? "animate-spin" : ""} />
-              刷新
+              {t("agentTeamSchedule.refresh")}
             </Button>
             <Button variant="outline" onClick={() => setBatchDialogOpen(true)}>
               <LayersIcon />
-              批量排班
+              {t("agentTeamSchedule.batch")}
             </Button>
             <Button onClick={() => openCreateDialog()}>
               <PlusIcon />
-              新建
+              {t("agentTeamSchedule.new")}
             </Button>
           </div>
         </div>
@@ -409,6 +415,7 @@ export default function DashboardAgentTeamSchedulesPage() {
               onEdit={openEditDialog}
               onMove={handleCalendarUpdate}
               onResize={handleCalendarUpdate}
+              t={t}
             />
           </div>
         ) : (
@@ -417,9 +424,9 @@ export default function DashboardAgentTeamSchedulesPage() {
               <Table>
                 <TableHeader className="bg-muted/40">
                   <TableRow>
-                    <TableHead>客服组</TableHead>
-                    <TableHead>时间范围</TableHead>
-                    <TableHead className="w-[92px] text-right">操作</TableHead>
+                    <TableHead>{t("agentTeamSchedule.team")}</TableHead>
+                    <TableHead>{t("agentTeamSchedule.timeRange")}</TableHead>
+                    <TableHead className="w-[92px] text-right">{t("agentTeamSchedule.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -431,8 +438,8 @@ export default function DashboardAgentTeamSchedulesPage() {
                             <CalendarClockIcon className="size-4" />
                           </div>
                           <div className="min-w-0">
-                            <div className="font-medium">{item.teamName || `客服组#${item.teamId}`}</div>
-                            <div className="text-xs text-muted-foreground">组ID：{item.teamId}</div>
+                            <div className="font-medium">{item.teamName || t("agentTeamSchedule.teamFallback", { id: item.teamId })}</div>
+                            <div className="text-xs text-muted-foreground">{t("agentTeamSchedule.teamId", { id: item.teamId })}</div>
                           </div>
                         </div>
                       </TableCell>
@@ -443,12 +450,12 @@ export default function DashboardAgentTeamSchedulesPage() {
                       <TableCell className="text-right">
                         <ButtonGroup className="ml-auto">
                           <Button variant="outline" size="sm" onClick={() => openEditDialog(item)} disabled={isHistoricalSchedule(item)}>
-                            编辑
+                            {t("agentTeamSchedule.edit")}
                           </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger
                               render={<Button variant="outline" size="icon-sm" />}
-                              aria-label={`更多操作 ${item.startAt}`}
+                              aria-label={t("agentTeamSchedule.moreActions", { name: item.startAt })}
                             >
                               <MoreHorizontalIcon />
                             </DropdownMenuTrigger>
@@ -458,7 +465,7 @@ export default function DashboardAgentTeamSchedulesPage() {
                                 className="text-destructive focus:text-destructive"
                               >
                                 <Trash2Icon />
-                                {actionLoadingId === item.id ? "删除中..." : "删除"}
+                                {actionLoadingId === item.id ? t("agentTeamSchedule.deleting") : t("agentTeamSchedule.delete")}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -469,7 +476,7 @@ export default function DashboardAgentTeamSchedulesPage() {
                   {!loading && result.results.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={3} className="py-12 text-center text-muted-foreground">
-                        没有匹配的客服组排班
+                        {t("agentTeamSchedule.emptyRows")}
                       </TableCell>
                     </TableRow>
                   ) : null}

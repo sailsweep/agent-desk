@@ -7,7 +7,7 @@ import {
   RefreshCwIcon,
   SearchIcon,
 } from "lucide-react"
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 import { toast } from "sonner"
 
 import { ConversationCloseDialog } from "@/components/conversation-actions/close-dialog"
@@ -34,13 +34,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   Table,
   TableBody,
   TableCell,
@@ -66,50 +59,57 @@ import {
   type PageResult,
   type TagTree,
 } from "@/lib/api/admin"
+import { useI18n } from "@/i18n/provider"
 import { formatDateTime } from "@/lib/utils"
 import { ConversationDetailDialog } from "./_components/detail"
 
 const RECONNECT_BASE_DELAY = 2000
 const RECONNECT_MAX_DELAY = 30000
 
-const statusOptions = [
-  { value: "all", label: "全部状态" },
-  { value: "1", label: "AI接待中" },
-  { value: "2", label: "待接入" },
-  { value: "3", label: "处理中" },
-  { value: "4", label: "已关闭" },
-] as const
-
-function getStatusMeta(status: number) {
+function getStatusMeta(
+  status: number,
+  t: (key: string, values?: Record<string, string | number>) => string
+) {
   switch (status) {
     case 1:
-      return { label: "AI接待中", variant: "secondary" as const }
+      return { label: t("conversation.filterAiServing"), variant: "secondary" as const }
     case 2:
-      return { label: "待接入", variant: "outline" as const }
+      return { label: t("conversation.filterPending"), variant: "outline" as const }
     case 3:
-      return { label: "处理中", variant: "secondary" as const }
+      return { label: t("conversation.filterActive"), variant: "secondary" as const }
     case 4:
-      return { label: "已关闭", variant: "outline" as const }
+      return { label: t("conversation.filterClosed"), variant: "outline" as const }
     default:
-      return { label: "未知", variant: "outline" as const }
+      return { label: t("conversationMonitor.unknown"), variant: "outline" as const }
   }
 }
 
-function getServiceModeLabel(mode: number) {
+function getServiceModeLabel(
+  mode: number,
+  t: (key: string, values?: Record<string, string | number>) => string
+) {
   switch (mode) {
     case 1:
-      return "AI 接待"
+      return t("conversationMonitor.serviceAi")
     case 2:
-      return "人工接待"
+      return t("conversationMonitor.serviceHuman")
     case 3:
-      return "AI 优先"
+      return t("conversationMonitor.serviceAiFirst")
     default:
-      return "未定义"
+      return t("conversationMonitor.serviceUndefined")
   }
 }
 
-function getStatusLabel(value: string) {
-  return statusOptions.find((item) => item.value === value)?.label ?? "全部状态"
+function getStatusOptions(
+  t: (key: string, values?: Record<string, string | number>) => string
+) {
+  return [
+    { value: "all", label: t("conversationMonitor.allStatuses") },
+    { value: "1", label: t("conversation.filterAiServing") },
+    { value: "2", label: t("conversation.filterPending") },
+    { value: "3", label: t("conversation.filterActive") },
+    { value: "4", label: t("conversation.filterClosed") },
+  ]
 }
 
 function buildTagOptions(
@@ -131,6 +131,8 @@ function buildTagOptions(
 }
 
 export default function DashboardConversationsPage() {
+  const t = useI18n()
+  const statusOptions = useMemo(() => getStatusOptions(t), [t])
   const [keywordInput, setKeywordInput] = useState("")
   const [statusFilterInput, setStatusFilterInput] = useState("all")
   const [tagFilterInput, setTagFilterInput] = useState("0")
@@ -144,13 +146,13 @@ export default function DashboardConversationsPage() {
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(20)
   const [tagOptions, setTagOptions] = useState<ComboboxOption[]>([
-    { value: "0", label: "全部标签" },
+    { value: "0", label: t("conversationMonitor.allTags") },
   ])
   const [assigneeOptions, setAssigneeOptions] = useState<ComboboxOption[]>([
-    { value: "0", label: "全部指派人" },
+    { value: "0", label: t("conversationMonitor.allAssignees") },
   ])
   const [agentTeamOptions, setAgentTeamOptions] = useState<ComboboxOption[]>([
-    { value: "0", label: "全部客服组" },
+    { value: "0", label: t("conversationMonitor.allTeams") },
   ])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -194,11 +196,11 @@ export default function DashboardConversationsPage() {
       })
       setResult(data)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载会话列表失败")
+      toast.error(error instanceof Error ? error.message : t("conversationMonitor.loadListFailed"))
     } finally {
       setLoading(false)
     }
-  }, [keyword, limit, page, statusFilter, tagFilter, assigneeFilter, agentTeamFilter])
+  }, [keyword, limit, page, statusFilter, tagFilter, assigneeFilter, agentTeamFilter, t])
 
   useEffect(() => {
     let cancelled = false
@@ -212,18 +214,18 @@ export default function DashboardConversationsPage() {
         ])
         if (!cancelled) {
           setTagOptions([
-            { value: "0", label: "全部标签" },
+            { value: "0", label: t("conversationMonitor.allTags") },
             ...buildTagOptions(tagData),
           ])
           setAssigneeOptions([
-            { value: "0", label: "全部指派人" },
+            { value: "0", label: t("conversationMonitor.allAssignees") },
             ...assigneeData.map((item: AdminAgentProfile) => ({
               value: String(item.userId),
               label: item.displayName || item.nickname || item.username || `#${item.userId}`,
             })),
           ])
           setAgentTeamOptions([
-            { value: "0", label: "全部客服组" },
+            { value: "0", label: t("conversationMonitor.allTeams") },
             ...teamData.map((item: AdminAgentTeam) => ({
               value: String(item.id),
               label: item.name,
@@ -232,7 +234,7 @@ export default function DashboardConversationsPage() {
         }
       } catch (error) {
         if (!cancelled) {
-          toast.error(error instanceof Error ? error.message : "加载筛选项失败")
+          toast.error(error instanceof Error ? error.message : t("conversationMonitor.loadFiltersFailed"))
         }
       }
     }
@@ -242,7 +244,7 @@ export default function DashboardConversationsPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     detailItemRef.current = detailItem
@@ -290,7 +292,7 @@ export default function DashboardConversationsPage() {
       try {
         socket = new WebSocket(createAdminWebSocketUrl())
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "连接实时服务失败")
+        toast.error(error instanceof Error ? error.message : t("conversationMonitor.realtimeConnectFailed"))
         scheduleReconnect()
         return
       }
@@ -382,7 +384,7 @@ export default function DashboardConversationsPage() {
       }
       subscribedConversationIdRef.current = null
     }
-  }, [loadConversations])
+  }, [loadConversations, t])
 
   useEffect(() => {
     const socket = websocketRef.current
@@ -466,7 +468,7 @@ export default function DashboardConversationsPage() {
       setDetailMessagesNextCursor(messages.cursor ?? "")
       setDetailMessagesHasMore(Boolean(messages.hasMore))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载会话详情失败")
+      toast.error(error instanceof Error ? error.message : t("conversationMonitor.loadDetailFailed"))
     } finally {
       setDetailLoading(false)
     }
@@ -492,7 +494,7 @@ export default function DashboardConversationsPage() {
       setDetailMessagesNextCursor(page.cursor ?? "")
       setDetailMessagesHasMore(Boolean(page.hasMore))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载更多消息失败")
+      toast.error(error instanceof Error ? error.message : t("conversationMonitor.loadMoreMessagesFailed"))
     } finally {
       setDetailMessagesLoadingMore(false)
     }
@@ -501,6 +503,7 @@ export default function DashboardConversationsPage() {
     detailMessagesHasMore,
     detailMessagesLoadingMore,
     detailMessagesNextCursor,
+    t,
   ])
 
   async function openDetail(item: AdminConversation) {
@@ -603,13 +606,13 @@ export default function DashboardConversationsPage() {
     setActionLoadingId(item.id)
     try {
       await markConversationRead(item.id)
-      toast.success(`已标记已读：${item.customerName || `#${item.id}`}`)
+      toast.success(t("conversationMonitor.markedRead", { name: item.customerName || `#${item.id}` }))
       await loadConversations()
       if (detailItem?.id === item.id) {
         await refreshDetail()
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "标记已读失败")
+      toast.error(error instanceof Error ? error.message : t("conversationMonitor.markReadFailed"))
     } finally {
       setActionLoadingId(null)
     }
@@ -619,13 +622,13 @@ export default function DashboardConversationsPage() {
     setActionLoadingId(item.id)
     try {
       await dispatchConversation(item.id)
-      toast.success(`已触发自动分配：${item.customerName || `#${item.id}`}`)
+      toast.success(t("conversationMonitor.dispatchTriggered", { name: item.customerName || `#${item.id}` }))
       await loadConversations()
       if (detailItem?.id === item.id) {
         await refreshDetail()
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "自动分配失败")
+      toast.error(error instanceof Error ? error.message : t("conversationMonitor.dispatchFailed"))
     } finally {
       setActionLoadingId(null)
     }
@@ -649,7 +652,7 @@ export default function DashboardConversationsPage() {
               disabled={loading || refreshing}
             >
               <RefreshCwIcon className={loading || refreshing ? "animate-spin" : ""} />
-              刷新
+              {t("conversationMonitor.refresh")}
             </Button>
           }
         >
@@ -659,29 +662,25 @@ export default function DashboardConversationsPage() {
               value={keywordInput}
               onChange={(event) => setKeywordInput(event.target.value)}
               onKeyDown={handleFilterKeyDown}
-              placeholder="按主题或摘要筛选"
+              placeholder={t("conversationMonitor.keywordPlaceholder")}
               className="pl-9"
             />
           </div>
-          <Select value={statusFilterInput} onValueChange={handleStatusFilterChange}>
-            <SelectTrigger className="w-full sm:w-36">
-              <SelectValue>{getStatusLabel(statusFilterInput)}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {statusOptions.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="w-full sm:w-36">
+            <OptionCombobox
+              value={statusFilterInput}
+              options={statusOptions}
+              placeholder={t("conversationMonitor.allStatuses")}
+              onChange={handleStatusFilterChange}
+            />
+          </div>
           <div className="w-full sm:w-64">
             <OptionCombobox
               value={tagFilterInput}
               options={tagOptions}
-              placeholder="选择标签"
-              searchPlaceholder="搜索标签路径"
-              emptyText="没有匹配标签"
+              placeholder={t("conversationMonitor.selectTag")}
+              searchPlaceholder={t("conversationMonitor.searchTagPath")}
+              emptyText={t("conversationMonitor.emptyTags")}
               onChange={setTagFilterInput}
             />
           </div>
@@ -689,9 +688,9 @@ export default function DashboardConversationsPage() {
             <OptionCombobox
               value={assigneeFilterInput}
               options={assigneeOptions}
-              placeholder="选择指派人"
-              searchPlaceholder="搜索指派人"
-              emptyText="没有匹配指派人"
+              placeholder={t("conversationMonitor.selectAssignee")}
+              searchPlaceholder={t("conversationMonitor.searchAssignee")}
+              emptyText={t("conversationMonitor.emptyAssignees")}
               onChange={setAssigneeFilterInput}
             />
           </div>
@@ -699,15 +698,15 @@ export default function DashboardConversationsPage() {
             <OptionCombobox
               value={agentTeamFilterInput}
               options={agentTeamOptions}
-              placeholder="选择客服组"
-              searchPlaceholder="搜索客服组"
-              emptyText="没有匹配客服组"
+              placeholder={t("conversationMonitor.selectTeam")}
+              searchPlaceholder={t("conversationMonitor.searchTeam")}
+              emptyText={t("conversationMonitor.emptyTeams")}
               onChange={setAgentTeamFilterInput}
             />
           </div>
           <Button variant="outline" onClick={applyFilters} disabled={loading}>
             <SearchIcon />
-            查询
+            {t("conversationMonitor.query")}
           </Button>
         </DashboardToolbar>
 
@@ -726,39 +725,51 @@ export default function DashboardConversationsPage() {
             <Table>
               <TableHeader className="bg-muted/40">
                 <TableRow>
-                  <TableHead>会话信息</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead>接待模式</TableHead>
-                  <TableHead>当前客服</TableHead>
-                  <TableHead>未读</TableHead>
-                  <TableHead>最后活跃</TableHead>
-                  <TableHead className="w-28 text-right">操作</TableHead>
+                  <TableHead>{t("conversationMonitor.columnConversation")}</TableHead>
+                  <TableHead>{t("conversationMonitor.columnStatus")}</TableHead>
+                  <TableHead>{t("conversationMonitor.columnServiceMode")}</TableHead>
+                  <TableHead>{t("conversationMonitor.columnAssignee")}</TableHead>
+                  <TableHead>{t("conversationMonitor.columnUnread")}</TableHead>
+                  <TableHead>{t("conversationMonitor.columnLastActive")}</TableHead>
+                  <TableHead className="w-28 text-right">
+                    {t("conversationMonitor.columnActions")}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {result.results.map((item) => {
-                  const statusMeta = getStatusMeta(item.status)
+                  const statusMeta = getStatusMeta(item.status, t)
 
                   return (
                     <TableRow key={item.id}>
                       <TableCell className="max-w-60">
                         <div className="min-w-0">
-                          <div className="font-medium">{item.customerName || `客户 #${item.customerId || item.id}`}</div>
+                          <div className="font-medium">
+                            {item.customerName ||
+                              t("conversationMonitor.customerFallback", {
+                                id: item.customerId || item.id,
+                              })}
+                          </div>
                           <div className="mt-1 text-sm text-muted-foreground">
-                            渠道ID：{item.channelId || "-"}
+                            {t("conversationMonitor.channelIdValue", {
+                              id: item.channelId || "-",
+                            })}
                           </div>
                           <div className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                            {item.lastMessageSummary || "暂无最新消息摘要"}
+                            {item.lastMessageSummary || t("conversationMonitor.noLatestSummary")}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant={statusMeta.variant}>{statusMeta.label}</Badge>
                       </TableCell>
-                      <TableCell>{getServiceModeLabel(item.serviceMode)}</TableCell>
+                      <TableCell>{getServiceModeLabel(item.serviceMode, t)}</TableCell>
                       <TableCell>{item.currentAssigneeName || "-"}</TableCell>
                       <TableCell>
-                        客服 {item.agentUnreadCount} / 用户 {item.customerUnreadCount}
+                        {t("conversationMonitor.unreadSummary", {
+                          agent: item.agentUnreadCount,
+                          customer: item.customerUnreadCount,
+                        })}
                       </TableCell>
                       <TableCell>{formatDateTime(item.lastMessageAt)}</TableCell>
                       <TableCell className="text-right">
@@ -769,12 +780,14 @@ export default function DashboardConversationsPage() {
                             onClick={() => void openDetail(item)}
                             disabled={actionLoadingId === item.id}
                           >
-                            查看
+                            {t("conversationMonitor.view")}
                           </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger
                               render={<Button variant="outline" size="icon-sm" />}
-                              aria-label={`更多操作 ${item.customerName || item.id}`}
+                              aria-label={t("conversationMonitor.moreActions", {
+                                name: item.customerName || item.id,
+                              })}
                             >
                               <MoreHorizontalIcon />
                             </DropdownMenuTrigger>
@@ -784,28 +797,36 @@ export default function DashboardConversationsPage() {
                                 disabled={actionLoadingId === item.id || item.status !== 2}
                               >
                                 <MessageCircleMoreIcon />
-                                {actionLoadingId === item.id ? "处理中..." : "分配会话"}
+                                {actionLoadingId === item.id
+                                  ? t("conversationMonitor.processing")
+                                  : t("conversationMonitor.assign")}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => void handleDispatch(item)}
                                 disabled={actionLoadingId === item.id || item.status !== 2}
                               >
                                 <RefreshCwIcon />
-                                {actionLoadingId === item.id ? "处理中..." : "重试分配"}
+                                {actionLoadingId === item.id
+                                  ? t("conversationMonitor.processing")
+                                  : t("conversationMonitor.retryDispatch")}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => void handleRead(item)}
                                 disabled={actionLoadingId === item.id}
                               >
                                 <CheckCheckIcon />
-                                {actionLoadingId === item.id ? "处理中..." : "标记已读"}
+                                {actionLoadingId === item.id
+                                  ? t("conversationMonitor.processing")
+                                  : t("conversationMonitor.markRead")}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => openTransfer(item)}
                                 disabled={actionLoadingId === item.id || item.status !== 3}
                               >
                                 <MessageCircleMoreIcon />
-                                {actionLoadingId === item.id ? "处理中..." : "转接会话"}
+                                {actionLoadingId === item.id
+                                  ? t("conversationMonitor.processing")
+                                  : t("conversationMonitor.transfer")}
                               </DropdownMenuItem>
                               {item.status !== 4 ? (
                                 <DropdownMenuItem
@@ -813,7 +834,9 @@ export default function DashboardConversationsPage() {
                                   disabled={actionLoadingId === item.id}
                                 >
                                   <RefreshCwIcon />
-                                  {actionLoadingId === item.id ? "处理中..." : "关闭会话"}
+                                  {actionLoadingId === item.id
+                                    ? t("conversationMonitor.processing")
+                                    : t("conversationMonitor.close")}
                                 </DropdownMenuItem>
                               ) : null}
                             </DropdownMenuContent>
@@ -827,8 +850,8 @@ export default function DashboardConversationsPage() {
                   <DashboardTableStateRow
                     colSpan={7}
                     loading={loading}
-                    loadingText="正在加载会话记录..."
-                    emptyText="没有匹配的会话记录"
+                    loadingText={t("conversationMonitor.loadingRows")}
+                    emptyText={t("conversationMonitor.emptyRows")}
                   />
                 ) : null}
               </TableBody>

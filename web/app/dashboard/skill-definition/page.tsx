@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   BrainCircuitIcon,
   BugIcon,
@@ -51,19 +51,35 @@ import {
   type PageResult,
   type SkillDefinition,
 } from "@/lib/api/admin"
-import { Status, StatusLabels } from "@/lib/generated/enums"
-import { getEnumLabel, getEnumOptions } from "@/lib/enums"
+import { useI18n } from "@/i18n/provider"
+import { Status } from "@/lib/generated/enums"
 import { formatDateTime } from "@/lib/utils"
 import { EditDialog } from "./_components/edit"
 import { DebugDialog } from "./_components/debug-dialog"
 
-const statusFilterOptions = [
-  { value: "all", label: "全部状态" },
-  ...getEnumOptions(StatusLabels).map((option) => ({
-    value: String(option.value),
-    label: option.label,
-  })),
-]
+type TFunction = (key: string, values?: Record<string, string | number>) => string
+
+function statusLabel(status: number, t: TFunction) {
+  if (status === Status.Ok) {
+    return t("skillDefinition.statusOk")
+  }
+  if (status === Status.Disabled) {
+    return t("skillDefinition.statusDisabled")
+  }
+  if (status === Status.Deleted) {
+    return t("skillDefinition.statusDeleted")
+  }
+  return String(status)
+}
+
+function getStatusFilterOptions(t: TFunction) {
+  return [
+    { value: "all", label: t("skillDefinition.allStatus") },
+    { value: String(Status.Ok), label: t("skillDefinition.statusOk") },
+    { value: String(Status.Disabled), label: t("skillDefinition.statusDisabled") },
+    { value: String(Status.Deleted), label: t("skillDefinition.statusDeleted") },
+  ]
+}
 
 type SkillRowProps = {
   item: SkillDefinition
@@ -73,6 +89,7 @@ type SkillRowProps = {
   handleToggleStatus: (item: SkillDefinition) => void
   handleDelete: (item: SkillDefinition) => void
   handleRestore: (item: SkillDefinition) => void
+  t: TFunction
 }
 
 function SkillRow({
@@ -83,6 +100,7 @@ function SkillRow({
   handleToggleStatus,
   handleDelete,
   handleRestore,
+  t,
 }: SkillRowProps) {
   const isDeleted = item.status === Status.Deleted
   const statusBadgeVariant = isDeleted
@@ -102,12 +120,12 @@ function SkillRow({
             <div className="flex flex-wrap items-center gap-2">
               <div className="font-medium">{item.name}</div>
               <Badge variant="outline">{item.code}</Badge>
-              <Badge variant="secondary">白名单 {item.toolWhitelist.length}</Badge>
-              <Badge variant="secondary">示例 {item.examples.length}</Badge>
+              <Badge variant="secondary">{t("skillDefinition.whitelistCount", { count: item.toolWhitelist.length })}</Badge>
+              <Badge variant="secondary">{t("skillDefinition.exampleCount", { count: item.examples.length })}</Badge>
             </div>
             <div className="mt-2 space-y-2">
               <div className="line-clamp-2 text-sm leading-6 text-muted-foreground">
-                {item.description || "暂无描述"}
+                {item.description || t("skillDefinition.noDescription")}
               </div>
             </div>
             {item.toolWhitelist.length > 0 ? (
@@ -131,10 +149,10 @@ function SkillRow({
             checked={item.status === Status.Ok}
             disabled={actionLoadingId === item.id || isDeleted}
             onCheckedChange={() => void handleToggleStatus(item)}
-            aria-label={`${item.name} 状态切换`}
+            aria-label={t("skillDefinition.toggleStatus", { name: item.name })}
           />
           <Badge variant={statusBadgeVariant}>
-            {getEnumLabel(StatusLabels, item.status as keyof typeof StatusLabels)}
+            {statusLabel(item.status, t)}
           </Badge>
         </div>
       </TableCell>
@@ -150,15 +168,15 @@ function SkillRow({
         <ButtonGroup className="ml-auto">
           <Button variant="outline" size="sm" onClick={() => openDebugDialog(item)}>
             <BugIcon />
-            调试
+            {t("skillDefinition.debug")}
           </Button>
           <Button variant="outline" size="sm" onClick={() => openEditDialog(item)}>
-            编辑
+            {t("skillDefinition.edit")}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger
               render={<Button variant="outline" size="icon-sm" />}
-              aria-label={`更多操作 ${item.name}`}
+              aria-label={t("skillDefinition.moreActions", { name: item.name })}
             >
               <MoreHorizontalIcon />
             </DropdownMenuTrigger>
@@ -169,7 +187,7 @@ function SkillRow({
                   onClick={() => void handleRestore(item)}
                 >
                   <RotateCcwIcon />
-                  {actionLoadingId === item.id ? "恢复中..." : "恢复"}
+                  {actionLoadingId === item.id ? t("skillDefinition.restoring") : t("skillDefinition.restore")}
                 </DropdownMenuItem>
               ) : (
                 <DropdownMenuItem
@@ -178,7 +196,7 @@ function SkillRow({
                   className="text-destructive focus:text-destructive"
                 >
                   <Trash2Icon />
-                  {actionLoadingId === item.id ? "删除中..." : "删除"}
+                  {actionLoadingId === item.id ? t("skillDefinition.deleting") : t("skillDefinition.delete")}
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
@@ -190,6 +208,7 @@ function SkillRow({
 }
 
 export default function DashboardSkillsPage() {
+  const t = useI18n()
   const [nameInput, setNameInput] = useState("")
   const [codeInput, setCodeInput] = useState("")
   const [statusFilterInput, setStatusFilterInput] = useState("all")
@@ -209,6 +228,7 @@ export default function DashboardSkillsPage() {
     results: [],
     page: { page: 1, limit: 20, total: 0 },
   })
+  const statusFilterOptions = useMemo(() => getStatusFilterOptions(t), [t])
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -222,11 +242,11 @@ export default function DashboardSkillsPage() {
       })
       setResult(data)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载 Skills 失败")
+      toast.error(error instanceof Error ? error.message : t("skillDefinition.loadFailed"))
     } finally {
       setLoading(false)
     }
-  }, [name, code, statusFilter, page, limit])
+  }, [name, code, statusFilter, page, limit, t])
 
   useEffect(() => {
     void loadData()
@@ -298,16 +318,16 @@ export default function DashboardSkillsPage() {
           id: editingItem.id,
           ...payload,
         })
-        toast.success(`已更新 Skill：${editingItem.name}`)
+        toast.success(t("skillDefinition.updated", { name: editingItem.name }))
       } else {
         await createSkillDefinition(payload)
-        toast.success(`已创建 Skill：${payload.name}`)
+        toast.success(t("skillDefinition.created", { name: payload.name }))
       }
       setDialogOpen(false)
       setEditingItem(null)
       await loadData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "保存 Skill 失败")
+      toast.error(error instanceof Error ? error.message : t("skillDefinition.saveFailed"))
     } finally {
       setSaving(false)
     }
@@ -323,10 +343,10 @@ export default function DashboardSkillsPage() {
     setActionLoadingId(item.id)
     try {
       await updateSkillDefinitionStatus(item.id, nextStatus)
-      toast.success(`已${nextStatus === Status.Ok ? "启用" : "停用"}：${item.name}`)
+      toast.success(t(nextStatus === Status.Ok ? "skillDefinition.enabled" : "skillDefinition.disabled", { name: item.name }))
       await loadData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "更新状态失败")
+      toast.error(error instanceof Error ? error.message : t("skillDefinition.statusUpdateFailed"))
     } finally {
       setActionLoadingId(null)
     }
@@ -340,10 +360,10 @@ export default function DashboardSkillsPage() {
     setActionLoadingId(item.id)
     try {
       await deleteSkillDefinition(item.id)
-      toast.success(`已删除 Skill：${item.name}`)
+      toast.success(t("skillDefinition.deleted", { name: item.name }))
       await loadData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "删除 Skill 失败")
+      toast.error(error instanceof Error ? error.message : t("skillDefinition.deleteFailed"))
     } finally {
       setActionLoadingId(null)
     }
@@ -357,10 +377,10 @@ export default function DashboardSkillsPage() {
     setActionLoadingId(item.id)
     try {
       await restoreSkillDefinition(item.id)
-      toast.success(`已恢复 Skill：${item.name}`)
+      toast.success(t("skillDefinition.restored", { name: item.name }))
       await loadData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "恢复 Skill 失败")
+      toast.error(error instanceof Error ? error.message : t("skillDefinition.restoreFailed"))
     } finally {
       setActionLoadingId(null)
     }
@@ -374,11 +394,11 @@ export default function DashboardSkillsPage() {
             <>
               <Button variant="outline" onClick={() => void loadData()} disabled={loading}>
                 <RefreshCwIcon className={loading ? "animate-spin" : ""} />
-                刷新
+                {t("skillDefinition.refresh")}
               </Button>
               <Button onClick={openCreateDialog}>
                 <PlusIcon />
-                新建
+                {t("skillDefinition.new")}
               </Button>
             </>
           }
@@ -389,7 +409,7 @@ export default function DashboardSkillsPage() {
               value={nameInput}
               onChange={(event) => setNameInput(event.target.value)}
               onKeyDown={handleFilterKeyDown}
-              placeholder="按名称筛选"
+              placeholder={t("skillDefinition.filterName")}
               className="pl-9"
             />
           </div>
@@ -397,22 +417,22 @@ export default function DashboardSkillsPage() {
             value={codeInput}
             onChange={(event) => setCodeInput(event.target.value)}
             onKeyDown={handleFilterKeyDown}
-            placeholder="按编码筛选"
+            placeholder={t("skillDefinition.filterCode")}
             className="w-full sm:w-56"
           />
           <div className="w-full sm:w-36">
             <OptionCombobox
               value={statusFilterInput}
               options={statusFilterOptions}
-              placeholder="全部状态"
-              searchPlaceholder="搜索状态"
-              emptyText="未找到状态"
+              placeholder={t("skillDefinition.allStatus")}
+              searchPlaceholder={t("skillDefinition.searchStatus")}
+              emptyText={t("skillDefinition.emptyStatus")}
               onChange={setStatusFilterInput}
             />
           </div>
           <Button variant="outline" onClick={applyFilters} disabled={loading}>
             <SearchIcon />
-            查询
+            {t("skillDefinition.query")}
           </Button>
         </DashboardToolbar>
 
@@ -435,9 +455,9 @@ export default function DashboardSkillsPage() {
               <TableHeader className="bg-muted/40">
                 <TableRow>
                   <TableHead>Skill</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead>最近更新</TableHead>
-                  <TableHead className="w-[168px] text-right">操作</TableHead>
+                  <TableHead>{t("skillDefinition.status")}</TableHead>
+                  <TableHead>{t("skillDefinition.updatedAt")}</TableHead>
+                  <TableHead className="w-[168px] text-right">{t("skillDefinition.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -445,8 +465,8 @@ export default function DashboardSkillsPage() {
                   <DashboardTableStateRow
                     colSpan={4}
                     loading={loading}
-                    loadingText="正在加载 Skill..."
-                    emptyText="没有匹配的 Skill"
+                    loadingText={t("skillDefinition.loadingRows")}
+                    emptyText={t("skillDefinition.emptyRows")}
                   />
                 ) : null}
                 {result.results.map((item) => (
@@ -459,6 +479,7 @@ export default function DashboardSkillsPage() {
                     handleToggleStatus={handleToggleStatus}
                     handleDelete={handleDelete}
                     handleRestore={handleRestore}
+                    t={t}
                   />
                 ))}
               </TableBody>

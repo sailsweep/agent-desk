@@ -1,6 +1,7 @@
 import { readSession } from "@/lib/auth"
 import { request } from "@/lib/api/client"
 import { createWebSocketBaseUrl } from "@/lib/api/websocket"
+import { translateCurrentMessage } from "@/i18n/messages"
 
 export type Paging = {
   page: number
@@ -576,7 +577,7 @@ function toQueryString(query?: Record<string, string | number | undefined>) {
 export function createAdminWebSocketUrl() {
   const session = readSession()
   if (!session?.accessToken) {
-    throw new Error("未登录或登录已过期")
+    throw new Error(translateCurrentMessage("api.authExpired"))
   }
 
   const baseUrl = createWebSocketBaseUrl()

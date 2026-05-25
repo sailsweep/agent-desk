@@ -39,6 +39,7 @@ import {
   type TicketStatus,
   type TicketSummary,
 } from "@/lib/api/ticket"
+import { useI18n } from "@/i18n/provider"
 import { cn, formatDateTime } from "@/lib/utils"
 import { EditDialog } from "./_components/edit"
 import { TicketDetailDialog } from "./_components/ticket-detail-dialog"
@@ -63,13 +64,23 @@ const emptySummary: TicketSummary = {
   stale: 0,
 }
 
-const assigneeAllOption: ComboboxOption = { value: "0", label: "全部负责人" }
-const tagAllOption: ComboboxOption = { value: "0", label: "全部标签" }
-const staleHourOptions: ComboboxOption[] = [
-  { value: "24", label: "24 小时" },
-  { value: "48", label: "48 小时" },
-  { value: "168", label: "168 小时" },
-]
+type TFunction = (key: string, values?: Record<string, string | number>) => string
+
+function getAssigneeAllOption(t: TFunction): ComboboxOption {
+  return { value: "0", label: t("ticket.allAssignees") }
+}
+
+function getTagAllOption(t: TFunction): ComboboxOption {
+  return { value: "0", label: t("ticket.allTags") }
+}
+
+function getStaleHourOptions(t: TFunction): ComboboxOption[] {
+  return [
+    { value: "24", label: t("ticket.hours", { hours: 24 }) },
+    { value: "48", label: t("ticket.hours", { hours: 48 }) },
+    { value: "168", label: t("ticket.hours", { hours: 168 }) },
+  ]
+}
 
 function buildTagOptions(nodes: TagTree[], parentPath = ""): ComboboxOption[] {
   const result: ComboboxOption[] = []
@@ -86,28 +97,29 @@ function buildTagOptions(nodes: TagTree[], parentPath = ""): ComboboxOption[] {
   return result
 }
 
-function sourceLabel(source: string) {
+function sourceLabel(source: string, t: TFunction) {
   switch (source) {
     case "manual":
-      return "手动"
+      return t("ticket.manual")
     case "conversation":
-      return "会话"
+      return t("ticket.conversation")
     default:
       return source || "-"
   }
 }
 
-function assigneeLabel(ticket: TicketItem) {
+function assigneeLabel(ticket: TicketItem, t: TFunction) {
   if (ticket.currentAssigneeName) {
     return ticket.currentAssigneeName
   }
   if (ticket.currentAssigneeId > 0) {
-    return `客服#${ticket.currentAssigneeId}`
+    return t("ticket.agentFallback", { id: ticket.currentAssigneeId })
   }
-  return "未分配"
+  return t("ticket.unassigned")
 }
 
 export default function TicketsPage() {
+  const t = useI18n()
   const searchParams = useSearchParams()
   const [tickets, setTickets] = useState<TicketItem[]>([])
   const [summary, setSummary] = useState<TicketSummary>(emptySummary)
@@ -116,8 +128,8 @@ export default function TicketsPage() {
   const [assigneeId, setAssigneeId] = useState("0")
   const [tagId, setTagId] = useState("0")
   const [staleHours, setStaleHours] = useState("24")
-  const [assigneeOptions, setAssigneeOptions] = useState<ComboboxOption[]>([assigneeAllOption])
-  const [tagOptions, setTagOptions] = useState<ComboboxOption[]>([tagAllOption])
+  const [assigneeOptions, setAssigneeOptions] = useState<ComboboxOption[]>([])
+  const [tagOptions, setTagOptions] = useState<ComboboxOption[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
@@ -128,16 +140,19 @@ export default function TicketsPage() {
   const quickViews = useMemo(
     () =>
       [
-        { key: "all", label: "全部工单", count: summary.all },
-        { key: "pending", label: "待处理", count: summary.pending },
-        { key: "in_progress", label: "处理中", count: summary.inProgress },
-        { key: "done", label: "已处理", count: summary.done },
-        { key: "unassigned", label: "待分配", count: summary.unassigned },
-        { key: "mine", label: "我的工单", count: summary.mine },
-        { key: "stale", label: "长时间未更新", count: summary.stale },
+        { key: "all", label: t("ticket.quickAll"), count: summary.all },
+        { key: "pending", label: t("ticket.quickPending"), count: summary.pending },
+        { key: "in_progress", label: t("ticket.quickInProgress"), count: summary.inProgress },
+        { key: "done", label: t("ticket.quickDone"), count: summary.done },
+        { key: "unassigned", label: t("ticket.quickUnassigned"), count: summary.unassigned },
+        { key: "mine", label: t("ticket.quickMine"), count: summary.mine },
+        { key: "stale", label: t("ticket.quickStale"), count: summary.stale },
       ] satisfies Array<{ key: QuickViewKey; label: string; count: number }>,
-    [summary],
+    [summary, t],
   )
+  const assigneeAllOption = useMemo(() => getAssigneeAllOption(t), [t])
+  const tagAllOption = useMemo(() => getTagAllOption(t), [t])
+  const staleHourOptions = useMemo(() => getStaleHourOptions(t), [t])
 
   const loadData = useCallback(async () => {
     const seq = loadSeqRef.current + 1
@@ -179,13 +194,13 @@ export default function TicketsPage() {
       if (loadSeqRef.current !== seq) {
         return
       }
-      toast.error(error instanceof Error ? error.message : "加载工单失败")
+      toast.error(error instanceof Error ? error.message : t("ticket.loadFailed"))
     } finally {
       if (loadSeqRef.current === seq) {
         setLoading(false)
       }
     }
-  }, [assigneeId, keyword, quickView, staleHours, tagId])
+  }, [assigneeId, keyword, quickView, staleHours, tagId, t])
 
   useEffect(() => {
     void loadData()
@@ -214,18 +229,18 @@ export default function TicketsPage() {
               agent.displayName ||
               agent.nickname ||
               agent.username ||
-              `客服#${agent.userId}`,
+              t("ticket.agentFallback", { id: agent.userId }),
           })),
         ])
         setTagOptions([tagAllOption, ...buildTagOptions(Array.isArray(tags) ? tags : [])])
       })
       .catch((error) => {
-        toast.error(error instanceof Error ? error.message : "加载筛选项失败")
+        toast.error(error instanceof Error ? error.message : t("ticket.loadFiltersFailed"))
       })
     return () => {
       active = false
     }
-  }, [])
+  }, [assigneeAllOption, tagAllOption, t])
 
   function resetFilters() {
     setQuickView("all")
@@ -239,11 +254,11 @@ export default function TicketsPage() {
     setSavingCreate(true)
     try {
       await createTicket(payload)
-      toast.success("工单已创建")
+      toast.success(t("ticket.created"))
       setCreateOpen(false)
       await loadData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "创建工单失败")
+      toast.error(error instanceof Error ? error.message : t("ticket.createFailed"))
     } finally {
       setSavingCreate(false)
     }
@@ -282,18 +297,18 @@ export default function TicketsPage() {
           <>
             <Button type="button" variant="outline" onClick={() => void loadData()} disabled={loading}>
               <RefreshCcwIcon className={cn("size-4", loading ? "animate-spin" : "")} />
-              刷新
+              {t("ticket.refresh")}
             </Button>
             <Button type="button" onClick={() => setCreateOpen(true)}>
               <PlusIcon className="size-4" />
-              新建工单
+              {t("ticket.newTicket")}
             </Button>
           </>
         }
       >
         <Input
           className="w-full sm:w-72"
-          placeholder="搜索编号、标题或描述"
+          placeholder={t("ticket.searchPlaceholder")}
           value={keyword}
           onChange={(event) => setKeyword(event.target.value)}
           onKeyDown={(event) => {
@@ -306,7 +321,7 @@ export default function TicketsPage() {
           <OptionCombobox
             value={assigneeId}
             onChange={setAssigneeId}
-            placeholder="全部负责人"
+            placeholder={t("ticket.allAssignees")}
             options={assigneeOptions}
           />
         </div>
@@ -314,7 +329,7 @@ export default function TicketsPage() {
           <OptionCombobox
             value={tagId}
             onChange={setTagId}
-            placeholder="全部标签"
+            placeholder={t("ticket.allTags")}
             options={tagOptions}
           />
         </div>
@@ -322,21 +337,21 @@ export default function TicketsPage() {
           <OptionCombobox
             value={staleHours}
             onChange={setStaleHours}
-            placeholder="未更新阈值"
+            placeholder={t("ticket.staleThreshold")}
             options={staleHourOptions}
           />
         </div>
         <Button type="button" variant="outline" onClick={resetFilters}>
           <SearchXIcon className="size-4" />
-          重置
+          {t("ticket.reset")}
         </Button>
         <Button type="button" variant="outline" onClick={() => void loadData()} disabled={loading}>
           <RefreshCcwIcon className={cn("size-4", loading ? "animate-spin" : "")} />
-          刷新
+          {t("ticket.refresh")}
         </Button>
         <Button type="button" onClick={() => void loadData()} disabled={loading}>
           <SearchIcon className="size-4" />
-          查询
+          {t("ticket.query")}
         </Button>
       </DashboardToolbar>
 
@@ -344,11 +359,11 @@ export default function TicketsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>工单</TableHead>
-              <TableHead className="w-28">状态</TableHead>
-              <TableHead className="w-36">负责人</TableHead>
-              <TableHead className="w-40">最后更新</TableHead>
-              <TableHead className="w-24 text-right">操作</TableHead>
+              <TableHead>{t("ticket.columnTicket")}</TableHead>
+              <TableHead className="w-28">{t("ticket.columnStatus")}</TableHead>
+              <TableHead className="w-36">{t("ticket.columnAssignee")}</TableHead>
+              <TableHead className="w-40">{t("ticket.columnUpdated")}</TableHead>
+              <TableHead className="w-24 text-right">{t("ticket.columnActions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -356,8 +371,8 @@ export default function TicketsPage() {
               <DashboardTableStateRow
                 colSpan={5}
                 loading={loading}
-                loadingText="正在加载工单..."
-                emptyText="暂无工单"
+                loadingText={t("ticket.loadingRows")}
+                emptyText={t("ticket.emptyRows")}
               />
             ) : (
               tickets.map((ticket) => (
@@ -367,8 +382,8 @@ export default function TicketsPage() {
                       <div className="truncate text-sm font-medium">{ticket.title}</div>
                       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                         <span className="font-mono">{ticket.ticketNo}</span>
-                        <span>{ticket.customer?.name || (ticket.customerId ? `客户#${ticket.customerId}` : "无客户")}</span>
-                        <span>{sourceLabel(ticket.source)}</span>
+                        <span>{ticket.customer?.name || (ticket.customerId ? t("ticket.customerFallback", { id: ticket.customerId }) : t("ticket.noCustomer"))}</span>
+                        <span>{sourceLabel(ticket.source, t)}</span>
                         {ticket.channel ? <span>{ticket.channel}</span> : null}
                       </div>
                       {ticket.tags && ticket.tags.length > 0 ? (
@@ -391,7 +406,7 @@ export default function TicketsPage() {
                     <TicketStatusBadge status={ticket.status} />
                   </TableCell>
                   <TableCell className="max-w-36 truncate text-sm text-muted-foreground">
-                    {assigneeLabel(ticket)}
+                    {assigneeLabel(ticket, t)}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {ticket.updatedAt ? formatDateTime(ticket.updatedAt) : "-"}
@@ -406,7 +421,7 @@ export default function TicketsPage() {
                         setDetailOpen(true)
                       }}
                     >
-                      详情
+                      {t("ticket.detail")}
                     </Button>
                   </TableCell>
                 </TableRow>
