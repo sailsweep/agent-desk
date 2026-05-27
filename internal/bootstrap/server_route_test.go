@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -46,6 +47,59 @@ func TestNewServerRegistersGinRoutes(t *testing.T) {
 		if !routes[route] {
 			t.Fatalf("expected route %s to be registered", route)
 		}
+	}
+}
+
+func TestNewServerExposesPublicAuthOptions(t *testing.T) {
+	config.SetCurrent(&config.Config{
+		Storage: config.StorageConfig{
+			Local: config.LocalStorageConfig{
+				Root:    "storage",
+				BaseURL: "/storage",
+			},
+		},
+		WxWork: config.WxWorkConfig{
+			Enabled: true,
+		},
+		OIDC: config.OIDCConfig{
+			Enabled:      false,
+			ClientSecret: "must-not-leak",
+		},
+	})
+
+	app, err := NewServer()
+	if err != nil {
+		t.Fatalf("NewServer() error = %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+	app.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/auth/options", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d want %d", rec.Code, http.StatusOK)
+	}
+
+	var body struct {
+		Success bool `json:"success"`
+		Data    struct {
+			WxWorkEnabled bool `json:"wxworkEnabled"`
+			OIDCEnabled   bool `json:"oidcEnabled"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if !body.Success {
+		t.Fatalf("success=false, body=%s", rec.Body.String())
+	}
+	if !body.Data.WxWorkEnabled {
+		t.Fatalf("wxworkEnabled=false want true")
+	}
+	if body.Data.OIDCEnabled {
+		t.Fatalf("oidcEnabled=true want false")
+	}
+	if strings.Contains(rec.Body.String(), "must-not-leak") {
+		t.Fatalf("response leaked sensitive OIDC config: %s", rec.Body.String())
 	}
 }
 
@@ -157,5 +211,53 @@ func TestNewServerRejectsUnconfiguredCORSOrigin(t *testing.T) {
 	}
 	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "" {
 		t.Fatalf("Access-Control-Allow-Origin=%q want empty", got)
+	}
+}
+
+func TestNewServerEchoesRequestID(t *testing.T) {
+	config.SetCurrent(&config.Config{
+		Storage: config.StorageConfig{
+			Local: config.LocalStorageConfig{
+				Root:    "storage",
+				BaseURL: "/storage",
+			},
+		},
+	})
+
+	app, err := NewServer()
+	if err != nil {
+		t.Fatalf("NewServer() error = %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/not-exists", nil)
+	req.Header.Set("X-Request-Id", "trace-123")
+	app.ServeHTTP(rec, req)
+
+	if got := rec.Header().Get("X-Request-Id"); got != "trace-123" {
+		t.Fatalf("X-Request-Id=%q want %q", got, "trace-123")
+	}
+}
+
+func TestNewServerGeneratesRequestID(t *testing.T) {
+	config.SetCurrent(&config.Config{
+		Storage: config.StorageConfig{
+			Local: config.LocalStorageConfig{
+				Root:    "storage",
+				BaseURL: "/storage",
+			},
+		},
+	})
+
+	app, err := NewServer()
+	if err != nil {
+		t.Fatalf("NewServer() error = %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+	app.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/not-exists", nil))
+
+	if got := rec.Header().Get("X-Request-Id"); got == "" {
+		t.Fatalf("X-Request-Id should be generated")
 	}
 }

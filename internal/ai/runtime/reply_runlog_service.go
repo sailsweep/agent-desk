@@ -41,6 +41,7 @@ func (s *replyRunLogService) Write(input replyRunLogInput) {
 	logItem := &models.AgentRunLog{
 		ConversationID:   input.Conversation.ID,
 		MessageID:        input.Message.ID,
+		RequestID:        input.Message.RequestID,
 		AIAgentID:        input.AIAgent.ID,
 		AIConfigID:       input.AIAgent.AIConfigID,
 		UserMessage:      strings.TrimSpace(input.Question),
@@ -66,6 +67,7 @@ func (s *replyRunLogService) Write(input replyRunLogInput) {
 	}
 	if err := svc.AgentRunLogService.Create(logItem); err != nil {
 		slog.Warn("create agent run log failed",
+			"requestId", input.Message.RequestID,
 			"message_id", input.Message.ID,
 			"conversation_id", logItem.ConversationID,
 			"ai_agent_id", input.AIAgent.ID,
@@ -245,6 +247,9 @@ func extractGraphToolTrace(summary *applicationruntime.Summary) string {
 }
 
 func firstToolSearchTargetToolCode(summary *applicationruntime.Summary) string {
+	if summary == nil {
+		return ""
+	}
 	trace := parseRuntimeTraceData(summary.TraceData)
 	for _, item := range trace.ToolSearch.Items {
 		toolCode := strings.TrimSpace(item.TargetToolCode)
@@ -262,6 +267,9 @@ func firstToolSearchTargetToolCode(summary *applicationruntime.Summary) string {
 }
 
 func firstGraphToolCode(summary *applicationruntime.Summary) string {
+	if summary == nil {
+		return ""
+	}
 	trace := parseRuntimeTraceData(summary.TraceData)
 	for _, item := range trace.GraphTools.Items {
 		toolCode := strings.TrimSpace(item.ToolCode)
@@ -273,6 +281,9 @@ func firstGraphToolCode(summary *applicationruntime.Summary) string {
 }
 
 func extractHandoffReason(summary *applicationruntime.Summary) string {
+	if summary == nil {
+		return ""
+	}
 	trace := parseRuntimeTraceData(summary.TraceData)
 	for _, item := range trace.GraphTools.Items {
 		if strings.TrimSpace(item.ToolCode) != toolx.GraphHandoffConversation.Code {
@@ -291,6 +302,9 @@ func extractHandoffReason(summary *applicationruntime.Summary) string {
 }
 
 func graphPlanReason(summary *applicationruntime.Summary) string {
+	if summary == nil {
+		return ""
+	}
 	trace := parseRuntimeTraceData(summary.TraceData)
 	for _, item := range trace.GraphTools.Items {
 		toolCode := strings.TrimSpace(item.ToolCode)

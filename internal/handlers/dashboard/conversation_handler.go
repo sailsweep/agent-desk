@@ -255,7 +255,7 @@ func ConversationPostSend_message(ctx *gin.Context) {
 		httpx.WriteJSON(ctx, err)
 		return
 	}
-	item, err := services.MessageService.SendAgentMessage(req.ConversationID, 0, req.ClientMsgID, req.MessageType, req.Content, req.Payload, operator)
+	item, err := services.MessageService.SendAgentMessageWithRequestID(req.ConversationID, 0, req.ClientMsgID, req.MessageType, req.Content, req.Payload, operator, httpx.GetRequestID(ctx))
 	if err != nil {
 		httpx.WriteJSON(ctx, err)
 		return

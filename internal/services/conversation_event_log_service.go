@@ -3,6 +3,7 @@ package services
 import (
 	"cs-agent/internal/models"
 	"cs-agent/internal/pkg/enums"
+	"cs-agent/internal/pkg/tracex"
 	"cs-agent/internal/repositories"
 	"strings"
 	"time"
@@ -69,8 +70,13 @@ func (s *conversationEventLogService) Delete(id int64) {
 }
 
 func (s *conversationEventLogService) CreateEvent(ctx *sqls.TxContext, conversationID int64, eventType enums.IMEventType, operatorType enums.IMSenderType, operatorID int64, content, payload string) error {
+	return s.CreateEventWithRequestID(ctx, conversationID, "", eventType, operatorType, operatorID, content, payload)
+}
+
+func (s *conversationEventLogService) CreateEventWithRequestID(ctx *sqls.TxContext, conversationID int64, requestID string, eventType enums.IMEventType, operatorType enums.IMSenderType, operatorID int64, content, payload string) error {
 	return repositories.ConversationEventLogRepository.Create(ctx.Tx, &models.ConversationEventLog{
 		ConversationID: conversationID,
+		RequestID:      tracex.NormalizeRequestID(requestID),
 		EventType:      eventType,
 		OperatorType:   operatorType,
 		OperatorID:     operatorID,

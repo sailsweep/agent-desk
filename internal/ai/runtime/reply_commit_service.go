@@ -36,7 +36,7 @@ func (s *replyCommitService) SendAIReply(input replyCommitInput) (*models.Messag
 		return nil, nil
 	}
 	commitStartedAt := time.Now()
-	replyMessage, err := svc.MessageService.SendAIMessage(
+	replyMessage, err := svc.MessageService.SendAIMessageWithRequestID(
 		input.Conversation.ID,
 		input.AIAgent.ID,
 		fmt.Sprintf("%s_%d", strings.TrimSpace(input.ClientPrefix), input.Message.ID),
@@ -44,6 +44,7 @@ func (s *replyCommitService) SendAIReply(input replyCommitInput) (*models.Messag
 		replyText,
 		"",
 		s.buildAIPrincipal(input.AIAgent),
+		input.Message.RequestID,
 	)
 	if input.Trace != nil {
 		input.Trace.CommitMs = time.Since(commitStartedAt).Milliseconds()

@@ -18,3 +18,8 @@ type LoginResponse struct {
 	Permissions []string          `json:"permissions"`
 	Roles       []string          `json:"roles"`
 }
+
+type AuthOptionsResponse struct {
+	WxWorkEnabled bool `json:"wxworkEnabled"`
+	OIDCEnabled   bool `json:"oidcEnabled"`
+}

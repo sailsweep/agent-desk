@@ -11,6 +11,7 @@ import (
 func registerApiAuthRoutes(group *gin.RouterGroup) {
 	group.POST("/login", api.Login)
 	group.POST("/logout", api.Logout)
+	group.GET("/options", api.AuthOptions)
 	group.GET("/profile", api.Profile)
 	group.GET("/wxwork_callback", api.WxWorkCallback)
 	group.POST("/wxwork_exchange", api.WxWorkExchange)

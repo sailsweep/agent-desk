@@ -8,6 +8,7 @@ import (
 
 	"cs-agent/internal/ai/runtime/tooling"
 	"cs-agent/internal/models"
+	"cs-agent/internal/pkg/tracex"
 	"cs-agent/internal/services"
 
 	componenttool "github.com/cloudwego/eino/components/tool"
@@ -51,7 +52,8 @@ func (g *HandoffGraph) Run(ctx context.Context, argumentsInJSON string) (string,
 		if err != nil {
 			return "", err
 		}
-		handled, err := services.ConversationService.TryOffHoursHandoffByAI(g.conversation.ID, g.aiAgent, reason)
+		requestID := tracex.RequestIDFromContext(ctx)
+		handled, err := services.ConversationService.TryOffHoursHandoffByAIWithRequestID(g.conversation.ID, g.aiAgent, reason, requestID)
 		if err != nil || handled {
 			if handled && err == nil {
 				return tooling.MarshalToolResult(tooling.ToolResult{
@@ -91,7 +93,7 @@ func (g *HandoffGraph) Run(ctx context.Context, argumentsInJSON string) (string,
 	}
 	switch parseHandoffDecision(resumeText) {
 	case ConfirmationDecisionConfirm:
-		if err := services.ConversationService.HandoffByAI(g.conversation.ID, g.aiAgent, state.Reason); err != nil {
+		if err := services.ConversationService.HandoffByAIWithRequestID(g.conversation.ID, g.aiAgent, state.Reason, tracex.RequestIDFromContext(ctx)); err != nil {
 			return "", err
 		}
 		// ConversationService sends the customer-visible handoff notice according to the dispatch decision.

@@ -6,6 +6,7 @@ import (
 	"cs-agent/internal/pkg/enums"
 	"cs-agent/internal/pkg/errorsx"
 	"cs-agent/internal/pkg/openidentity"
+	"cs-agent/internal/pkg/tracex"
 	"cs-agent/internal/pkg/utils"
 	"cs-agent/internal/repositories"
 	"log/slog"
@@ -130,18 +131,22 @@ func (s *messageService) GetConversationReadTarget(conversationID, messageID int
 func (s *messageService) SendMessage(conversationID int64, senderType enums.IMSenderType, reqSenderID int64, clientMsgID string, messageType enums.IMMessageType, content, payload string, operator *dto.AuthPrincipal, external *openidentity.ExternalUser) (*models.Message, error) {
 	switch senderType {
 	case enums.IMSenderTypeAgent:
-		return s.sendMessage(conversationID, enums.IMSenderTypeAgent, reqSenderID, clientMsgID, messageType, content, payload, operator, nil)
+		return s.sendMessage(conversationID, enums.IMSenderTypeAgent, reqSenderID, clientMsgID, messageType, content, payload, operator, nil, "")
 	case enums.IMSenderTypeAI:
-		return s.sendMessage(conversationID, enums.IMSenderTypeAI, reqSenderID, clientMsgID, messageType, content, payload, operator, nil)
+		return s.sendMessage(conversationID, enums.IMSenderTypeAI, reqSenderID, clientMsgID, messageType, content, payload, operator, nil, "")
 	case enums.IMSenderTypeCustomer:
-		return s.sendMessage(conversationID, enums.IMSenderTypeCustomer, 0, clientMsgID, messageType, content, payload, nil, external)
+		return s.sendMessage(conversationID, enums.IMSenderTypeCustomer, 0, clientMsgID, messageType, content, payload, nil, external, "")
 	default:
 		return nil, errorsx.InvalidParam("不支持的发送人类型")
 	}
 }
 
 func (s *messageService) SendAgentMessage(conversationID int64, reqSenderID int64, clientMsgID string, messageType enums.IMMessageType, content, payload string, operator *dto.AuthPrincipal) (*models.Message, error) {
-	return s.sendMessage(conversationID, enums.IMSenderTypeAgent, reqSenderID, clientMsgID, messageType, content, payload, operator, nil)
+	return s.SendAgentMessageWithRequestID(conversationID, reqSenderID, clientMsgID, messageType, content, payload, operator, "")
+}
+
+func (s *messageService) SendAgentMessageWithRequestID(conversationID int64, reqSenderID int64, clientMsgID string, messageType enums.IMMessageType, content, payload string, operator *dto.AuthPrincipal, requestID string) (*models.Message, error) {
+	return s.sendMessage(conversationID, enums.IMSenderTypeAgent, reqSenderID, clientMsgID, messageType, content, payload, operator, nil, requestID)
 }
 
 func (s *messageService) RecallAgentMessage(messageID int64, operator *dto.AuthPrincipal) (*models.Message, error) {
@@ -240,10 +245,18 @@ func (s *messageService) RecallAgentMessage(messageID int64, operator *dto.AuthP
 }
 
 func (s *messageService) SendAIMessage(conversationID int64, aiAgentID int64, clientMsgID string, messageType enums.IMMessageType, content, payload string, operator *dto.AuthPrincipal) (*models.Message, error) {
-	return s.sendMessage(conversationID, enums.IMSenderTypeAI, aiAgentID, clientMsgID, messageType, content, payload, operator, nil)
+	return s.SendAIMessageWithRequestID(conversationID, aiAgentID, clientMsgID, messageType, content, payload, operator, "")
+}
+
+func (s *messageService) SendAIMessageWithRequestID(conversationID int64, aiAgentID int64, clientMsgID string, messageType enums.IMMessageType, content, payload string, operator *dto.AuthPrincipal, requestID string) (*models.Message, error) {
+	return s.sendMessage(conversationID, enums.IMSenderTypeAI, aiAgentID, clientMsgID, messageType, content, payload, operator, nil, requestID)
 }
 
 func (s *messageService) SendAIServiceNotice(conversationID int64, aiAgentID int64, content string) (*models.Message, error) {
+	return s.SendAIServiceNoticeWithRequestID(conversationID, aiAgentID, content, "")
+}
+
+func (s *messageService) SendAIServiceNoticeWithRequestID(conversationID int64, aiAgentID int64, content string, requestID string) (*models.Message, error) {
 	conversation := ConversationService.Get(conversationID)
 	if conversation == nil {
 		return nil, errorsx.InvalidParam("会话不存在")
@@ -255,7 +268,7 @@ func (s *messageService) SendAIServiceNotice(conversationID int64, aiAgentID int
 		UserID:   0,
 		Username: "system",
 		Nickname: "system",
-	}, nil)
+	}, nil, requestID)
 }
 
 func (s *messageService) createAIWelcomeMessage(ctx *sqls.TxContext, conversation *models.Conversation, aiAgent *models.AIAgent, now time.Time) (*models.Message, error) {
@@ -351,12 +364,16 @@ func (s *messageService) createAIWelcomeMessage(ctx *sqls.TxContext, conversatio
 }
 
 func (s *messageService) SendCustomerMessage(conversationID int64, clientMsgID string, messageType enums.IMMessageType, content, payload string, external openidentity.ExternalUser) (*models.Message, error) {
+	return s.SendCustomerMessageWithRequestID(conversationID, clientMsgID, messageType, content, payload, external, "")
+}
+
+func (s *messageService) SendCustomerMessageWithRequestID(conversationID int64, clientMsgID string, messageType enums.IMMessageType, content, payload string, external openidentity.ExternalUser, requestID string) (*models.Message, error) {
 	ext := external
-	return s.sendMessage(conversationID, enums.IMSenderTypeCustomer, 0, clientMsgID, messageType, content, payload, nil, &ext)
+	return s.sendMessage(conversationID, enums.IMSenderTypeCustomer, 0, clientMsgID, messageType, content, payload, nil, &ext, requestID)
 }
 
 func (s *messageService) sendMessage(conversationID int64, senderType enums.IMSenderType, reqSenderID int64, clientMsgID string,
-	messageType enums.IMMessageType, content, payload string, operator *dto.AuthPrincipal, external *openidentity.ExternalUser) (*models.Message, error) {
+	messageType enums.IMMessageType, content, payload string, operator *dto.AuthPrincipal, external *openidentity.ExternalUser, requestID string) (*models.Message, error) {
 
 	if senderType == enums.IMSenderTypeCustomer {
 		if external == nil || strings.TrimSpace(external.ExternalID) == "" {
@@ -373,11 +390,11 @@ func (s *messageService) sendMessage(conversationID int64, senderType enums.IMSe
 	if err != nil {
 		return nil, err
 	}
-	return s.sendValidatedMessage(conversation, senderType, reqSenderID, clientMsgID, messageType, content, payload, operator, external)
+	return s.sendValidatedMessage(conversation, senderType, reqSenderID, clientMsgID, messageType, content, payload, operator, external, requestID)
 }
 
 func (s *messageService) sendValidatedMessage(conversation *models.Conversation, senderType enums.IMSenderType, reqSenderID int64, clientMsgID string,
-	messageType enums.IMMessageType, content, payload string, operator *dto.AuthPrincipal, external *openidentity.ExternalUser) (*models.Message, error) {
+	messageType enums.IMMessageType, content, payload string, operator *dto.AuthPrincipal, external *openidentity.ExternalUser, requestID string) (*models.Message, error) {
 
 	var err error
 	var summary string
@@ -398,6 +415,7 @@ func (s *messageService) sendValidatedMessage(conversation *models.Conversation,
 
 	var (
 		now           = time.Now()
+		traceID       = tracex.NormalizeRequestID(requestID)
 		auditUserID   = int64(0)
 		auditUserName = ""
 		nextSeq       = repositories.MessageRepository.NextSeqNo(sqls.DB(), conversation.ID)
@@ -412,6 +430,7 @@ func (s *messageService) sendValidatedMessage(conversation *models.Conversation,
 	}
 	message := &models.Message{
 		ConversationID: conversation.ID,
+		RequestID:      traceID,
 		ClientMsgID:    clientMsgID,
 		SenderType:     senderType,
 		SenderID:       reqSenderID,
@@ -487,7 +506,7 @@ func (s *messageService) sendValidatedMessage(conversation *models.Conversation,
 		}
 
 		// 记录事件日志
-		if err := ConversationEventLogService.CreateEvent(ctx, conversation.ID, enums.IMEventTypeMessageSend, senderType,
+		if err := ConversationEventLogService.CreateEventWithRequestID(ctx, conversation.ID, traceID, enums.IMEventTypeMessageSend, senderType,
 			func() int64 {
 				if operator != nil {
 					return operator.UserID

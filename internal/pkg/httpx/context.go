@@ -3,6 +3,7 @@ package httpx
 import (
 	"cs-agent/internal/pkg/httpx/params"
 	"cs-agent/internal/pkg/openidentity"
+	"cs-agent/internal/pkg/tracex"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/common/strs"
@@ -30,4 +31,16 @@ func GetChannelID(ctx *gin.Context) string {
 		return channelID
 	}
 	return ""
+}
+
+func GetRequestID(ctx *gin.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	if value, ok := ctx.Get(tracex.GinRequestIDKey); ok {
+		if requestID, ok := value.(string); ok {
+			return tracex.NormalizeRequestID(requestID)
+		}
+	}
+	return tracex.NormalizeRequestID(ctx.GetHeader(tracex.RequestIDHeader))
 }

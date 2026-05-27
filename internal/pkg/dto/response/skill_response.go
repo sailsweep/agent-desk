@@ -44,6 +44,7 @@ type AgentRunLogResponse struct {
 	ID                int64  `json:"id"`
 	ConversationID    int64  `json:"conversationId"`
 	MessageID         int64  `json:"messageId"`
+	RequestID         string `json:"requestId"`
 	AIAgentID         int64  `json:"aiAgentId"`
 	AIConfigID        int64  `json:"aiConfigId"`
 	UserMessage       string `json:"userMessage"`

@@ -9,6 +9,7 @@ import (
 	applicationruntime "cs-agent/internal/ai/application/runtime"
 	"cs-agent/internal/models"
 	"cs-agent/internal/pkg/enums"
+	"cs-agent/internal/pkg/tracex"
 	svc "cs-agent/internal/services"
 )
 
@@ -30,10 +31,11 @@ func (s *aiReplyService) TriggerReplyAsync(conversation models.Conversation, mes
 		}
 		startedAt := time.Now()
 		timeout := s.resolveReplyTimeout(*aiAgent)
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := context.WithTimeout(tracex.ContextWithRequestID(context.Background(), message.RequestID), timeout)
 		defer cancel()
 		if err := s.TriggerReply(ctx, conversation, message, *aiAgent); err != nil {
 			slog.Error("failed to trigger ai reply",
+				"requestId", message.RequestID,
 				"message_id", message.ID,
 				"timeout_ms", timeout.Milliseconds(),
 				"elapsed_ms", time.Since(startedAt).Milliseconds(),

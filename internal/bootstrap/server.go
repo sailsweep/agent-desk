@@ -13,6 +13,7 @@ import (
 	"cs-agent/internal/pkg/ginx"
 	"cs-agent/internal/pkg/httpx"
 	"cs-agent/internal/pkg/i18nx"
+	"cs-agent/internal/pkg/tracex"
 	"cs-agent/internal/services"
 	webspa "cs-agent/web"
 
@@ -29,6 +30,7 @@ func NewServer() (*gin.Engine, error) {
 	printBanner()
 
 	app := gin.New()
+	app.Use(requestIDMiddleware())
 	app.Use(corsMiddleware())
 	app.Use(gin.Recovery())
 	app.Use(requestLogMiddleware())
@@ -103,14 +105,27 @@ func corsMiddleware() gin.HandlerFunc {
 	}
 }
 
+func requestIDMiddleware() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		requestID := tracex.EnsureRequestID(ctx.GetHeader(tracex.RequestIDHeader))
+		ctx.Set(tracex.GinRequestIDKey, requestID)
+		if requestID != "" {
+			ctx.Header(tracex.RequestIDHeader, requestID)
+		}
+		ctx.Next()
+	}
+}
+
 func requestLogMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		start := time.Now()
 		path := ctx.Request.URL.Path
 		method := ctx.Request.Method
+		requestID, _ := ctx.Get(tracex.GinRequestIDKey)
 		ctx.Next()
 
 		slog.Info("http request",
+			"requestId", requestID,
 			"method", method,
 			"path", path,
 			"status", ctx.Writer.Status(),

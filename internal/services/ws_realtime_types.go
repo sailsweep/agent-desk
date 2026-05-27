@@ -137,6 +137,7 @@ func (e RealtimeResyncRequiredEvent) EventPayload() RealtimeEventPayload {
 type RealtimeMessageCreatedPayload struct {
 	ConversationID    int64                      `json:"conversationId,omitempty"`
 	MessageID         int64                      `json:"messageId,omitempty"`
+	RequestID         string                     `json:"requestId,omitempty"`
 	Message           response.MessageResponse   `json:"message,omitempty"`
 	Status            enums.IMConversationStatus `json:"status,omitempty"`
 	CurrentAssigneeID int64                      `json:"currentAssigneeId,omitempty"`

@@ -163,6 +163,40 @@ func TestConversationCreateCreatesAIWelcomeMessage(t *testing.T) {
 	}
 }
 
+func TestSendCustomerMessageStoresRequestIDOnMessageAndEvent(t *testing.T) {
+	db := setupMessageWelcomeTestDB(t)
+	aiAgent := createWelcomeTestAIAgent(t, db, "")
+	external := welcomeTestExternalUser("trace-user")
+	conversation, err := ConversationService.Create(external, 11, aiAgent.ID)
+	if err != nil {
+		t.Fatalf("create conversation: %v", err)
+	}
+
+	message, err := MessageService.SendCustomerMessageWithRequestID(
+		conversation.ID,
+		"client-msg-trace",
+		enums.IMMessageTypeText,
+		"hello",
+		"",
+		external,
+		"trace-123",
+	)
+	if err != nil {
+		t.Fatalf("SendCustomerMessageWithRequestID() error = %v", err)
+	}
+	if message.RequestID != "trace-123" {
+		t.Fatalf("message.RequestID=%q want %q", message.RequestID, "trace-123")
+	}
+
+	var event models.ConversationEventLog
+	if err := db.Where("conversation_id = ?", conversation.ID).Order("id DESC").First(&event).Error; err != nil {
+		t.Fatalf("find event: %v", err)
+	}
+	if event.RequestID != "trace-123" {
+		t.Fatalf("event.RequestID=%q want %q", event.RequestID, "trace-123")
+	}
+}
+
 func TestConversationCreateDoesNotDuplicateWelcomeMessageForExistingConversation(t *testing.T) {
 	db := setupMessageWelcomeTestDB(t)
 	aiAgent := createWelcomeTestAIAgent(t, db, "欢迎咨询")

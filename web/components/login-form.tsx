@@ -6,7 +6,7 @@ import { startTransition, useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import { useAuth } from "@/components/auth-provider"
-import { loginWithPassword } from "@/lib/api/auth"
+import { fetchAuthOptions, loginWithPassword, type AuthOptions } from "@/lib/api/auth"
 import { useI18n } from "@/i18n/provider"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -36,6 +36,10 @@ export function LoginForm({
   const { session } = useAuth()
   const [isPending, setIsPending] = useState(false)
   const [isWxWorkEnv, setIsWxWorkEnv] = useState(false)
+  const [authOptions, setAuthOptions] = useState<AuthOptions>({
+    wxworkEnabled: false,
+    oidcEnabled: false,
+  })
   const nextPath = searchParams.get("next")
   const wxworkError = searchParams.get("wxworkError")
   const oidcError = searchParams.get("oidcError")
@@ -62,6 +66,26 @@ export function LoginForm({
 
   useEffect(() => {
     setIsWxWorkEnv(detectWxWorkEnvironment())
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    void fetchAuthOptions()
+      .then((options) => {
+        if (!cancelled) {
+          setAuthOptions(options)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAuthOptions({ wxworkEnabled: false, oidcEnabled: false })
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -126,33 +150,37 @@ export function LoginForm({
             {isPending ? t("auth.signingIn") : t("auth.signIn")}
           </Button>
         </Field>
-        <Field>
-          <Button
-            type="button"
-            variant="outline"
-            className="gap-2"
-            onClick={() => {
-              const path = isWxWorkEnv ? "/api/auth/wxwork_login" : "/api/auth/wxwork_qr_login"
-              window.location.href = `${path}?next=${encodeURIComponent(redirectPath)}`
-            }}
-          >
-            <Image src="/images/wxwork.svg" alt="" width={16} height={16} className="size-4 shrink-0" />
-            {t("auth.wxworkSignIn")}
-          </Button>
-        </Field>
-        <Field>
-          <Button
-            type="button"
-            variant="outline"
-            className="gap-2"
-            onClick={() => {
-              window.location.href = `/api/auth/oidc_login?next=${encodeURIComponent(redirectPath)}`
-            }}
-          >
-            <KeyRoundIcon className="size-4 shrink-0" />
-            {t("auth.oidcSignIn")}
-          </Button>
-        </Field>
+        {authOptions.wxworkEnabled ? (
+          <Field>
+            <Button
+              type="button"
+              variant="outline"
+              className="gap-2"
+              onClick={() => {
+                const path = isWxWorkEnv ? "/api/auth/wxwork_login" : "/api/auth/wxwork_qr_login"
+                window.location.href = `${path}?next=${encodeURIComponent(redirectPath)}`
+              }}
+            >
+              <Image src="/images/wxwork.svg" alt="" width={16} height={16} className="size-4 shrink-0" />
+              {t("auth.wxworkSignIn")}
+            </Button>
+          </Field>
+        ) : null}
+        {authOptions.oidcEnabled ? (
+          <Field>
+            <Button
+              type="button"
+              variant="outline"
+              className="gap-2"
+              onClick={() => {
+                window.location.href = `/api/auth/oidc_login?next=${encodeURIComponent(redirectPath)}`
+              }}
+            >
+              <KeyRoundIcon className="size-4 shrink-0" />
+              {t("auth.oidcSignIn")}
+            </Button>
+          </Field>
+        ) : null}
       </FieldGroup>
     </form>
   )

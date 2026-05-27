@@ -73,7 +73,7 @@ func MessagePostSend(ctx *gin.Context) {
 		return
 	}
 
-	item, err := services.MessageService.SendCustomerMessage(req.ConversationID, req.ClientMsgID, req.MessageType, req.Content, req.Payload, *external)
+	item, err := services.MessageService.SendCustomerMessageWithRequestID(req.ConversationID, req.ClientMsgID, req.MessageType, req.Content, req.Payload, *external, httpx.GetRequestID(ctx))
 	if err != nil {
 		httpx.WriteJSON(ctx, err)
 		return

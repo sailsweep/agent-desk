@@ -385,6 +385,7 @@ type ConversationReadState struct {
 type Message struct {
 	ID              int64                 `gorm:"primaryKey;autoIncrement"`
 	ConversationID  int64                 `gorm:"type:bigint;not null;index;uniqueIndex:uk_conversation_seq;uniqueIndex:uk_conversation_client_msg"`
+	RequestID       string                `gorm:"type:varchar(128);not null;default:'';index"`
 	ClientMsgID     string                `gorm:"type:varchar(128);not null;default:'';uniqueIndex:uk_conversation_client_msg"`
 	SenderType      enums.IMSenderType    `gorm:"type:varchar(30);not null;default:'';index"`
 	SenderID        int64                 `gorm:"type:bigint;not null;default:0;index"`
@@ -552,6 +553,7 @@ type Channel struct {
 type ConversationEventLog struct {
 	ID             int64              `gorm:"primaryKey;autoIncrement"`
 	ConversationID int64              `gorm:"type:bigint;not null;index"`
+	RequestID      string             `gorm:"type:varchar(128);not null;default:'';index"`
 	EventType      enums.IMEventType  `gorm:"type:varchar(50);not null;default:'';index"`
 	OperatorType   enums.IMSenderType `gorm:"type:varchar(30);not null;default:'';index"`
 	OperatorID     int64              `gorm:"type:bigint;not null;default:0;index"`
@@ -839,6 +841,7 @@ type AgentRunLog struct {
 	ID               int64     `gorm:"primaryKey;autoIncrement"`
 	ConversationID   int64     `gorm:"type:bigint;not null;default:0;index"`
 	MessageID        int64     `gorm:"type:bigint;not null;default:0;index"`
+	RequestID        string    `gorm:"type:varchar(128);not null;default:'';index"`
 	AIAgentID        int64     `gorm:"type:bigint;not null;default:0;index"`
 	AIConfigID       int64     `gorm:"type:bigint;not null;default:0;index"`
 	UserMessage      string    `gorm:"type:longtext"`

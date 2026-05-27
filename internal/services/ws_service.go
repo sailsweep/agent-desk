@@ -299,6 +299,7 @@ func (s *wsService) PublishMessageCreated(conversation *models.Conversation, mes
 		Payload: RealtimeMessageCreatedPayload{
 			ConversationID:    conversation.ID,
 			MessageID:         message.ID,
+			RequestID:         message.RequestID,
 			Message:           s.buildRealtimeMessage(message),
 			Status:            conversation.Status,
 			CurrentAssigneeID: conversation.CurrentAssigneeID,
@@ -324,6 +325,7 @@ func (s *wsService) buildRealtimeMessage(item *models.Message) response.MessageR
 	ret := response.MessageResponse{
 		ID:              item.ID,
 		ConversationID:  item.ConversationID,
+		RequestID:       item.RequestID,
 		ClientMsgID:     item.ClientMsgID,
 		SenderType:      item.SenderType,
 		SenderID:        item.SenderID,

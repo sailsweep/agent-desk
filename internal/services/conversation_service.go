@@ -347,12 +347,17 @@ func (s *conversationService) TransferConversation(conversationID, toUserID int6
 }
 
 func (s *conversationService) HandoffByAI(conversationID int64, aiAgent models.AIAgent, reason string) error {
+	return s.HandoffByAIWithRequestID(conversationID, aiAgent, reason, "")
+}
+
+func (s *conversationService) HandoffByAIWithRequestID(conversationID int64, aiAgent models.AIAgent, reason string, requestID string) error {
 	if conversationID <= 0 {
 		return errorsx.InvalidParam("会话不存在")
 	}
-	_, err := ConversationHumanDispatchService.HandoffByAI(conversationID, aiAgent, reason)
+	_, err := ConversationHumanDispatchService.HandoffByAIWithRequestID(conversationID, aiAgent, reason, requestID)
 	if err != nil {
 		slog.Warn("schedule-aware ai handoff failed",
+			"requestId", requestID,
 			"conversation_id", conversationID,
 			"ai_agent_id", aiAgent.ID,
 			"error", err)
@@ -361,12 +366,17 @@ func (s *conversationService) HandoffByAI(conversationID int64, aiAgent models.A
 }
 
 func (s *conversationService) TryOffHoursHandoffByAI(conversationID int64, aiAgent models.AIAgent, reason string) (bool, error) {
+	return s.TryOffHoursHandoffByAIWithRequestID(conversationID, aiAgent, reason, "")
+}
+
+func (s *conversationService) TryOffHoursHandoffByAIWithRequestID(conversationID int64, aiAgent models.AIAgent, reason string, requestID string) (bool, error) {
 	if conversationID <= 0 {
 		return false, errorsx.InvalidParam("会话不存在")
 	}
-	handled, err := ConversationHumanDispatchService.TryOffHoursHandoffByAI(conversationID, aiAgent, reason)
+	handled, err := ConversationHumanDispatchService.TryOffHoursHandoffByAIWithRequestID(conversationID, aiAgent, reason, requestID)
 	if err != nil {
 		slog.Warn("off-hours ai handoff failed",
+			"requestId", requestID,
 			"conversation_id", conversationID,
 			"ai_agent_id", aiAgent.ID,
 			"error", err)

@@ -5,6 +5,7 @@ import "cs-agent/internal/pkg/enums"
 type MessageResponse struct {
 	ID              int64                 `json:"id"`
 	ConversationID  int64                 `json:"conversationId"`
+	RequestID       string                `json:"requestId,omitempty"`
 	ClientMsgID     string                `json:"clientMsgId,omitempty"`
 	SenderType      enums.IMSenderType    `json:"senderType"`
 	SenderID        int64                 `json:"senderId"`

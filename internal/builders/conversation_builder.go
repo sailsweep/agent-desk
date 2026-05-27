@@ -149,6 +149,7 @@ func BuildMessageWithReadStatesAndLocale(item *models.Message, agentReadState, c
 	ret := response.MessageResponse{
 		ID:              item.ID,
 		ConversationID:  item.ConversationID,
+		RequestID:       item.RequestID,
 		ClientMsgID:     item.ClientMsgID,
 		SenderType:      item.SenderType,
 		SenderID:        item.SenderID,

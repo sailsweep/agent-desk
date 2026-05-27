@@ -3,6 +3,7 @@ package api
 import (
 	"cs-agent/internal/pkg/config"
 	"cs-agent/internal/pkg/dto/request"
+	"cs-agent/internal/pkg/dto/response"
 	"cs-agent/internal/pkg/httpx"
 	"cs-agent/internal/pkg/httpx/params"
 	"cs-agent/internal/services"
@@ -27,6 +28,14 @@ func Login(ctx *gin.Context) {
 		return
 	}
 	httpx.WriteJSON(ctx, ret)
+}
+
+func AuthOptions(ctx *gin.Context) {
+	cfg := config.Current()
+	httpx.WriteJSON(ctx, &response.AuthOptionsResponse{
+		WxWorkEnabled: cfg.WxWork.Enabled,
+		OIDCEnabled:   cfg.OIDC.Enabled,
+	})
 }
 
 func WxWorkLogin(ctx *gin.Context) {

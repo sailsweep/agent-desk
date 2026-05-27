@@ -22,6 +22,7 @@ func AgentRunLogAnyList(ctx *gin.Context) {
 	cnd := params.NewPagedSqlCnd(ctx,
 		params.QueryFilter{ParamName: "conversationId"},
 		params.QueryFilter{ParamName: "messageId"},
+		params.QueryFilter{ParamName: "requestId"},
 		params.QueryFilter{ParamName: "aiAgentId"},
 		params.QueryFilter{ParamName: "plannedAction"},
 		params.QueryFilter{ParamName: "plannedSkillCode", Op: params.Like},

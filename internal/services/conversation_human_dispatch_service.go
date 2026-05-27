@@ -46,6 +46,10 @@ func newConversationHumanDispatchService() *conversationHumanDispatchService {
 }
 
 func (s *conversationHumanDispatchService) TryOffHoursHandoffByAI(conversationID int64, aiAgent models.AIAgent, reason string) (bool, error) {
+	return s.TryOffHoursHandoffByAIWithRequestID(conversationID, aiAgent, reason, "")
+}
+
+func (s *conversationHumanDispatchService) TryOffHoursHandoffByAIWithRequestID(conversationID int64, aiAgent models.AIAgent, reason string, requestID string) (bool, error) {
 	conversation := ConversationService.Get(conversationID)
 	if conversation == nil {
 		return false, errorsx.InvalidParam("会话不存在")
@@ -55,16 +59,20 @@ func (s *conversationHumanDispatchService) TryOffHoursHandoffByAI(conversationID
 	if len(activeTeamIDs) > 0 {
 		return false, nil
 	}
-	if err := s.createEvent(conversationID, enums.IMEventTypeTransfer, enums.IMSenderTypeAI, aiAgent.ID, "转人工失败：非服务时间", strings.TrimSpace(reason)); err != nil {
+	if err := s.createEventWithRequestID(conversationID, requestID, enums.IMEventTypeTransfer, enums.IMSenderTypeAI, aiAgent.ID, "转人工失败：非服务时间", strings.TrimSpace(reason)); err != nil {
 		return true, err
 	}
-	if err := s.sendAIText(conversationID, aiAgent.ID, HandoffOffHoursMessage); err != nil {
+	if err := s.sendAITextWithRequestID(conversationID, aiAgent.ID, HandoffOffHoursMessage, requestID); err != nil {
 		return true, err
 	}
 	return true, nil
 }
 
 func (s *conversationHumanDispatchService) HandoffByAI(conversationID int64, aiAgent models.AIAgent, reason string) (*HandoffDecisionResult, error) {
+	return s.HandoffByAIWithRequestID(conversationID, aiAgent, reason, "")
+}
+
+func (s *conversationHumanDispatchService) HandoffByAIWithRequestID(conversationID int64, aiAgent models.AIAgent, reason string, requestID string) (*HandoffDecisionResult, error) {
 	conversation := ConversationService.Get(conversationID)
 	if conversation == nil {
 		return nil, errorsx.InvalidParam("会话不存在")
@@ -72,16 +80,16 @@ func (s *conversationHumanDispatchService) HandoffByAI(conversationID int64, aiA
 	teamIDs := orderedPositiveIDs(aiAgent.TeamIDs)
 	activeTeamIDs := ConversationDispatchService.findActiveScheduleTeamIDs(teamIDs, time.Now())
 	if len(activeTeamIDs) == 0 {
-		if _, err := s.TryOffHoursHandoffByAI(conversationID, aiAgent, reason); err != nil {
+		if _, err := s.TryOffHoursHandoffByAIWithRequestID(conversationID, aiAgent, reason, requestID); err != nil {
 			return nil, err
 		}
 		return &HandoffDecisionResult{Decision: HandoffDecisionOffHours, Message: HandoffOffHoursMessage}, nil
 	}
 
-	if err := s.markHandoff(conversationID, aiAgent, reason); err != nil {
+	if err := s.markHandoff(conversationID, aiAgent, reason, requestID); err != nil {
 		return nil, err
 	}
-	return s.dispatchAfterHandoff(conversationID, aiAgent.ID, activeTeamIDs, strings.TrimSpace(reason), true)
+	return s.dispatchAfterHandoffWithRequestID(conversationID, aiAgent.ID, activeTeamIDs, strings.TrimSpace(reason), true, requestID)
 }
 
 func (s *conversationHumanDispatchService) ApplyHumanOnlyCreate(conversationID int64, aiAgent models.AIAgent) (*HandoffDecisionResult, error) {
@@ -141,7 +149,11 @@ func (s *conversationHumanDispatchService) DispatchPendingConversation(conversat
 }
 
 func (s *conversationHumanDispatchService) dispatchAfterHandoff(conversationID, aiAgentID int64, activeTeamIDs []int64, reason string, publishAssignEvent bool) (*HandoffDecisionResult, error) {
-	if err := s.sendAIText(conversationID, aiAgentID, HandoffWaitingMessage); err != nil {
+	return s.dispatchAfterHandoffWithRequestID(conversationID, aiAgentID, activeTeamIDs, reason, publishAssignEvent, "")
+}
+
+func (s *conversationHumanDispatchService) dispatchAfterHandoffWithRequestID(conversationID, aiAgentID int64, activeTeamIDs []int64, reason string, publishAssignEvent bool, requestID string) (*HandoffDecisionResult, error) {
+	if err := s.sendAITextWithRequestID(conversationID, aiAgentID, HandoffWaitingMessage, requestID); err != nil {
 		return nil, err
 	}
 
@@ -175,7 +187,7 @@ func (s *conversationHumanDispatchService) dispatchAfterHandoff(conversationID, 
 	}
 
 	teamID := activeTeamIDs[0]
-	teamPoolConversation, err := s.moveToTeamPool(conversationID, teamID, reason)
+	teamPoolConversation, err := s.moveToTeamPoolWithRequestID(conversationID, teamID, reason, requestID)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +197,7 @@ func (s *conversationHumanDispatchService) dispatchAfterHandoff(conversationID, 
 	return &HandoffDecisionResult{Decision: HandoffDecisionTeamPool, TeamID: teamID, Message: HandoffWaitingMessage}, nil
 }
 
-func (s *conversationHumanDispatchService) markHandoff(conversationID int64, aiAgent models.AIAgent, reason string) error {
+func (s *conversationHumanDispatchService) markHandoff(conversationID int64, aiAgent models.AIAgent, reason string, requestID string) error {
 	now := time.Now()
 	trimmedReason := strings.TrimSpace(reason)
 	return sqls.WithTransaction(func(ctx *sqls.TxContext) error {
@@ -201,11 +213,15 @@ func (s *conversationHumanDispatchService) markHandoff(conversationID int64, aiA
 		}); err != nil {
 			return err
 		}
-		return ConversationEventLogService.CreateEvent(ctx, conversationID, enums.IMEventTypeTransfer, enums.IMSenderTypeAI, aiAgent.ID, "AI转人工", trimmedReason)
+		return ConversationEventLogService.CreateEventWithRequestID(ctx, conversationID, requestID, enums.IMEventTypeTransfer, enums.IMSenderTypeAI, aiAgent.ID, "AI转人工", trimmedReason)
 	})
 }
 
 func (s *conversationHumanDispatchService) moveToTeamPool(conversationID, teamID int64, reason string) (*models.Conversation, error) {
+	return s.moveToTeamPoolWithRequestID(conversationID, teamID, reason, "")
+}
+
+func (s *conversationHumanDispatchService) moveToTeamPoolWithRequestID(conversationID, teamID int64, reason string, requestID string) (*models.Conversation, error) {
 	now := time.Now()
 	var conversation *models.Conversation
 	err := sqls.WithTransaction(func(ctx *sqls.TxContext) error {
@@ -226,7 +242,7 @@ func (s *conversationHumanDispatchService) moveToTeamPool(conversationID, teamID
 		}); err != nil {
 			return err
 		}
-		if err := ConversationEventLogService.CreateEvent(ctx, conversationID, enums.IMEventTypeTransfer, enums.IMSenderTypeSystem, 0, "会话进入客服组待接入", ConversationService.buildEventPayload(map[string]any{
+		if err := ConversationEventLogService.CreateEventWithRequestID(ctx, conversationID, requestID, enums.IMEventTypeTransfer, enums.IMSenderTypeSystem, 0, "会话进入客服组待接入", ConversationService.buildEventPayload(map[string]any{
 			"fromStatus":     current.Status,
 			"toStatus":       enums.IMConversationStatusPending,
 			"fromAssigneeId": current.CurrentAssigneeID,
@@ -278,13 +294,21 @@ func (s *conversationHumanDispatchService) moveToGlobalPool(conversationID int64
 }
 
 func (s *conversationHumanDispatchService) createEvent(conversationID int64, eventType enums.IMEventType, senderType enums.IMSenderType, senderID int64, content, payload string) error {
+	return s.createEventWithRequestID(conversationID, "", eventType, senderType, senderID, content, payload)
+}
+
+func (s *conversationHumanDispatchService) createEventWithRequestID(conversationID int64, requestID string, eventType enums.IMEventType, senderType enums.IMSenderType, senderID int64, content, payload string) error {
 	return sqls.WithTransaction(func(ctx *sqls.TxContext) error {
-		return ConversationEventLogService.CreateEvent(ctx, conversationID, eventType, senderType, senderID, content, payload)
+		return ConversationEventLogService.CreateEventWithRequestID(ctx, conversationID, requestID, eventType, senderType, senderID, content, payload)
 	})
 }
 
 func (s *conversationHumanDispatchService) sendAIText(conversationID, aiAgentID int64, content string) error {
-	_, err := MessageService.SendAIServiceNotice(conversationID, aiAgentID, content)
+	return s.sendAITextWithRequestID(conversationID, aiAgentID, content, "")
+}
+
+func (s *conversationHumanDispatchService) sendAITextWithRequestID(conversationID, aiAgentID int64, content string, requestID string) error {
+	_, err := MessageService.SendAIServiceNoticeWithRequestID(conversationID, aiAgentID, content, requestID)
 	return err
 }
 
