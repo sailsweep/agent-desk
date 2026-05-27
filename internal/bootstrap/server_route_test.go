@@ -85,3 +85,77 @@ func TestNewServerSeparatesAPIStaticAndSPA(t *testing.T) {
 		}
 	}
 }
+
+func TestNewServerAllowsConfiguredCORSOrigin(t *testing.T) {
+	config.SetCurrent(&config.Config{
+		Server: config.ServerConfig{
+			CORS: config.CORSConfig{
+				AllowedOrigins: []string{"https://console.example.com"},
+			},
+		},
+		Storage: config.StorageConfig{
+			Local: config.LocalStorageConfig{
+				Root:    "storage",
+				BaseURL: "/storage",
+			},
+		},
+	})
+
+	app, err := NewServer()
+	if err != nil {
+		t.Fatalf("NewServer() error = %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodOptions, "/api/auth/login", nil)
+	req.Header.Set("Origin", "https://console.example.com")
+	req.Header.Set("Access-Control-Request-Method", http.MethodPost)
+	app.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status=%d want %d", rec.Code, http.StatusNoContent)
+	}
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "https://console.example.com" {
+		t.Fatalf("Access-Control-Allow-Origin=%q want %q", got, "https://console.example.com")
+	}
+	if got := rec.Header().Get("Access-Control-Allow-Methods"); !strings.Contains(got, http.MethodPost) {
+		t.Fatalf("Access-Control-Allow-Methods=%q should contain %q", got, http.MethodPost)
+	}
+	if got := rec.Header().Get("Vary"); got != "Origin" {
+		t.Fatalf("Vary=%q want %q", got, "Origin")
+	}
+}
+
+func TestNewServerRejectsUnconfiguredCORSOrigin(t *testing.T) {
+	config.SetCurrent(&config.Config{
+		Server: config.ServerConfig{
+			CORS: config.CORSConfig{
+				AllowedOrigins: []string{"https://console.example.com"},
+			},
+		},
+		Storage: config.StorageConfig{
+			Local: config.LocalStorageConfig{
+				Root:    "storage",
+				BaseURL: "/storage",
+			},
+		},
+	})
+
+	app, err := NewServer()
+	if err != nil {
+		t.Fatalf("NewServer() error = %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodOptions, "/api/auth/login", nil)
+	req.Header.Set("Origin", "https://evil.example.com")
+	req.Header.Set("Access-Control-Request-Method", http.MethodPost)
+	app.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status=%d want %d", rec.Code, http.StatusForbidden)
+	}
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "" {
+		t.Fatalf("Access-Control-Allow-Origin=%q want empty", got)
+	}
+}

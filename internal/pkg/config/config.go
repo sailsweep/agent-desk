@@ -30,7 +30,8 @@ type WxWorkNotifyConfig struct {
 }
 
 type ServerConfig struct {
-	Port int `yaml:"port"`
+	Port int        `yaml:"port"`
+	CORS CORSConfig `yaml:"cors"`
 }
 
 func (s ServerConfig) Address() string {
@@ -38,6 +39,12 @@ func (s ServerConfig) Address() string {
 		return ":8080"
 	}
 	return fmt.Sprintf(":%d", s.Port)
+}
+
+type CORSConfig struct {
+	// AllowedOrigins 是允许浏览器跨域访问的 Origin 白名单，必须包含协议和域名。
+	// 留空表示不允许跨域请求；同源请求通常不会携带 Origin，不受影响。
+	AllowedOrigins []string `yaml:"allowedOrigins"`
 }
 
 type DBConfig struct {

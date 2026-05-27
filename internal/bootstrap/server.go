@@ -29,7 +29,7 @@ func NewServer() (*gin.Engine, error) {
 	printBanner()
 
 	app := gin.New()
-	app.Use(corsMiddleware())
+	app.Use(corsMiddleware(cfg.Server.CORS.AllowedOrigins))
 	app.Use(gin.Recovery())
 	app.Use(requestLogMiddleware())
 	app.Use(maxBodySizeMiddleware(cfg.Storage.MaxRequestBodySizeBytes()))
@@ -60,18 +60,40 @@ func NewServer() (*gin.Engine, error) {
 	return app, nil
 }
 
-func corsMiddleware() gin.HandlerFunc {
+func corsMiddleware(allowedOrigins []string) gin.HandlerFunc {
 	allowHeaders := "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-Guest-Id, X-Channel-Id, X-External-Id, X-External-Name, X-Customer-Session-Token, X-Customer-Session-Expires-At"
 	exposeHeaders := "Content-Length, Content-Type, Authorization, X-Guest-Id, X-Channel-Id, X-External-Id, X-External-Name, X-Customer-Session-Token, X-Customer-Session-Expires-At"
+	allowMethods := "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+	allowedOriginSet := make(map[string]struct{}, len(allowedOrigins))
+	for _, origin := range allowedOrigins {
+		origin = strings.TrimRight(strings.TrimSpace(origin), "/")
+		if origin == "" {
+			continue
+		}
+		allowedOriginSet[origin] = struct{}{}
+	}
 	return func(ctx *gin.Context) {
 		if isWebsocketUpgrade(ctx) {
 			ctx.Next()
 			return
 		}
-		ctx.Header("Access-Control-Allow-Origin", "*")
-		ctx.Header("Access-Control-Allow-Headers", allowHeaders)
-		ctx.Header("Access-Control-Expose-Headers", exposeHeaders)
-		ctx.Header("Access-Control-Max-Age", "600")
+		origin := strings.TrimRight(strings.TrimSpace(ctx.GetHeader("Origin")), "/")
+		if origin != "" {
+			ctx.Header("Vary", "Origin")
+			if _, ok := allowedOriginSet[origin]; !ok {
+				if ctx.Request.Method == http.MethodOptions {
+					ctx.AbortWithStatus(http.StatusForbidden)
+					return
+				}
+				ctx.Next()
+				return
+			}
+			ctx.Header("Access-Control-Allow-Origin", origin)
+			ctx.Header("Access-Control-Allow-Methods", allowMethods)
+			ctx.Header("Access-Control-Allow-Headers", allowHeaders)
+			ctx.Header("Access-Control-Expose-Headers", exposeHeaders)
+			ctx.Header("Access-Control-Max-Age", "600")
+		}
 		if ctx.Request.Method == http.MethodOptions {
 			ctx.AbortWithStatus(http.StatusNoContent)
 			return

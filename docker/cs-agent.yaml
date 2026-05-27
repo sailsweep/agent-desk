@@ -1,5 +1,10 @@
 server:
   port: 8083
+  cors:
+    # 浏览器跨域白名单。生产部署时改为实际前端/嵌入站点域名。
+    allowedOrigins:
+      - http://127.0.0.1:8083
+      - http://localhost:8083
 
 db:
   type: mysql
