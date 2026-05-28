@@ -88,3 +88,58 @@ describe("normalizeDashboardCrudPageResult", () => {
     })
   })
 })
+
+describe("buildDashboardCrudFormValues", () => {
+  it("uses defaults for create forms and item values for edit forms", async () => {
+    const { buildDashboardCrudFormValues } = await loadModule()
+    const fields = [
+      { name: "title", defaultValue: "Untitled" },
+      { name: "sortNo", type: "number", defaultValue: "0" },
+      {
+        name: "status",
+        defaultValue: "0",
+        valueFromItem: (item) => String(item.status),
+      },
+    ]
+
+    assert.deepEqual(plain(buildDashboardCrudFormValues(fields)), {
+      title: "Untitled",
+      sortNo: "0",
+      status: "0",
+    })
+    assert.deepEqual(
+      plain(buildDashboardCrudFormValues(fields, { title: "Hello", sortNo: 7, status: 1 })),
+      {
+        title: "Hello",
+        sortNo: "7",
+        status: "1",
+      }
+    )
+  })
+})
+
+describe("normalizeDashboardCrudSubmitValues", () => {
+  it("trims strings and converts number fields", async () => {
+    const { normalizeDashboardCrudSubmitValues } = await loadModule()
+    const fields = [
+      { name: "title", trim: true },
+      { name: "sortNo", type: "number" },
+      { name: "status", type: "select", valueType: "number" },
+    ]
+
+    assert.deepEqual(
+      plain(
+        normalizeDashboardCrudSubmitValues(fields, {
+          title: "  Hello  ",
+          sortNo: "12",
+          status: "1",
+        })
+      ),
+      {
+        title: "Hello",
+        sortNo: 12,
+        status: 1,
+      }
+    )
+  })
+})

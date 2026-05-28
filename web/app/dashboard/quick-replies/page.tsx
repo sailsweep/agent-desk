@@ -9,6 +9,7 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import {
   createQuickReply,
   deleteQuickReply,
+  fetchQuickReply,
   fetchQuickReplies,
   updateQuickReply,
   type AdminQuickReply,
@@ -17,7 +18,6 @@ import {
 import { getEnumOptions } from "@/lib/enums"
 import { Status, StatusLabels } from "@/lib/generated/enums"
 import { useI18n } from "@/i18n/provider"
-import { EditDialog } from "./_components/edit"
 
 function getStatusLabel(status: Status, t: (key: string) => string) {
   if (status === Status.Disabled) {
@@ -118,6 +118,81 @@ export default function DashboardQuickRepliesPage() {
       createItem={createQuickReply}
       updateItem={(item, payload) => updateQuickReply({ id: item.id, ...payload })}
       deleteItem={(item) => deleteQuickReply(item.id)}
+      form={{
+        fetchDetail: fetchQuickReply,
+        fields: [
+          {
+            name: "groupName",
+            label: t("quickReply.groupName"),
+            placeholder: t("quickReply.groupNamePlaceholder"),
+            required: true,
+            requiredMessage: t("quickReply.groupNameRequired"),
+            trim: true,
+          },
+          {
+            name: "title",
+            label: t("quickReply.title"),
+            placeholder: t("quickReply.titlePlaceholder"),
+            required: true,
+            requiredMessage: t("quickReply.titleRequired"),
+            trim: true,
+          },
+          {
+            name: "content",
+            label: t("quickReply.content"),
+            placeholder: t("quickReply.contentPlaceholder"),
+            type: "textarea",
+            rows: 6,
+            required: true,
+            requiredMessage: t("quickReply.contentRequired"),
+            trim: true,
+          },
+          {
+            name: "status",
+            label: t("quickReply.columnStatus"),
+            type: "select",
+            defaultValue: String(Status.Ok),
+            valueType: "number",
+            required: true,
+            requiredMessage: t("quickReply.statusRequired"),
+            options: listStatusOptions.filter((item) => item.value !== "all"),
+            valueFromItem: (item) => String(item.status),
+          },
+          {
+            name: "sortNo",
+            label: t("quickReply.columnSort"),
+            placeholder: t("quickReply.sortPlaceholder"),
+            type: "number",
+            defaultValue: "0",
+            min: 0,
+            step: 1,
+            required: true,
+            requiredMessage: t("quickReply.sortRequired"),
+            pattern: /^\d+$/,
+            patternMessage: t("quickReply.sortInvalid"),
+          },
+        ],
+        transformSubmitValues: (values) => ({
+          groupName: String(values.groupName ?? ""),
+          title: String(values.title ?? ""),
+          content: String(values.content ?? ""),
+          status: Number(values.status),
+          sortNo: Number(values.sortNo),
+        }),
+        labels: {
+          createTitle: t("quickReply.createTitle"),
+          editTitle: t("quickReply.editTitle"),
+          create: t("quickReply.create"),
+          save: t("quickReply.save"),
+          saving: t("quickReply.saving"),
+          cancel: t("quickReply.cancel"),
+          loadingDetail: t("quickReply.loadingDetail"),
+          required: t("quickReply.titleRequired"),
+          invalidNumber: t("quickReply.sortInvalid"),
+          minValue: () => t("quickReply.sortInvalid"),
+          maxValue: () => t("quickReply.sortInvalid"),
+        },
+      }}
       renderRowActions={({ item, actionLoading, reload, setActionLoadingId }) => (
         <DropdownMenuItem
           onClick={() => {
@@ -162,15 +237,6 @@ export default function DashboardQuickRepliesPage() {
               ? t("quickReply.disable")
               : t("quickReply.enable")}
         </DropdownMenuItem>
-      )}
-      renderEditDialog={({ open, saving, itemId, onOpenChange, onSubmit }) => (
-        <EditDialog
-          open={open}
-          saving={saving}
-          itemId={itemId}
-          onOpenChange={onOpenChange}
-          onSubmit={onSubmit}
-        />
       )}
       labels={{
         refresh: t("quickReply.refresh"),

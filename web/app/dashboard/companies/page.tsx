@@ -10,6 +10,7 @@ import {
   createCompany,
   deleteCompany,
   fetchCompanies,
+  fetchCompany,
   updateCompany,
   updateCompanyStatus,
   type AdminCompany,
@@ -18,7 +19,6 @@ import {
 import { getEnumOptions } from "@/lib/enums"
 import { Status, StatusLabels } from "@/lib/generated/enums"
 import { useI18n } from "@/i18n/provider"
-import { EditDialog } from "./_components/edit"
 
 function getStatusLabel(status: Status, t: (key: string) => string) {
   if (status === Status.Disabled) {
@@ -132,6 +132,51 @@ export default function DashboardCompaniesPage() {
       updateItem={(item, payload) => updateCompany({ id: item.id, ...payload })}
       deleteItem={(item) => deleteCompany(item.id)}
       canDelete={(item) => item.status !== Status.Deleted}
+      form={{
+        fetchDetail: fetchCompany,
+        fields: [
+          {
+            name: "name",
+            label: t("company.columnName"),
+            placeholder: t("company.namePlaceholder"),
+            required: true,
+            requiredMessage: t("company.nameRequired"),
+            trim: true,
+          },
+          {
+            name: "code",
+            label: t("company.columnCode"),
+            placeholder: t("company.optional"),
+            trim: true,
+          },
+          {
+            name: "remark",
+            label: t("company.columnRemark"),
+            placeholder: t("company.remarkPlaceholder"),
+            type: "textarea",
+            rows: 4,
+            trim: true,
+          },
+        ],
+        transformSubmitValues: (values) => ({
+          name: String(values.name ?? ""),
+          code: String(values.code ?? ""),
+          remark: String(values.remark ?? ""),
+        }),
+        labels: {
+          createTitle: t("company.createTitle"),
+          editTitle: t("company.editTitle"),
+          create: t("company.create"),
+          save: t("company.save"),
+          saving: t("company.saving"),
+          cancel: t("company.cancel"),
+          loadingDetail: t("company.loadingDetail"),
+          required: t("company.nameRequired"),
+          invalidNumber: t("company.nameRequired"),
+          minValue: () => t("company.nameRequired"),
+          maxValue: () => t("company.nameRequired"),
+        },
+      }}
       renderRowActions={({ item, actionLoading, reload, setActionLoadingId }) => (
         <DropdownMenuItem
           disabled={item.status === Status.Deleted}
@@ -173,15 +218,6 @@ export default function DashboardCompaniesPage() {
             </>
           )}
         </DropdownMenuItem>
-      )}
-      renderEditDialog={({ open, saving, itemId, onOpenChange, onSubmit }) => (
-        <EditDialog
-          open={open}
-          saving={saving}
-          itemId={itemId}
-          onOpenChange={onOpenChange}
-          onSubmit={onSubmit}
-        />
       )}
       labels={{
         refresh: t("company.refresh"),

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { ChevronsUpDownIcon, PlusIcon } from "lucide-react"
 import { toast } from "sonner"
 
-import { EditDialog as CompanyEditDialog } from "@/app/dashboard/companies/_components/edit"
+import { DashboardCrudFormDialog } from "@/components/dashboard/crud"
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -233,11 +233,54 @@ export function CompanyPicker({
         </PopoverContent>
       </Popover>
 
-      <CompanyEditDialog
+      <DashboardCrudFormDialog<AdminCompany, CreateAdminCompanyPayload>
         open={createOpen}
         saving={createSaving}
+        item={null}
         itemId={null}
-        initialValues={{ name: trimmedKeyword }}
+        fields={[
+          {
+            name: "name",
+            label: t("company.columnName"),
+            placeholder: t("company.namePlaceholder"),
+            defaultValue: trimmedKeyword,
+            required: true,
+            requiredMessage: t("company.nameRequired"),
+            trim: true,
+          },
+          {
+            name: "code",
+            label: t("company.columnCode"),
+            placeholder: t("company.optional"),
+            trim: true,
+          },
+          {
+            name: "remark",
+            label: t("company.columnRemark"),
+            placeholder: t("company.remarkPlaceholder"),
+            type: "textarea",
+            rows: 4,
+            trim: true,
+          },
+        ]}
+        transformSubmitValues={(values) => ({
+          name: String(values.name ?? ""),
+          code: String(values.code ?? ""),
+          remark: String(values.remark ?? ""),
+        })}
+        labels={{
+          createTitle: t("company.createTitle"),
+          editTitle: t("company.editTitle"),
+          create: t("company.create"),
+          save: t("company.save"),
+          saving: t("company.saving"),
+          cancel: t("company.cancel"),
+          loadingDetail: t("company.loadingDetail"),
+          required: t("company.nameRequired"),
+          invalidNumber: t("company.nameRequired"),
+          minValue: () => t("company.nameRequired"),
+          maxValue: () => t("company.nameRequired"),
+        }}
         onOpenChange={setCreateOpen}
         onSubmit={handleCreateCompany}
       />

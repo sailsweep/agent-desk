@@ -39,10 +39,12 @@ import {
 import {
   buildDashboardCrudQuery,
   normalizeDashboardCrudPageResult,
+  type DashboardCrudFormField,
   type DashboardCrudPageResult,
   type DashboardCrudQueryFilter,
   type DashboardCrudQueryValue,
 } from "./dashboard-crud-utils"
+import { DashboardCrudFormDialog } from "./dashboard-crud-form-dialog"
 
 type DashboardCrudFilter<TValue extends string | number = string> =
   DashboardCrudQueryFilter & {
@@ -84,7 +86,28 @@ type DashboardCrudPageProps<TItem, TPayload> = {
   fetchList: (
     query: Record<string, DashboardCrudQueryValue>
   ) => Promise<DashboardCrudPageResult<TItem>>
-  renderEditDialog: (props: DashboardCrudDialogProps<TItem, TPayload>) => ReactNode
+  renderEditDialog?: (props: DashboardCrudDialogProps<TItem, TPayload>) => ReactNode
+  form?: {
+    fields: DashboardCrudFormField<TItem>[]
+    fetchDetail?: (id: number) => Promise<TItem>
+    transformSubmitValues?: (
+      values: Record<string, string | number>,
+      context: { mode: "create" | "edit"; item: TItem | null }
+    ) => TPayload
+    labels: {
+      createTitle: string
+      editTitle: string
+      create: string
+      save: string
+      saving: string
+      cancel: string
+      loadingDetail: string
+      required: string
+      invalidNumber: string
+      minValue: (min: number) => string
+      maxValue: (max: number) => string
+    }
+  }
   getItemId: (item: TItem) => number
   createItem: (payload: TPayload) => Promise<unknown>
   updateItem: (item: TItem, payload: TPayload) => Promise<unknown>
@@ -117,6 +140,7 @@ export function DashboardCrudPage<TItem, TPayload>({
   columns,
   fetchList,
   renderEditDialog,
+  form,
   getItemId,
   createItem,
   updateItem,
@@ -402,14 +426,29 @@ export function DashboardCrudPage<TItem, TPayload>({
           </Table>
         </DashboardTableShell>
       </DashboardPage>
-      {renderEditDialog({
-        open: dialogOpen,
-        saving,
-        item: editingItem,
-        itemId: editingItem ? getItemId(editingItem) : null,
-        onOpenChange: handleDialogOpenChange,
-        onSubmit: handleSubmit,
-      })}
+      {form ? (
+        <DashboardCrudFormDialog
+          open={dialogOpen}
+          saving={saving}
+          item={editingItem}
+          itemId={editingItem ? getItemId(editingItem) : null}
+          fields={form.fields}
+          fetchDetail={form.fetchDetail}
+          transformSubmitValues={form.transformSubmitValues}
+          labels={form.labels}
+          onOpenChange={handleDialogOpenChange}
+          onSubmit={handleSubmit}
+        />
+      ) : (
+        renderEditDialog?.({
+          open: dialogOpen,
+          saving,
+          item: editingItem,
+          itemId: editingItem ? getItemId(editingItem) : null,
+          onOpenChange: handleDialogOpenChange,
+          onSubmit: handleSubmit,
+        })
+      )}
     </>
   )
 }

@@ -16,6 +16,34 @@ export type DashboardCrudPageResult<T> = {
   }
 }
 
+export type DashboardCrudFormValue = string | number | undefined
+
+export type DashboardCrudFormOption = {
+  value: string
+  label: string
+}
+
+export type DashboardCrudFormField<TItem = unknown> = {
+  name: string
+  label: string
+  type?: "text" | "textarea" | "number" | "select"
+  placeholder?: string
+  defaultValue?: DashboardCrudFormValue
+  required?: boolean
+  requiredMessage?: string
+  trim?: boolean
+  valueType?: "string" | "number"
+  min?: number
+  max?: number
+  step?: number
+  pattern?: RegExp
+  patternMessage?: string
+  options?: ReadonlyArray<DashboardCrudFormOption>
+  colSpan?: 1 | 2
+  rows?: number
+  valueFromItem?: (item: TItem) => DashboardCrudFormValue
+}
+
 export function buildDashboardCrudQuery({
   values,
   filters,
@@ -71,4 +99,43 @@ export function normalizeDashboardCrudPageResult<T>(
       total: result?.page?.total ?? 0,
     },
   }
+}
+
+export function buildDashboardCrudFormValues<TItem>(
+  fields: ReadonlyArray<DashboardCrudFormField<TItem>>,
+  item?: TItem | null
+): Record<string, string> {
+  return Object.fromEntries(
+    fields.map((field) => {
+      let value: unknown = field.defaultValue ?? ""
+      if (item) {
+        if (field.valueFromItem) {
+          value = field.valueFromItem(item)
+        } else if (typeof item === "object" && item && field.name in item) {
+          value = (item as Record<string, unknown>)[field.name]
+        }
+      }
+      return [field.name, value === undefined || value === null ? "" : String(value)]
+    })
+  )
+}
+
+export function normalizeDashboardCrudSubmitValues<TItem>(
+  fields: ReadonlyArray<DashboardCrudFormField<TItem>>,
+  values: Record<string, string>
+): Record<string, string | number> {
+  const output: Record<string, string | number> = {}
+
+  fields.forEach((field) => {
+    const rawValue = values[field.name] ?? ""
+    const text = field.trim ? rawValue.trim() : rawValue
+    if (field.type === "number" || field.valueType === "number") {
+      const numberValue = Number(text)
+      output[field.name] = Number.isFinite(numberValue) ? numberValue : 0
+      return
+    }
+    output[field.name] = text
+  })
+
+  return output
 }
