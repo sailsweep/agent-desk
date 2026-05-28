@@ -10,9 +10,13 @@ import {
 export function useDashboardCrudFilters(
   filters: ReadonlyArray<DashboardCrudFilterStateConfig>
 ) {
+  const defaultsKey = filters
+    .map((filter) => `${filter.name}:${String(filter.defaultValue)}`)
+    .join("|")
   const initialFilters = useMemo(
     () => buildDashboardCrudInitialFilters(filters),
-    [filters]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [defaultsKey]
   )
   const [draftFilters, setDraftFilters] = useState(initialFilters)
   const [appliedFilters, setAppliedFilters] = useState(initialFilters)
@@ -33,11 +37,23 @@ export function useDashboardCrudFilters(
     setAppliedFilters(draftFilters)
   }
 
+  function applyFilter(name: string, value: string | number | undefined) {
+    setDraftFilters((current) => ({
+      ...current,
+      [name]: value,
+    }))
+    setAppliedFilters((current) => ({
+      ...current,
+      [name]: value,
+    }))
+  }
+
   return {
     draftFilters,
     appliedFilters,
     setDraftFilter,
     setDraftFilters,
+    applyFilter,
     applyFilters,
   }
 }

@@ -1,26 +1,18 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
-import { RefreshCwIcon, SearchIcon } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { SearchIcon } from "lucide-react"
 import { toast } from "sonner"
 
-import {
-  DashboardPage,
-  DashboardTableShell,
-  DashboardToolbar,
-} from "@/components/dashboard-page"
-import { ListPagination } from "@/components/list-pagination"
-import { OptionCombobox } from "@/components/option-combobox"
+import { DashboardListPage } from "@/components/dashboard/list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { AgentRunLogDetailDialog } from "./_components/detail"
 import {
   fetchAgentRunLogs,
   fetchAIAgentsAll,
   type AIAgent,
   type AgentRunLog,
-  type PageResult,
 } from "@/lib/api/admin"
 import { useI18n } from "@/i18n/provider"
 import { formatDateTime } from "@/lib/utils"
@@ -100,27 +92,8 @@ function actionBadgeVariant(action: string) {
 
 export default function DashboardAgentRunLogsPage() {
   const t = useI18n()
-  const [keywordInput, setKeywordInput] = useState("")
-  const [plannedActionInput, setPlannedActionInput] = useState("all")
-  const [finalActionInput, setFinalActionInput] = useState("all")
-  const [finalStatusInput, setFinalStatusInput] = useState("all")
-  const [hitlStatusInput, setHitlStatusInput] = useState("all")
-  const [aiAgentIdInput, setAiAgentIdInput] = useState("all")
-  const [keyword, setKeyword] = useState("")
-  const [plannedAction, setPlannedAction] = useState("all")
-  const [finalAction, setFinalAction] = useState("all")
-  const [finalStatus, setFinalStatus] = useState("all")
-  const [hitlStatus, setHitlStatus] = useState("all")
-  const [aiAgentId, setAiAgentId] = useState("all")
-  const [page, setPage] = useState(1)
-  const [limit, setLimit] = useState(20)
-  const [loading, setLoading] = useState(true)
   const [detailOpen, setDetailOpen] = useState(false)
   const [activeLogId, setActiveLogId] = useState<number | null>(null)
-  const [result, setResult] = useState<PageResult<AgentRunLog>>({
-    results: [],
-    page: { page: 1, limit: 20, total: 0 },
-  })
   const [aiAgents, setAiAgents] = useState<AIAgent[]>([])
   const actionOptions = useMemo(() => getActionOptions(t), [t])
   const finalStatusOptions = useMemo(() => getFinalStatusOptions(t), [t])
@@ -137,31 +110,6 @@ export default function DashboardAgentRunLogsPage() {
     [aiAgents, t]
   )
 
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await fetchAgentRunLogs({
-        userMessage: keyword.trim() || undefined,
-        plannedAction: plannedAction === "all" ? undefined : plannedAction,
-        finalAction: finalAction === "all" ? undefined : finalAction,
-        finalStatus: finalStatus === "all" ? undefined : finalStatus,
-        hitlStatus: hitlStatus === "all" ? undefined : hitlStatus,
-        aiAgentId: aiAgentId === "all" ? undefined : aiAgentId,
-        page,
-        limit,
-      })
-      setResult(data)
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("agentRunLog.loadFailed"))
-    } finally {
-      setLoading(false)
-    }
-  }, [aiAgentId, finalAction, finalStatus, hitlStatus, keyword, limit, page, plannedAction, t])
-
-  useEffect(() => {
-    void loadData()
-  }, [loadData])
-
   useEffect(() => {
     async function loadAIAgents() {
       try {
@@ -174,122 +122,84 @@ export default function DashboardAgentRunLogsPage() {
     void loadAIAgents()
   }, [t])
 
-  function applyFilters() {
-    setKeyword(keywordInput)
-    setPlannedAction(plannedActionInput)
-    setFinalAction(finalActionInput)
-    setFinalStatus(finalStatusInput)
-    setHitlStatus(hitlStatusInput)
-    setAiAgentId(aiAgentIdInput)
-    setPage(1)
-  }
-
-  function handleFilterKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
-    if (event.key !== "Enter") {
-      return
-    }
-    event.preventDefault()
-    applyFilters()
-  }
-
   return (
     <>
-      <DashboardPage>
-        <DashboardToolbar
-          actions={
-            <Button
-              variant="outline"
-              onClick={() => void loadData()}
-              disabled={loading}
-              className="w-full xl:w-auto"
-            >
-              <RefreshCwIcon className={loading ? "animate-spin" : ""} />
-              {t("agentRunLog.refresh")}
-            </Button>
-          }
-        >
-          <div className="relative min-w-0">
-            <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={keywordInput}
-              onChange={(event) => setKeywordInput(event.target.value)}
-              onKeyDown={handleFilterKeyDown}
-              placeholder={t("agentRunLog.filterUserMessage")}
-              className="pl-9"
-            />
-          </div>
-          <div className="min-w-0">
-            <OptionCombobox
-              value={plannedActionInput}
-              options={actionOptions}
-              placeholder={t("agentRunLog.plannedAction")}
-              searchPlaceholder={t("agentRunLog.searchAction")}
-              emptyText={t("agentRunLog.emptyAction")}
-              onChange={(value) => setPlannedActionInput(value || "all")}
-            />
-          </div>
-          <div className="min-w-0">
-            <OptionCombobox
-              value={finalActionInput}
-              options={actionOptions}
-              placeholder={t("agentRunLog.finalAction")}
-              searchPlaceholder={t("agentRunLog.searchAction")}
-              emptyText={t("agentRunLog.emptyAction")}
-              onChange={(value) => setFinalActionInput(value || "all")}
-            />
-          </div>
-          <div className="min-w-0">
-            <OptionCombobox
-              value={finalStatusInput}
-              options={finalStatusOptions}
-              placeholder={t("agentRunLog.finalStatus")}
-              searchPlaceholder={t("agentRunLog.searchStatus")}
-              emptyText={t("agentRunLog.emptyStatus")}
-              onChange={(value) => setFinalStatusInput(value || "all")}
-            />
-          </div>
-          <div className="min-w-0">
-            <OptionCombobox
-              value={hitlStatusInput}
-              options={hitlStatusOptions}
-              placeholder={t("agentRunLog.hitlStatus")}
-              searchPlaceholder={t("agentRunLog.searchHitl")}
-              emptyText={t("agentRunLog.emptyStatus")}
-              onChange={(value) => setHitlStatusInput(value || "all")}
-            />
-          </div>
-          <div className="min-w-0">
-            <OptionCombobox
-              value={aiAgentIdInput}
-              options={aiAgentOptions}
-              placeholder={t("agentRunLog.selectAgent")}
-              searchPlaceholder={t("agentRunLog.searchAgent")}
-              emptyText={t("agentRunLog.emptyAgent")}
-              onChange={(value) => setAiAgentIdInput(value || "all")}
-            />
-          </div>
-          <Button variant="outline" onClick={applyFilters} disabled={loading} className="w-full xl:w-auto">
-            <SearchIcon />
-            {t("agentRunLog.query")}
-          </Button>
-        </DashboardToolbar>
-
-        <DashboardTableShell
-          pagination={
-            <ListPagination
-              page={result.page.page}
-              total={result.page.total}
-              limit={limit}
-              loading={loading}
-              onPageChange={setPage}
-              onLimitChange={(nextLimit) => {
-                setLimit(nextLimit)
-                setPage(1)
-              }}
-            />
-          }
-        >
-          {!loading && result.results.length === 0 ? (
+      <DashboardListPage<AgentRunLog>
+        filters={[
+          {
+            name: "userMessage",
+            label: t("agentRunLog.filterUserMessage"),
+            placeholder: t("agentRunLog.filterUserMessage"),
+            defaultValue: "",
+            trim: true,
+            className: "min-w-0",
+            inputClassName: "pl-9",
+            icon: <SearchIcon className="size-4" />,
+          },
+          {
+            name: "plannedAction",
+            label: t("agentRunLog.plannedAction"),
+            type: "select",
+            defaultValue: "all",
+            allValue: "all",
+            options: actionOptions,
+            placeholder: t("agentRunLog.plannedAction"),
+            searchPlaceholder: t("agentRunLog.searchAction"),
+            emptyText: t("agentRunLog.emptyAction"),
+            className: "min-w-0",
+          },
+          {
+            name: "finalAction",
+            label: t("agentRunLog.finalAction"),
+            type: "select",
+            defaultValue: "all",
+            allValue: "all",
+            options: actionOptions,
+            placeholder: t("agentRunLog.finalAction"),
+            searchPlaceholder: t("agentRunLog.searchAction"),
+            emptyText: t("agentRunLog.emptyAction"),
+            className: "min-w-0",
+          },
+          {
+            name: "finalStatus",
+            label: t("agentRunLog.finalStatus"),
+            type: "select",
+            defaultValue: "all",
+            allValue: "all",
+            options: finalStatusOptions,
+            placeholder: t("agentRunLog.finalStatus"),
+            searchPlaceholder: t("agentRunLog.searchStatus"),
+            emptyText: t("agentRunLog.emptyStatus"),
+            className: "min-w-0",
+          },
+          {
+            name: "hitlStatus",
+            label: t("agentRunLog.hitlStatus"),
+            type: "select",
+            defaultValue: "all",
+            allValue: "all",
+            options: hitlStatusOptions,
+            placeholder: t("agentRunLog.hitlStatus"),
+            searchPlaceholder: t("agentRunLog.searchHitl"),
+            emptyText: t("agentRunLog.emptyStatus"),
+            className: "min-w-0",
+          },
+          {
+            name: "aiAgentId",
+            label: t("agentRunLog.selectAgent"),
+            type: "select",
+            defaultValue: "all",
+            allValue: "all",
+            options: aiAgentOptions,
+            placeholder: t("agentRunLog.selectAgent"),
+            searchPlaceholder: t("agentRunLog.searchAgent"),
+            emptyText: t("agentRunLog.emptyAgent"),
+            className: "min-w-0",
+          },
+        ]}
+        fetchList={fetchAgentRunLogs}
+        renderContent={({ result, loading }) =>
+          !loading && result.results.length === 0 ? (
             <div className="py-14 text-center text-sm text-muted-foreground">
               {t("agentRunLog.emptyRows")}
             </div>
@@ -388,9 +298,16 @@ export default function DashboardAgentRunLogsPage() {
                 ))}
               </div>
             </div>
-          )}
-        </DashboardTableShell>
-      </DashboardPage>
+          )
+        }
+        labels={{
+          refresh: t("agentRunLog.refresh"),
+          query: t("agentRunLog.query"),
+          loading: t("agentRunLog.loadingRows"),
+          empty: t("agentRunLog.emptyRows"),
+          loadFailed: t("agentRunLog.loadFailed"),
+        }}
+      />
       <AgentRunLogDetailDialog
         open={detailOpen}
         logId={activeLogId}

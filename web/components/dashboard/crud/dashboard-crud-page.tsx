@@ -209,6 +209,12 @@ export function DashboardCrudPage<TItem, TPayload>({
   )
   const { draftFilters, appliedFilters, setDraftFilter, applyFilters } =
     useDashboardCrudFilters(filters)
+  const filtersKey = filters
+    .map(
+      (filter) =>
+        `${filter.name}:${String(filter.defaultValue)}:${String(filter.allValue)}:${filter.trim ? "1" : "0"}:${filter.valueType ?? ""}`
+    )
+    .join("|")
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(pageSize)
   const [loading, setLoading] = useState(true)
@@ -238,7 +244,8 @@ export function DashboardCrudPage<TItem, TPayload>({
     } finally {
       setLoading(false)
     }
-  }, [appliedFilters, fetchList, filters, labels.loadFailed, limit, page])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appliedFilters, fetchList, filtersKey, labels.loadFailed, limit, page])
 
   useEffect(() => {
     void loadData()
