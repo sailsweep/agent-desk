@@ -10,7 +10,7 @@
 
 ## 2. 固定技术栈
 
-- 后端：`Golang` + `Iris` + `GORM` + `github.com/mlogclub/simple`
+- 后端：`Golang` + `Gin` + `GORM` + `github.com/mlogclub/simple`
 - 数据库：同时兼容 `SQLite` 和 `MySQL`
 - 前端：`Next.js(App Router)` + `React` + `shadcn/ui` + `Tailwind CSS`
 - 前端包管理器：`pnpm`
@@ -25,38 +25,46 @@
 │   └── generator/
 ├── internal/
 │   ├── bootstrap/
-│   ├── config/
+│   ├── builders/
+│   ├── handlers/
+│   │   ├── api/
+│   │   ├── dashboard/
+│   │   └── third/
+│   ├── middleware/
+│   ├── migration/
 │   ├── models/
 │   ├── repositories/
 │   ├── services/
-│   ├── controllers/
-│   ├── migration/
-│   ├── dto/
-│   ├── convert/
-│   ├── errorsx/
-│   └── logx/
+│   └── pkg/
+│       ├── config/
+│       ├── dto/
+│       ├── enums/
+│       ├── errorsx/
+│       ├── httpx/
+│       ├── logx/
+│       └── utils/
 ├── web/
 └── docs/
 ```
 
 ## 4. 后端分层
 
-必须遵循单向依赖：`models -> repositories -> services -> controllers`
+必须遵循单向依赖：`models -> repositories -> services -> handlers`
 
 - `models`：只定义实体和表映射
 - `repositories`：只封装数据访问
 - `services`：负责业务规则、事务编排、聚合逻辑
-- `controllers`：只做参数解析、权限校验、service 调用、响应封装
+- `handlers`：只做参数解析、权限校验、service 调用、响应封装
 
 禁止：
 
-- controller 直接调用 repository
+- handler 直接调用 repository
 - 直接将 GORM model 返回前端
 - 在 models/repositories 中写业务编排
 
-## 4.1 分层全链路（models -> repositories -> services -> controllers -> builders）
+## 4.1 分层全链路（models -> repositories -> services -> handlers -> builders）
 
-本章是对“分层”规则的**可执行细化**：每一层只做该层应该做的事情，数据以 DTO 为中心流转，GORM 细节集中在 repository，事务边界集中在 service，返回组装集中在 builders/controller。
+本章是对“分层”规则的**可执行细化**：每一层只做该层应该做的事情，数据以 DTO 为中心流转，GORM 细节集中在 repository，事务边界集中在 service，返回组装集中在 builders/handler。
 
 ### 4.1.1 依赖方向（必须）
 
@@ -66,28 +74,28 @@
 - `repositories` → 依赖 `models`、基础库（`gorm`/`simple/sqls`）
 - `services` → 依赖 `repositories`、`models`、`enums/errorsx/utils`，负责事务与业务编排
 - `builders` → 依赖 `models`、`dto/response`（必要时可依赖少量 `services` 用于补充展示字段，但优先在 service 里聚合好）
-- `controllers` → 依赖 `services`、`builders`、`dto/request`、`web/params`、`web` 响应封装
+- `handlers` → 依赖 `services`、`builders`、`pkg/dto/request`、`pkg/httpx/params`、`pkg/httpx` 响应封装
 
 禁止反向依赖：
 
-- `repositories` 不能依赖 `services/controllers/builders`
-- `models` 不能依赖 `repositories/services/controllers/builders`
-- `controllers` 不能依赖 `repositories`（必须通过 service）
+- `repositories` 不能依赖 `services/handlers/builders`
+- `models` 不能依赖 `repositories/services/handlers/builders`
+- `handlers` 不能依赖 `repositories`（必须通过 service）
 
 ### 4.1.2 数据形态与流转（推荐统一）
 
 一条典型 CRUD/业务动作的数据流：
 
-1. **controller** 读取参数（query/body/form/path），做权限校验，调用 **service**
+1. **handler** 读取参数（query/body/form/path），做权限校验，调用 **service**
 2. **service** 执行业务规则（校验、幂等、状态机、聚合），必要时开启事务，调用 **repository**
 3. **repository** 只做数据读写（CRUD + 查询），返回 `models` 或必要的聚合结构
 4. **builders** 将 `models`/聚合结果映射为 `response DTO`
-5. **controller** 返回 `web.JsonData(...)` 或 `web.JsonPageData(...)`
+5. **handler** 返回 `httpx.WriteJSON(...)`
 
 强约束：
 
-- **controller 入参使用 request DTO**
-- **controller 出参使用 response DTO**
+- **handler 入参使用 request DTO**
+- **handler 出参使用 response DTO**
 - **禁止直接返回 models 到前端**
 
 ### 4.1.3 各层“允许/禁止”清单
@@ -110,7 +118,7 @@
 - **禁止**
   - 业务编排（跨表流程、状态流转、事件发布等）
   - 权限判断、登录态判断
-  - 直接拼接返回 DTO（DTO 映射属于 builders/controller）
+  - 直接拼接返回 DTO（DTO 映射属于 builders/handler）
 
 Repository 最佳实践：
 
@@ -126,7 +134,7 @@ Repository 最佳实践：
   - 事务编排：`sqls.WithTransaction(func(ctx *sqls.TxContext) error { ... })`
   - 调用 builders 前的领域对象整理（如果 builders 只做映射更干净）
 - **禁止**
-  - controller 才该做的事情：参数解析/HTTP 细节/响应封装
+  - handler 才该做的事情：参数解析/HTTP 细节/响应封装
   - repository 才该做的事情：散落 GORM 查询（除非一次性复杂 SQL 且不值得抽）
 
 Service 最佳实践：
@@ -136,7 +144,7 @@ Service 最佳实践：
 
 #### builders（输出构建层）
 
-定位：将 `models`（或 service 聚合结果）转换为 `response DTO`，避免 controller 写一堆映射样板代码。
+定位：将 `models`（或 service 聚合结果）转换为 `response DTO`，避免 handler 写一堆映射样板代码。
 
 - **允许**
   - `Model -> ResponseDTO` 的纯映射
@@ -151,16 +159,16 @@ builders 推荐形式：
 - 位置：`internal/builders/*_builder.go`
 - 方法：`BuildXxx(item *models.Xxx) *response.Xxx` / `BuildXxxList(list []models.Xxx) []response.Xxx`
 
-#### controllers（接口层）
+#### handlers（接口层）
 
 - **允许**
   - 参数解析：`params.ReadJSON/ReadForm/NewPagedSqlCnd/GetInt64...`
   - 权限：`AuthService.GetAuthPrincipal/RequirePermission/HasPermission`
-  - 调 service，调 builders，包装 `web.JsonData/JsonPageData/JsonError`
+  - 调 service，调 builders，包装 `httpx.WriteJSON`
 - **禁止**
   - 直接调用 repository
   - 直接返回 models
-  - 在 controller 内写业务编排（例如“先写 A 再写 B”）
+  - 在 handler 内写业务编排（例如“先写 A 再写 B”）
 
 ### 4.1.4 “事务”最佳实践（替代模糊口号）
 
@@ -182,20 +190,23 @@ builders 推荐形式：
 ### 4.1.5 一个“标准接口”的代码骨架（示例）
 
 ```go
-// Controller: 参数/权限/响应
-func (c *XxxController) PostUpdate() web.JsonResult {
-  operator := services.AuthService.GetAuthPrincipal(c.Ctx)
-  if operator == nil {
-    return web.JsonErrorMsg("未登录或登录已过期")
+// Handler: 参数/权限/响应
+func XxxPostUpdate(ctx *gin.Context) {
+  operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionXxxUpdate)
+  if err != nil {
+    httpx.WriteJSON(ctx, err)
+    return
   }
-  var req request.UpdateXxxRequest
-  if err := params.ReadJSON(c.Ctx, &req); err != nil {
-    return web.JsonError(err)
+  req := request.UpdateXxxRequest{}
+  if err := params.ReadJSON(ctx, &req); err != nil {
+    httpx.WriteJSON(ctx, err)
+    return
   }
   if err := services.XxxService.UpdateXxx(req, operator); err != nil {
-    return web.JsonError(err)
+    httpx.WriteJSON(ctx, err)
+    return
   }
-  return web.JsonSuccess()
+  httpx.WriteJSON(ctx, nil)
 }
 ```
 
@@ -233,8 +244,8 @@ func BuildXxx(item *models.Xxx) *response.Xxx {
 
 - DB 初始化后必须执行：`sqls.SetDB(db)`
 - 查询条件优先使用：`sqls.Cnd`
-- 参数绑定优先使用：`web/params`
-- HTTP 响应统一使用：`web.JsonData`、`web.JsonPageData`、`web.JsonError`
+- 参数绑定优先使用：`internal/pkg/httpx/params`
+- HTTP 响应统一使用：`internal/pkg/httpx.WriteJSON`
 - 写操作事务边界按 **4.1.4 事务最佳实践** 执行（禁止“单条写 SQL 也默认开事务”的口号式规则）
 
 ## 6. 数据库兼容规则
@@ -253,7 +264,7 @@ func BuildXxx(item *models.Xxx) *response.Xxx {
 - 生成库：`github.com/mlogclub/codegen`
 - 注册方式：`codegen.GetGenerateStruct(&models.XXX{})`
 - 生成文件建议放在 `generated` 目录，命名为 `*_gen.go`
-- 生成代码只负责基础 CRUD，业务逻辑必须写在手写 service/controller 中
+- 生成代码只负责基础 CRUD，业务逻辑必须写在手写 service/handler 中
 
 标准流程：
 
@@ -303,98 +314,85 @@ func BuildXxx(item *models.Xxx) *response.Xxx {
 
 ### 8.4 路由注册
 
-- 业务后台统一在 `internal/bootstrap/server.go` 中通过 `mvc.Configure(app.Party("/api/dashboard"), ...)` 注册
-- 开放接口按领域归档，如 `mvc.Configure(app.Party("/api"), ...)`
-- 在分组内部通过 `m.Party("/xxx").Handle(...)` 挂载资源
-- 不要为每个资源单独再写一层顶级 `mvc.Configure(app.Party("/api/dashboard/xxx"), ...)`
+- Gin 引擎统一在 `internal/bootstrap/server.go` 中创建，中间件也在这里按顺序注册
+- 路由按分组函数拆到 `internal/bootstrap/routes.go` 及 `internal/bootstrap/*_routes.go`
+- 业务后台统一通过 `dashboardGroup := app.Group("/api/dashboard", middleware.AuthMiddleware)` 注册
+- 开放接口按领域归档到 `/api/*` 分组，第三方回调归档到 `/api/third/*` 分组
+- 在分组内部通过 `group.GET/POST/PUT/DELETE/Any(...)` 显式挂载 handler
+- 不要为每个资源单独再创建一层顶级 `app.Group("/api/dashboard/xxx")`
 - 认证与鉴权中间件优先挂在 `/api/dashboard` 或 `/api/admin` 这一层
 
-### 8.5 Iris MVC 自动路由规则
+### 8.5 Gin 显式路由规则
 
-本项目使用 Iris MVC 自动路由，controller 方法名必须按 Iris 规则命名，不能按个人习惯随意写。
+本项目使用 Gin 显式路由，不使用框架自动路由。handler 方法名只用于代码组织，最终 URL 以 `internal/bootstrap/*_routes.go` 中注册的路径为准。
 
-- controller 挂载方式示例：
+- 路由挂载方式示例：
 
 ```go
-m.Party("/quick-reply").Handle(new(dashboard.QuickReplyController))
+func registerDashboardQuickReplyRoutes(group *gin.RouterGroup) {
+  group.Any("/list", dashboard.QuickReplyAnyList)
+  group.GET("/:id", dashboard.QuickReplyGetBy)
+  group.POST("/create", dashboard.QuickReplyPostCreate)
+  group.POST("/update", dashboard.QuickReplyPostUpdate)
+  group.POST("/delete", dashboard.QuickReplyPostDelete)
+}
 ```
 
-在上面的注册下，controller 的基础路径就是 `/quick-reply`，最终完整路径再拼上外层分组，如 `/api/dashboard/quick-reply`。
-
-- controller 名称 `QuickReplyController` 不会自动变成路径，路径以 `m.Party("/quick-reply")` 为准
-- 方法名前缀决定 HTTP Method：
-  - `AnyXxx`：匹配任意方法
-  - `GetXxx`：匹配 `GET`
-  - `PostXxx`：匹配 `POST`
-  - `PutXxx`：匹配 `PUT`
-  - `DeleteXxx`：匹配 `DELETE`
-- 方法名后缀决定子路径：
-  - `Any()` -> `/`
-  - `AnyList()` -> `/list`
-  - `PostCreate()` -> `/create`
-  - `PostUpdate()` -> `/update`
-  - `PostDelete()` -> `/delete`
-  - `GetBy(id int64)` -> `/{id}`
-  - `GetMessageList()` -> `/message/list`
-  - `PostSendMessage()` -> `/send/message`
-  - `PostSend_message()` -> `/send_message`
-- `By` 表示路径参数，不是普通单词：
-  - `GetBy(id int64)` -> `GET /{id}`
-  - `GetUserBy(id int64)` -> `GET /user/{id}`
-  - 不要把本来想要 `/list`、`/detail`、`/create` 的接口误写成带 `By` 的方法
-- 多个参数会继续追加路径参数：
-  - `GetBy(projectId int64, episodeId int64)` -> `GET /{projectId}/{episodeId}`
-  - 本项目默认不鼓励这样设计，除详情场景外优先用 query/body
-- `AnyList()` 虽然可匹配任意方法，但本项目约定它用于列表查询，前端应按 `GET /list` 使用
-- 写接口统一用 `PostCreate()`、`PostUpdate()`、`PostDelete()`，不要写成 `AnyCreate()`、`GetUpdate()` 这类不符合语义的命名
+- 在上面的注册下，资源基础路径由外层 `dashboardGroup.Group("/quick-reply")` 决定，最终完整路径为 `/api/dashboard/quick-reply/list`、`/api/dashboard/quick-reply/{id}` 等
+- handler 命名建议保留现有可读前缀：`XxxAnyList`、`XxxGetBy`、`XxxPostCreate`、`XxxPostUpdate`、`XxxPostDelete`
+- handler 命名不产生路由；新增接口前必须修改对应 `register...Routes` 函数
+- HTTP Method 必须由 Gin 注册方法决定：
+  - 列表查询：优先 `group.Any("/list", XxxAnyList)`，前端按 `GET /list` 使用
+  - 详情查询：优先 `group.GET("/:id", XxxGetBy)`
+  - 写接口：统一 `group.POST("/create|/update|/delete", XxxPost...)`
+  - 业务动作：统一显式路径，如 `group.POST("/send_message", ConversationPostSend_message)`
+- path param 只在详情或强路径语义场景使用；普通过滤条件继续使用 query/body
 
 当前项目常见正确映射示例：
 
-- `m.Party("/user").Handle(new(dashboard.UserController))`
-  - `AnyList()` -> `ANY /api/dashboard/user/list`
-  - `GetBy(id int64)` -> `GET /api/dashboard/user/{id}`
-  - `PostCreate()` -> `POST /api/dashboard/user/create`
-  - `PostUpdate()` -> `POST /api/dashboard/user/update`
-  - `PostDelete()` -> `POST /api/dashboard/user/delete`
-- `m.Party("/conversation").Handle(new(dashboard.ConversationController))`
-  - `AnyList()` -> `ANY /api/dashboard/conversation/list`
-  - `GetBy(id int64)` -> `GET /api/dashboard/conversation/{id}`
-  - `AnyMessageList()` -> `ANY /api/dashboard/conversation/message/list`
-  - `PostSendMessage()` -> `POST /api/dashboard/conversation/send/message`
-  - 如果业务明确要求下划线路径，则方法名写成 `PostSend_message()`，对应 `POST /api/dashboard/conversation/send_message`
+- `registerDashboardUserRoutes(dashboardGroup.Group("/user"))`
+  - `group.Any("/list", dashboard.UserAnyList)` -> `ANY /api/dashboard/user/list`
+  - `group.GET("/:id", dashboard.UserGetBy)` -> `GET /api/dashboard/user/{id}`
+  - `group.POST("/create", dashboard.UserPostCreate)` -> `POST /api/dashboard/user/create`
+  - `group.POST("/update", dashboard.UserPostUpdate)` -> `POST /api/dashboard/user/update`
+  - `group.POST("/delete", dashboard.UserPostDelete)` -> `POST /api/dashboard/user/delete`
+- `registerDashboardConversationRoutes(dashboardGroup.Group("/conversation"))`
+  - `group.Any("/list", dashboard.ConversationAnyList)` -> `ANY /api/dashboard/conversation/list`
+  - `group.GET("/:id", dashboard.ConversationGetBy)` -> `GET /api/dashboard/conversation/{id}`
+  - `group.Any("/message/list", dashboard.ConversationAnyMessage_list)` -> `ANY /api/dashboard/conversation/message/list`
+  - `group.POST("/send_message", dashboard.ConversationPostSend_message)` -> `POST /api/dashboard/conversation/send_message`
 
 容易写错的点：
 
-- 不要以为 `GetList()` 会生成 `/list` 的通用查询接口；它只会是 `GET /list`，而当前项目统一使用 `AnyList()`
-- 不要把详情接口写成 `GetDetail()`，那会生成 `GET /detail`，不是 `GET /{id}`
-- 不要把动作接口写成 `PostBy(id int64)` 这类混合命名，除非你真的需要 `POST /{id}`
-- CamelCase 方法名会按单词切分成多段路径，不要想当然把 `PostSendMessage()` 理解成 `/sendMessage`
-- 如果接口契约要求单段路径或下划线形式，优先显式使用下划线命名，例如 `PostSend_message()` -> `/send_message`
-- controller 新增方法前，先根据方法名手工推导一次最终 URL，确认与前端约定一致再落代码
+- 不要以为新增 `XxxGetList` 方法会自动出现 `/list` 路由；必须在 routes 文件显式注册
+- 不要把详情接口注册成 `/detail`，当前约定详情为 `GET /:id`
+- 不要随意新增深层嵌套路由；从属资源优先通过 `projectId`、`conversationId` 等普通参数过滤
+- 如果接口契约要求下划线路径，直接在 Gin 路由里写下划线路径，例如 `group.POST("/send_message", ...)`
+- handler 新增方法前，先写出对应 Gin 路由注册，确认最终 URL 与前端约定一致再落代码
 
-### 8.6 Controller 约定
+### 8.6 Handler 约定
 
-- 每个资源一个 controller 文件
-- 结构体统一：`type XxxController struct { Ctx iris.Context }`
-- 方法命名遵循 Iris MVC：
-  - `AnyList()`
-  - `GetBy(id int64)`
-  - `PostCreate()`
-  - `PostUpdate()`
-  - `PostDelete()`
-  - 业务动作可扩展 `PostTest()`、`PostGenerate()` 等
+- 每个资源一个 handler 文件，位置为 `internal/handlers/{api|dashboard|third}/*_handler.go`
+- handler 统一形式：`func XxxPostCreate(ctx *gin.Context)`
+- 方法命名建议：
+  - `XxxAnyList(ctx *gin.Context)`
+  - `XxxGetBy(ctx *gin.Context)`
+  - `XxxPostCreate(ctx *gin.Context)`
+  - `XxxPostUpdate(ctx *gin.Context)`
+  - `XxxPostDelete(ctx *gin.Context)`
+  - 业务动作可扩展 `XxxPostTest(ctx *gin.Context)`、`XxxPostGenerate(ctx *gin.Context)` 等
 
-- `AnyList()` 分页列表要求：
+- `AnyList` 分页列表要求：
   - 使用 `params.NewPagedSqlCnd(...)`
   - 每个筛选字段通过 `params.QueryFilter` 显式声明
   - 默认排序优先 `.Desc("id")`；特殊排序需明确理由
   - service 层优先使用 `FindPageByCnd(...)`
-  - controller 层做 DTO 映射，禁止直接返回 model 列表
+  - handler 层做 DTO 映射，禁止直接返回 model 列表
 
 - 分页返回统一为：
 
 ```go
-return web.JsonData(&web.PageResult{Results: results, Page: paging})
+httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
 ```
 
 - 分页 `data` 结构必须为：
@@ -403,15 +401,15 @@ return web.JsonData(&web.PageResult{Results: results, Page: paging})
   - `data.page.limit`
   - `data.page.total`
 
-- 详情优先返回 `web.JsonData(dto)`
-- 删除优先返回 `web.JsonSuccess()`
+- 详情优先返回 `httpx.WriteJSON(ctx, dto)`
+- 删除优先返回 `httpx.WriteJSON(ctx, nil)`
 - JSON body 优先使用 `params.ReadJSON`
 - form 参数优先使用 `params.ReadForm`
 - 获取单个参数可以使用 `params.GetInt64`、`params.GetInt64Arr`、`params.Get` 等
 - 分页和 query 优先使用 `params.NewPagedSqlCnd`
-- 登录态用户通过 `services.AuthService.GetAuthPrincipal(c.Ctx)` 获取
+- 登录态用户通过 `services.AuthService.GetAuthPrincipal(ctx)` 或 `RequirePermission(ctx, ...)` 获取
 - 权限判断统一通过 `services.AuthService.HasPermission(...)` 或 `RequirePermission(...)`
-- 鉴权失败统一返回 `web.JsonErrorMsg(...)`
+- 鉴权失败统一返回 `httpx.WriteJSON(ctx, err)`
 - `gorm.ErrRecordNotFound` 等错误应转换成明确业务提示
 - 后端数据返回时，将数据转换成Response DTO相关的逻辑可以放到 `internal/builders` 包下。
 
