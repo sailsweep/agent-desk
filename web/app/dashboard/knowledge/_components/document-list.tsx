@@ -196,6 +196,7 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
     filters,
     fetchList,
     enabled: Boolean(knowledgeBaseId),
+    reloadKey: knowledgeBaseId,
     loadFailed: t("knowledge.loadDocumentsFailed"),
   });
 

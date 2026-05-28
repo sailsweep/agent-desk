@@ -68,6 +68,7 @@ export type DashboardListPageProps<TItem> = {
   onRowClick?: (item: TItem) => void
   pageSize?: number
   enabled?: boolean
+  reloadKey?: string | number | null
   layout?: "page" | "fragment"
   tableShellClassName?: string
   labels: {
@@ -90,6 +91,7 @@ export function DashboardListPage<TItem>({
   onRowClick,
   pageSize,
   enabled,
+  reloadKey,
   layout = "page",
   tableShellClassName,
   labels,
@@ -99,6 +101,7 @@ export function DashboardListPage<TItem>({
     fetchList,
     pageSize,
     enabled,
+    reloadKey,
     loadFailed: labels.loadFailed,
   })
   const renderContext: DashboardListRenderContext<TItem> = {

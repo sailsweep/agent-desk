@@ -200,6 +200,7 @@ export function RetrieveLogList({
             },
           ]}
           fetchList={(query) => fetchKnowledgeRetrieveLogs({ knowledgeBaseId, ...query })}
+          reloadKey={knowledgeBaseId}
           getItemId={(item) => item.id}
           getRowClassName={() => "cursor-pointer"}
           onRowClick={(item) => handleOpenDetail(item.id)}

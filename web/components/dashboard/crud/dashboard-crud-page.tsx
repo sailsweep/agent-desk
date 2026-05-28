@@ -163,6 +163,7 @@ export type DashboardCrudPageProps<TItem, TPayload> = {
     handleLabel: string
   }
   pageSize?: number
+  reloadKey?: string | number | null
   layout?: "page" | "fragment"
   showToolbar?: boolean
   showToolbarActions?: boolean
@@ -205,6 +206,7 @@ export function DashboardCrudPage<TItem, TPayload>({
   renderRowActions,
   sort,
   pageSize = 20,
+  reloadKey,
   layout = "page",
   showToolbar = true,
   showToolbarActions = true,
@@ -227,6 +229,7 @@ export function DashboardCrudPage<TItem, TPayload>({
     filters,
     fetchList,
     pageSize,
+    reloadKey,
     loadFailed: labels.loadFailed,
   })
   const draftFilters = list.draftFilters

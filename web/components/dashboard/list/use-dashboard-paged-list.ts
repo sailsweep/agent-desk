@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import {
@@ -24,6 +24,7 @@ export type DashboardPagedListOptions<TItem> = {
   pageSize?: number
   loadFailed: string
   enabled?: boolean
+  reloadKey?: string | number | null
 }
 
 export function useDashboardPagedList<TItem>({
@@ -32,7 +33,10 @@ export function useDashboardPagedList<TItem>({
   pageSize = 20,
   loadFailed,
   enabled = true,
+  reloadKey,
 }: DashboardPagedListOptions<TItem>) {
+  const fetchListRef = useRef(fetchList)
+  fetchListRef.current = fetchList
   const filtersKey = filters
     .map(
       (filter) =>
@@ -65,7 +69,7 @@ export function useDashboardPagedList<TItem>({
 
     setLoading(true)
     try {
-      const data = await fetchList(
+      const data = await fetchListRef.current(
         buildDashboardCrudQuery({
           values: appliedFilters,
           filters,
@@ -80,7 +84,7 @@ export function useDashboardPagedList<TItem>({
       setLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appliedFilters, enabled, fetchList, filtersKey, limit, loadFailed, page])
+  }, [appliedFilters, enabled, filtersKey, limit, loadFailed, page, reloadKey])
 
   useEffect(() => {
     void loadData()
