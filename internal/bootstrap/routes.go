@@ -165,6 +165,7 @@ func registerDashboardNotificationRoutes(group *gin.RouterGroup) {
 }
 
 func registerDashboardQuickReplyRoutes(group *gin.RouterGroup) {
+	group.GET("/:id", dashboard.QuickReplyGetBy)
 	group.POST("/create", dashboard.QuickReplyPostCreate)
 	group.POST("/delete", dashboard.QuickReplyPostDelete)
 	group.Any("/list", dashboard.QuickReplyAnyList)

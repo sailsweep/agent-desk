@@ -1,9 +1,9 @@
 package dashboard
 
 import (
+	"cs-agent/internal/builders"
 	"cs-agent/internal/pkg/constants"
 	"cs-agent/internal/pkg/dto/request"
-	"cs-agent/internal/pkg/dto/response"
 	"cs-agent/internal/pkg/enums"
 	"cs-agent/internal/pkg/httpx"
 	"cs-agent/internal/services"
@@ -28,18 +28,26 @@ func QuickReplyAnyList(ctx *gin.Context) {
 	).Asc("sort_no").Desc("id")
 
 	list, paging := services.QuickReplyService.FindPageByCnd(cnd)
-	results := make([]response.QuickReplyResponse, 0, len(list))
-	for _, item := range list {
-		results = append(results, response.QuickReplyResponse{
-			ID:        item.ID,
-			GroupName: item.GroupName,
-			Title:     item.Title,
-			Content:   item.Content,
-			Status:    item.Status,
-			SortNo:    item.SortNo,
-		})
-	}
+	results := builders.BuildQuickReplyResponses(list)
 	httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
+}
+
+func QuickReplyGetBy(ctx *gin.Context) {
+	id, ok := httpx.GetPathInt64(ctx, "id")
+	if !ok {
+		return
+	}
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionQuickReplyView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
+	}
+
+	item := services.QuickReplyService.Get(id)
+	if item == nil {
+		httpx.WriteJSON(ctx, web.JsonErrorMsg("快捷回复不存在"))
+		return
+	}
+	httpx.WriteJSON(ctx, builders.BuildQuickReplyResponse(item))
 }
 
 func QuickReplyGetList_all(ctx *gin.Context) {
@@ -48,17 +56,7 @@ func QuickReplyGetList_all(ctx *gin.Context) {
 		return
 	}
 	list := services.QuickReplyService.Find(sqls.NewCnd().Eq("status", enums.StatusOk).Asc("sort_no").Desc("id"))
-	results := make([]response.QuickReplyResponse, 0, len(list))
-	for _, item := range list {
-		results = append(results, response.QuickReplyResponse{
-			ID:        item.ID,
-			GroupName: item.GroupName,
-			Title:     item.Title,
-			Content:   item.Content,
-			Status:    item.Status,
-			SortNo:    item.SortNo,
-		})
-	}
+	results := builders.BuildQuickReplyResponses(list)
 	httpx.WriteJSON(ctx, results)
 }
 
@@ -79,14 +77,7 @@ func QuickReplyPostCreate(ctx *gin.Context) {
 		httpx.WriteJSON(ctx, err)
 		return
 	}
-	httpx.WriteJSON(ctx, &response.QuickReplyResponse{
-		ID:        item.ID,
-		GroupName: item.GroupName,
-		Title:     item.Title,
-		Content:   item.Content,
-		Status:    item.Status,
-		SortNo:    item.SortNo,
-	})
+	httpx.WriteJSON(ctx, builders.BuildQuickReplyResponse(item))
 }
 
 func QuickReplyPostUpdate(ctx *gin.Context) {
