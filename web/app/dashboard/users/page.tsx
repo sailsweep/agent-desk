@@ -1,6 +1,6 @@
 "use client"
 
-import { type KeyboardEvent, useCallback, useEffect, useState } from "react"
+import { type KeyboardEvent, useCallback, useMemo, useState } from "react"
 import {
   KeyRoundIcon,
   MoreHorizontalIcon,
@@ -17,6 +17,10 @@ import {
   DashboardTableStateRow,
   DashboardToolbar,
 } from "@/components/dashboard-page"
+import {
+  useDashboardPagedList,
+  type DashboardListFilter,
+} from "@/components/dashboard/list"
 import { ListPagination } from "@/components/list-pagination"
 import {
   assignUserRoles,
@@ -30,7 +34,6 @@ import {
   type AdminRole,
   type AdminUser,
   type CreateAdminUserPayload,
-  type PageResult,
   type ResetPasswordResult,
   type UpdateAdminUserPayload,
 } from "@/lib/api/admin"
@@ -65,11 +68,6 @@ import {
 export default function DashboardUsersPage() {
   const t = useI18n()
   const { locale } = useAppLocale()
-  const [keywordInput, setKeywordInput] = useState("")
-  const [keyword, setKeyword] = useState("")
-  const [page, setPage] = useState(1)
-  const [limit, setLimit] = useState(20)
-  const [loading, setLoading] = useState(true)
   const [creatingOpen, setCreatingOpen] = useState(false)
   const [savingCreate, setSavingCreate] = useState(false)
   const [initialPassword, setInitialPassword] = useState<{
@@ -88,34 +86,34 @@ export default function DashboardUsersPage() {
   const [resetPasswordResult, setResetPasswordResult] =
     useState<ResetPasswordResult | null>(null)
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null)
-  const [result, setResult] = useState<PageResult<AdminUser>>({
-    results: [],
-    page: { page: 1, limit: 20, total: 0 },
+  const filters = useMemo<DashboardListFilter[]>(
+    () => [
+      {
+        name: "username",
+        label: t("user.filterUsername"),
+        defaultValue: "",
+        trim: true,
+      },
+    ],
+    [t],
+  )
+  const fetchList = useCallback(
+    (query: Record<string, string | number | boolean | string[] | number[] | undefined>) =>
+      fetchUsers({
+        username: typeof query.username === "string" ? query.username : undefined,
+        page: Number(query.page),
+        limit: Number(query.limit),
+      }),
+    [],
+  )
+  const list = useDashboardPagedList<AdminUser>({
+    filters,
+    fetchList,
+    loadFailed: t("user.loadFailed"),
   })
 
-  const loadUsers = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await fetchUsers({
-        username: keyword.trim() || undefined,
-        page,
-        limit,
-      })
-      setResult(data)
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("user.loadFailed"))
-    } finally {
-      setLoading(false)
-    }
-  }, [keyword, limit, page, t])
-
-  useEffect(() => {
-    void loadUsers()
-  }, [loadUsers])
-
   function applyFilters() {
-    setKeyword(keywordInput)
-    setPage(1)
+    list.applyFilters()
   }
 
   function handleFilterKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -152,18 +150,11 @@ export default function DashboardUsersPage() {
   }
 
   function handlePageChange(nextPage: number) {
-    if (nextPage < 1 || nextPage === page) {
-      return
-    }
-    setPage(nextPage)
+    list.handlePageChange(nextPage)
   }
 
   function handleLimitChange(nextLimit: number) {
-    if (nextLimit <= 0 || nextLimit === limit) {
-      return
-    }
-    setLimit(nextLimit)
-    setPage(1)
+    list.handleLimitChange(nextLimit)
   }
 
   function handleEditDrawerOpenChange(open: boolean) {
@@ -198,7 +189,7 @@ export default function DashboardUsersPage() {
         username: result.user.username,
         password: result.password,
       })
-      await loadUsers()
+      await list.loadData()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("user.createFailed"))
     } finally {
@@ -227,7 +218,7 @@ export default function DashboardUsersPage() {
       await updateUser(payload)
       toast.success(t("user.updated", { username: editingUser?.username || t("user.fallbackUser") }))
       setEditingUser(null)
-      await loadUsers()
+      await list.loadData()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("user.updateFailed"))
     } finally {
@@ -247,7 +238,7 @@ export default function DashboardUsersPage() {
       setAssigningRolesUser(null)
       setAssignRoleOptions([])
       setAssignRoleIds([])
-      await loadUsers()
+      await list.loadData()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("user.saveRolesFailed"))
     } finally {
@@ -298,7 +289,7 @@ export default function DashboardUsersPage() {
           status: nextStatus === Status.Ok ? t("user.enabled") : t("user.disabled"),
         })
       )
-      await loadUsers()
+      await list.loadData()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("user.statusUpdateFailed"))
     } finally {
@@ -311,7 +302,7 @@ export default function DashboardUsersPage() {
       <DashboardPage>
         <DashboardToolbar
           actions={
-            <Button onClick={() => setCreatingOpen(true)} disabled={loading}>
+            <Button onClick={() => setCreatingOpen(true)} disabled={list.loading}>
               <PlusIcon />
               {t("user.addUser")}
             </Button>
@@ -320,24 +311,26 @@ export default function DashboardUsersPage() {
           <div className="relative w-full sm:w-72">
             <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              value={keywordInput}
-              onChange={(event) => setKeywordInput(event.target.value)}
+              value={String(list.draftFilters.username ?? "")}
+              onChange={(event) =>
+                list.setDraftFilter("username", event.target.value)
+              }
               onKeyDown={handleFilterKeyDown}
               placeholder={t("user.filterUsername")}
               className="pl-9"
             />
           </div>
-          <Button variant="outline" onClick={applyFilters} disabled={loading}>
+          <Button variant="outline" onClick={applyFilters} disabled={list.loading}>
             {t("user.query")}
           </Button>
         </DashboardToolbar>
         <DashboardTableShell
           pagination={
             <ListPagination
-              page={result.page.page}
-              total={result.page.total}
-              limit={result.page.limit}
-              loading={loading}
+              page={list.result.page.page}
+              total={list.result.page.total}
+              limit={list.result.page.limit}
+              loading={list.loading}
               onPageChange={handlePageChange}
               onLimitChange={handleLimitChange}
             />
@@ -355,7 +348,7 @@ export default function DashboardUsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {result.results.map((item) => (
+                {list.result.results.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -455,10 +448,10 @@ export default function DashboardUsersPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {loading || result.results.length === 0 ? (
+                {list.loading || list.result.results.length === 0 ? (
                   <DashboardTableStateRow
                     colSpan={6}
-                    loading={loading}
+                    loading={list.loading}
                     loadingText={t("user.loadingRows")}
                     emptyText={t("user.emptyRows")}
                   />

@@ -54,6 +54,7 @@ export type DashboardListRenderContext<TItem> = {
   result: DashboardCrudPageResult<TItem>
   loading: boolean
   reload: () => Promise<void>
+  resetFilters: () => void
 }
 
 export type DashboardListPageProps<TItem> = {
@@ -104,6 +105,7 @@ export function DashboardListPage<TItem>({
     result: list.result,
     loading: list.loading,
     reload: list.loadData,
+    resetFilters: list.resetFilters,
   }
 
   function handleFilterKeyDown(event: KeyboardEvent<HTMLInputElement>) {

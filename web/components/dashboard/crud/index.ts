@@ -11,6 +11,7 @@ export {
 export { useDashboardCrudFilters } from "./use-dashboard-crud-filters"
 export type {
   DashboardCrudColumn,
+  DashboardCrudActionState,
   DashboardCrudDialogProps,
   DashboardCrudFilter,
   DashboardCrudPageProps,

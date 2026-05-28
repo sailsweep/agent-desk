@@ -39,7 +39,14 @@ export function useDashboardPagedList<TItem>({
         `${filter.name}:${String(filter.defaultValue)}:${String(filter.allValue)}:${filter.trim ? "1" : "0"}:${filter.valueType ?? ""}`
     )
     .join("|")
-  const { draftFilters, appliedFilters, setDraftFilter, applyFilter, applyFilters } =
+  const {
+    draftFilters,
+    appliedFilters,
+    setDraftFilter,
+    applyFilter,
+    applyFilters,
+    resetFilters,
+  } =
     useDashboardCrudFilters(filters)
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(pageSize)
@@ -100,6 +107,11 @@ export function useDashboardPagedList<TItem>({
     setPage(1)
   }
 
+  function resetDraftFilters() {
+    resetFilters()
+    setPage(1)
+  }
+
   return {
     draftFilters,
     setDraftFilter,
@@ -115,5 +127,6 @@ export function useDashboardPagedList<TItem>({
     loadData,
     handlePageChange,
     handleLimitChange,
+    resetFilters: resetDraftFilters,
   }
 }

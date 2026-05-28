@@ -6,4 +6,7 @@ export type {
   DashboardListPageProps,
   DashboardListRenderContext,
 } from "./dashboard-list-page"
-export type { DashboardPagedListOptions } from "./use-dashboard-paged-list"
+export type {
+  DashboardPagedListFilter,
+  DashboardPagedListOptions,
+} from "./use-dashboard-paged-list"

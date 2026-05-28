@@ -8,9 +8,13 @@ import {
   Trash2Icon,
   WrenchIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { toast } from "sonner";
 
+import {
+  useDashboardPagedList,
+  type DashboardPagedListFilter,
+} from "@/components/dashboard/list";
 import { ListPagination } from "@/components/list-pagination";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +47,6 @@ import {
   updateKnowledgeDocument,
   type CreateKnowledgeDocumentPayload,
   type KnowledgeDocumentListItem,
-  type PageResult,
 } from "@/lib/api/admin";
 import { useI18n } from "@/i18n/provider";
 import {
@@ -136,15 +139,6 @@ const VIEW_MODE_STORAGE_KEY = "knowledge-document-view-mode";
 
 export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentListProps) {
   const t = useI18n();
-  const [keywordInput, setKeywordInput] = useState("");
-  const [statusFilterInput, setStatusFilterInput] = useState("all");
-  const [indexStatusFilterInput, setIndexStatusFilterInput] = useState("all");
-  const [keyword, setKeyword] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [indexStatusFilter, setIndexStatusFilter] = useState("all");
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [actionLoadingMap, setActionLoadingMap] = useState<Record<number, { rebuildIndex: boolean; delete: boolean }>>({});
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -156,87 +150,72 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
     const saved = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
     return saved === "list" || saved === "grid" ? saved : "grid";
   });
-  const [documents, setDocuments] = useState<PageResult<KnowledgeDocumentListItem>>({
-    results: [],
-    page: { page: 1, limit: 20, total: 0 },
-  });
   const statusOptions = useMemo(() => getStatusOptions(t), [t]);
   const indexStatusOptions = useMemo(() => getIndexStatusOptions(t), [t]);
 
-  const loadData = useCallback(async (options?: {
-    keyword?: string;
-    statusFilter?: string;
-    indexStatusFilter?: string;
-    page?: number;
-    limit?: number;
-  }) => {
-    const nextKeyword = options?.keyword ?? keyword;
-    const nextStatusFilter = options?.statusFilter ?? statusFilter;
-    const nextIndexStatusFilter = options?.indexStatusFilter ?? indexStatusFilter;
-    const nextPage = options?.page ?? page;
-    const nextLimit = options?.limit ?? limit;
+  const filters = useMemo<DashboardPagedListFilter[]>(() => [
+    {
+      name: "title",
+      defaultValue: "",
+      trim: true,
+    },
+    {
+      name: "status",
+      defaultValue: "all",
+      allValue: "all",
+    },
+    {
+      name: "indexStatus",
+      defaultValue: "all",
+      allValue: "all",
+    },
+  ], []);
 
-    if (!knowledgeBaseId) {
-      setDocuments({ results: [], page: { page: 1, limit, total: 0 } });
-      setLoading(false);
-      return;
-    }
+  const fetchList = useCallback(async (query: Record<string, string | number | undefined>) => {
+    return fetchKnowledgeDocuments({
+      title: typeof query.title === "string" ? query.title : undefined,
+      status: typeof query.status === "string" ? query.status : undefined,
+      indexStatus: typeof query.indexStatus === "string" ? query.indexStatus : undefined,
+      knowledgeBaseId: knowledgeBaseId ?? 0,
+      page: typeof query.page === "number" ? query.page : Number(query.page ?? 1),
+      limit: typeof query.limit === "number" ? query.limit : Number(query.limit ?? 20),
+    });
+  }, [knowledgeBaseId]);
 
-    setLoading(true);
-    try {
-      const data = await fetchKnowledgeDocuments({
-        title: nextKeyword.trim() || undefined,
-        status: nextStatusFilter === "all" ? undefined : nextStatusFilter,
-        indexStatus: nextIndexStatusFilter === "all" ? undefined : nextIndexStatusFilter,
-        knowledgeBaseId,
-        page: nextPage,
-        limit: nextLimit,
-      });
-      setDocuments(data);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("knowledge.loadDocumentsFailed"));
-    } finally {
-      setLoading(false);
-    }
-  }, [indexStatusFilter, keyword, statusFilter, knowledgeBaseId, limit, page, t]);
-
-  useEffect(() => {
-    void loadData();
-  }, [loadData]);
+  const {
+    draftFilters,
+    setDraftFilter,
+    applyFilter,
+    applyFilters: applyDraftFilters,
+    loading,
+    result: documents,
+    loadData,
+    handlePageChange,
+    handleLimitChange,
+  } = useDashboardPagedList<KnowledgeDocumentListItem>({
+    filters,
+    fetchList,
+    enabled: Boolean(knowledgeBaseId),
+    loadFailed: t("knowledge.loadDocumentsFailed"),
+  });
 
   useEffect(() => {
     localStorage.setItem(VIEW_MODE_STORAGE_KEY, viewMode);
   }, [viewMode]);
 
   function handleStatusFilterChange(value: string | null) {
-    const newValue = value ?? "all";
-    setStatusFilterInput(newValue);
-    setStatusFilter(newValue);
+    applyFilter("status", value ?? "all");
   }
 
   function handleIndexStatusFilterChange(value: string | null) {
-    const newValue = value ?? "all";
-    setIndexStatusFilterInput(newValue);
-    setIndexStatusFilter(newValue);
+    applyFilter("indexStatus", value ?? "all");
   }
 
   function applyFilters() {
-    const nextKeyword = keywordInput;
-    const nextStatusFilter = statusFilterInput;
-    const nextIndexStatusFilter = indexStatusFilterInput;
-    setKeyword(nextKeyword);
-    setStatusFilter(nextStatusFilter);
-    setIndexStatusFilter(nextIndexStatusFilter);
-    setPage(1);
-    void loadData({
-      keyword: nextKeyword,
-      statusFilter: nextStatusFilter,
-      indexStatusFilter: nextIndexStatusFilter,
-      page: 1,
-    });
+    applyDraftFilters();
   }
 
-  function handleFilterKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+  function handleFilterKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key !== "Enter") {
       return;
     }
@@ -348,15 +327,15 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
             <div className="relative flex-1">
               <SearchIcon className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
-                value={keywordInput}
-                onChange={(event) => setKeywordInput(event.target.value)}
+                value={String(draftFilters.title ?? "")}
+                onChange={(event) => setDraftFilter("title", event.target.value)}
                 onKeyDown={handleFilterKeyDown}
                 placeholder={t("knowledge.searchDocumentTitle")}
                 className="h-8 pl-8 text-xs"
               />
             </div>
             <OptionCombobox
-              value={statusFilterInput}
+              value={String(draftFilters.status ?? "all")}
               onChange={handleStatusFilterChange}
               options={statusOptions}
               placeholder={t("knowledge.allStatus")}
@@ -364,7 +343,7 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
               emptyText={t("knowledge.emptyStatus")}
             />
             <OptionCombobox
-              value={indexStatusFilterInput}
+              value={String(draftFilters.indexStatus ?? "all")}
               onChange={handleIndexStatusFilterChange}
               options={indexStatusOptions}
               placeholder={t("knowledge.allIndexStatus")}
@@ -544,15 +523,8 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
             limit={documents.page.limit}
             total={documents.page.total}
             loading={loading}
-            onPageChange={(nextPage) => {
-              setPage(nextPage);
-              void loadData({ page: nextPage });
-            }}
-            onLimitChange={(nextLimit) => {
-              setLimit(nextLimit);
-              setPage(1);
-              void loadData({ limit: nextLimit, page: 1 });
-            }}
+            onPageChange={handlePageChange}
+            onLimitChange={handleLimitChange}
           />
         </div>
       </div>

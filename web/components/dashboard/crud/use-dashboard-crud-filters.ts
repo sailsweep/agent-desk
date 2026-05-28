@@ -48,6 +48,11 @@ export function useDashboardCrudFilters(
     }))
   }
 
+  function resetFilters() {
+    setDraftFilters(initialFilters)
+    setAppliedFilters(initialFilters)
+  }
+
   return {
     draftFilters,
     appliedFilters,
@@ -55,5 +60,6 @@ export function useDashboardCrudFilters(
     setDraftFilters,
     applyFilter,
     applyFilters,
+    resetFilters,
   }
 }

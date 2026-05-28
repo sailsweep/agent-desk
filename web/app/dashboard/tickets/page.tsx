@@ -1,28 +1,18 @@
 "use client"
 
-import { PlusIcon, RefreshCcwIcon, SearchIcon, SearchXIcon } from "lucide-react"
+import { PlusIcon, SearchXIcon } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import {
-  DashboardPage,
-  DashboardTableShell,
-  DashboardTableStateRow,
-  DashboardToolbar,
-} from "@/components/dashboard-page"
-import { OptionCombobox, type ComboboxOption } from "@/components/option-combobox"
+  DashboardListPage,
+  type DashboardListColumn,
+  type DashboardListFilter,
+} from "@/components/dashboard/list"
+import { type ComboboxOption } from "@/components/option-combobox"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import {
   fetchAgentProfilesAll,
   fetchTagsAll,
@@ -40,7 +30,7 @@ import {
   type TicketSummary,
 } from "@/lib/api/ticket"
 import { useI18n } from "@/i18n/provider"
-import { cn, formatDateTime } from "@/lib/utils"
+import { formatDateTime } from "@/lib/utils"
 import { EditDialog } from "./_components/edit"
 import { TicketDetailDialog } from "./_components/ticket-detail-dialog"
 import { TicketStatusBadge } from "./_components/ticket-status-badge"
@@ -118,93 +108,236 @@ function assigneeLabel(ticket: TicketItem, t: TFunction) {
   return t("ticket.unassigned")
 }
 
+function quickViewLabel(label: string, count: number) {
+  return `${label} ${count}`
+}
+
 export default function TicketsPage() {
   const t = useI18n()
   const searchParams = useSearchParams()
-  const [tickets, setTickets] = useState<TicketItem[]>([])
   const [summary, setSummary] = useState<TicketSummary>(emptySummary)
-  const [quickView, setQuickView] = useState<QuickViewKey>("all")
-  const [keyword, setKeyword] = useState("")
-  const [assigneeId, setAssigneeId] = useState("0")
-  const [tagId, setTagId] = useState("0")
-  const [staleHours, setStaleHours] = useState("24")
   const [assigneeOptions, setAssigneeOptions] = useState<ComboboxOption[]>([])
   const [tagOptions, setTagOptions] = useState<ComboboxOption[]>([])
-  const [loading, setLoading] = useState(false)
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const [savingCreate, setSavingCreate] = useState(false)
-  const loadSeqRef = useRef(0)
+  const listReloadRef = useRef<() => Promise<void>>(async () => undefined)
 
-  const quickViews = useMemo(
-    () =>
-      [
-        { key: "all", label: t("ticket.quickAll"), count: summary.all },
-        { key: "pending", label: t("ticket.quickPending"), count: summary.pending },
-        { key: "in_progress", label: t("ticket.quickInProgress"), count: summary.inProgress },
-        { key: "done", label: t("ticket.quickDone"), count: summary.done },
-        { key: "unassigned", label: t("ticket.quickUnassigned"), count: summary.unassigned },
-        { key: "mine", label: t("ticket.quickMine"), count: summary.mine },
-        { key: "stale", label: t("ticket.quickStale"), count: summary.stale },
-      ] satisfies Array<{ key: QuickViewKey; label: string; count: number }>,
-    [summary, t],
-  )
   const assigneeAllOption = useMemo(() => getAssigneeAllOption(t), [t])
   const tagAllOption = useMemo(() => getTagAllOption(t), [t])
   const staleHourOptions = useMemo(() => getStaleHourOptions(t), [t])
 
-  const loadData = useCallback(async () => {
-    const seq = loadSeqRef.current + 1
-    loadSeqRef.current = seq
-    setLoading(true)
-    try {
-      const staleThreshold = Number(staleHours)
-      const query: TicketListQuery = {
-        page: 1,
-        limit: 50,
-        keyword: keyword.trim() || undefined,
-        currentAssigneeId: assigneeId !== "0" ? Number(assigneeId) : undefined,
-        tagId: tagId !== "0" ? Number(tagId) : undefined,
+  const quickViews = useMemo(
+    () =>
+      [
+        {
+          value: "all",
+          label: quickViewLabel(t("ticket.quickAll"), summary.all),
+        },
+        {
+          value: "pending",
+          label: quickViewLabel(t("ticket.quickPending"), summary.pending),
+        },
+        {
+          value: "in_progress",
+          label: quickViewLabel(
+            t("ticket.quickInProgress"),
+            summary.inProgress,
+          ),
+        },
+        {
+          value: "done",
+          label: quickViewLabel(t("ticket.quickDone"), summary.done),
+        },
+        {
+          value: "unassigned",
+          label: quickViewLabel(
+            t("ticket.quickUnassigned"),
+            summary.unassigned,
+          ),
+        },
+        {
+          value: "mine",
+          label: quickViewLabel(t("ticket.quickMine"), summary.mine),
+        },
+        {
+          value: "stale",
+          label: quickViewLabel(t("ticket.quickStale"), summary.stale),
+        },
+      ] satisfies Array<{ value: QuickViewKey; label: string }>,
+    [summary, t],
+  )
+
+  const filters = useMemo<DashboardListFilter[]>(
+    () => [
+      {
+        name: "quickView",
+        label: t("ticket.quickAll"),
+        type: "segment",
+        defaultValue: "all",
+        allValue: "all",
+        options: quickViews,
+        className: "flex w-full flex-wrap gap-2",
+      },
+      {
+        name: "keyword",
+        label: t("ticket.searchPlaceholder"),
+        placeholder: t("ticket.searchPlaceholder"),
+        defaultValue: "",
+        trim: true,
+        className: "w-full sm:w-72",
+      },
+      {
+        name: "currentAssigneeId",
+        label: t("ticket.allAssignees"),
+        type: "select",
+        defaultValue: "0",
+        allValue: "0",
+        valueType: "number",
+        options: assigneeOptions,
+        className: "w-full sm:w-44",
+      },
+      {
+        name: "tagId",
+        label: t("ticket.allTags"),
+        type: "select",
+        defaultValue: "0",
+        allValue: "0",
+        valueType: "number",
+        options: tagOptions,
+        className: "w-full sm:w-44",
+      },
+      {
+        name: "staleHours",
+        label: t("ticket.staleThreshold"),
+        type: "select",
+        defaultValue: "24",
+        options: staleHourOptions,
+        className: "w-full sm:w-40",
+      },
+    ],
+    [assigneeOptions, quickViews, staleHourOptions, tagOptions, t],
+  )
+
+  const fetchList = useCallback(
+    async (query: Record<string, string | number | boolean | string[] | number[] | undefined>) => {
+      const quickView = String(query.quickView ?? "all") as QuickViewKey
+      const staleThreshold = Number(query.staleHours ?? 24)
+      const ticketQuery: TicketListQuery = {
+        page: Number(query.page),
+        limit: Number(query.limit),
+        keyword: typeof query.keyword === "string" ? query.keyword : undefined,
+        currentAssigneeId:
+          typeof query.currentAssigneeId === "number"
+            ? query.currentAssigneeId
+            : undefined,
+        tagId: typeof query.tagId === "number" ? query.tagId : undefined,
       }
 
-      if (quickView === "pending" || quickView === "in_progress" || quickView === "done") {
-        query.status = quickView as TicketStatus
+      if (
+        quickView === "pending" ||
+        quickView === "in_progress" ||
+        quickView === "done"
+      ) {
+        ticketQuery.status = quickView as TicketStatus
       }
       if (quickView === "unassigned") {
-        query.unassigned = 1
+        ticketQuery.unassigned = 1
       }
       if (quickView === "mine") {
-        query.mine = 1
+        ticketQuery.mine = 1
       }
       if (quickView === "stale") {
-        query.staleHours = staleThreshold
+        ticketQuery.staleHours = staleThreshold
       }
 
       const [ticketData, summaryData] = await Promise.all([
-        fetchTickets(query),
+        fetchTickets(ticketQuery),
         fetchTicketSummary({ staleHours: staleThreshold }),
       ])
-      if (loadSeqRef.current !== seq) {
-        return
-      }
-      setTickets(Array.isArray(ticketData.results) ? ticketData.results : [])
       setSummary(summaryData ?? emptySummary)
-    } catch (error) {
-      if (loadSeqRef.current !== seq) {
-        return
-      }
-      toast.error(error instanceof Error ? error.message : t("ticket.loadFailed"))
-    } finally {
-      if (loadSeqRef.current === seq) {
-        setLoading(false)
-      }
-    }
-  }, [assigneeId, keyword, quickView, staleHours, tagId, t])
+      return ticketData
+    },
+    [],
+  )
 
-  useEffect(() => {
-    void loadData()
-  }, [loadData])
+  const columns = useMemo<DashboardListColumn<TicketItem>[]>(
+    () => [
+      {
+        key: "ticket",
+        label: t("ticket.columnTicket"),
+        render: (ticket) => (
+          <div className="min-w-0 space-y-1">
+            <div className="truncate text-sm font-medium">{ticket.title}</div>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span className="font-mono">{ticket.ticketNo}</span>
+              <span>
+                {ticket.customer?.name ||
+                  (ticket.customerId
+                    ? t("ticket.customerFallback", { id: ticket.customerId })
+                    : t("ticket.noCustomer"))}
+              </span>
+              <span>{sourceLabel(ticket.source, t)}</span>
+              {ticket.channel ? <span>{ticket.channel}</span> : null}
+            </div>
+            {ticket.tags && ticket.tags.length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                {ticket.tags.slice(0, 3).map((tag) => (
+                  <Badge key={tag.id} variant="outline" className="px-1.5 py-0 text-[11px]">
+                    {tag.name}
+                  </Badge>
+                ))}
+                {ticket.tags.length > 3 ? (
+                  <Badge variant="outline" className="px-1.5 py-0 text-[11px]">
+                    +{ticket.tags.length - 3}
+                  </Badge>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        key: "status",
+        label: t("ticket.columnStatus"),
+        className: "w-28",
+        render: (ticket) => <TicketStatusBadge status={ticket.status} />,
+      },
+      {
+        key: "assignee",
+        label: t("ticket.columnAssignee"),
+        className: "max-w-36 truncate text-sm text-muted-foreground",
+        render: (ticket) => assigneeLabel(ticket, t),
+      },
+      {
+        key: "updatedAt",
+        label: t("ticket.columnUpdated"),
+        className: "w-40 text-sm text-muted-foreground",
+        render: (ticket) =>
+          ticket.updatedAt ? formatDateTime(ticket.updatedAt) : "-",
+      },
+      {
+        key: "actions",
+        label: t("ticket.columnActions"),
+        className: "w-24 text-right",
+        render: (ticket) => (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSelectedTicketId(ticket.id)
+              setDetailOpen(true)
+            }}
+          >
+            {t("ticket.detail")}
+          </Button>
+        ),
+      },
+    ],
+    [t],
+  )
 
   useEffect(() => {
     const ticketId = Number(searchParams.get("ticketId"))
@@ -242,21 +375,13 @@ export default function TicketsPage() {
     }
   }, [assigneeAllOption, tagAllOption, t])
 
-  function resetFilters() {
-    setQuickView("all")
-    setKeyword("")
-    setAssigneeId("0")
-    setTagId("0")
-    setStaleHours("24")
-  }
-
   async function handleCreateTicket(payload: CreateTicketPayload) {
     setSavingCreate(true)
     try {
       await createTicket(payload)
       toast.success(t("ticket.created"))
       setCreateOpen(false)
-      await loadData()
+      await listReloadRef.current()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("ticket.createFailed"))
     } finally {
@@ -265,171 +390,36 @@ export default function TicketsPage() {
   }
 
   return (
-    <DashboardPage>
-      <div className="flex flex-wrap gap-2">
-        {quickViews.map((view) => (
-          <button
-            key={view.key}
-            type="button"
-            className={cn(
-              "inline-flex min-w-0 items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition",
-              quickView === view.key
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-background hover:bg-muted",
-            )}
-            onClick={() => setQuickView(view.key)}
-          >
-            <span className="truncate font-medium">{view.label}</span>
-            <span
-              className={cn(
-                "rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums",
-                quickView === view.key ? "bg-primary-foreground/20" : "bg-muted text-muted-foreground",
-              )}
-            >
-              {view.count}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      <DashboardToolbar
-        actions={
-          <>
-            <Button type="button" variant="outline" onClick={() => void loadData()} disabled={loading}>
-              <RefreshCcwIcon className={cn("size-4", loading ? "animate-spin" : "")} />
-              {t("ticket.refresh")}
-            </Button>
-            <Button type="button" onClick={() => setCreateOpen(true)}>
-              <PlusIcon className="size-4" />
-              {t("ticket.newTicket")}
-            </Button>
-          </>
-        }
-      >
-        <Input
-          className="w-full sm:w-72"
-          placeholder={t("ticket.searchPlaceholder")}
-          value={keyword}
-          onChange={(event) => setKeyword(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              void loadData()
-            }
-          }}
-        />
-        <div className="w-full sm:w-44">
-          <OptionCombobox
-            value={assigneeId}
-            onChange={setAssigneeId}
-            placeholder={t("ticket.allAssignees")}
-            options={assigneeOptions}
-          />
-        </div>
-        <div className="w-full sm:w-44">
-          <OptionCombobox
-            value={tagId}
-            onChange={setTagId}
-            placeholder={t("ticket.allTags")}
-            options={tagOptions}
-          />
-        </div>
-        <div className="w-full sm:w-40">
-          <OptionCombobox
-            value={staleHours}
-            onChange={setStaleHours}
-            placeholder={t("ticket.staleThreshold")}
-            options={staleHourOptions}
-          />
-        </div>
-        <Button type="button" variant="outline" onClick={resetFilters}>
-          <SearchXIcon className="size-4" />
-          {t("ticket.reset")}
-        </Button>
-        <Button type="button" variant="outline" onClick={() => void loadData()} disabled={loading}>
-          <RefreshCcwIcon className={cn("size-4", loading ? "animate-spin" : "")} />
-          {t("ticket.refresh")}
-        </Button>
-        <Button type="button" onClick={() => void loadData()} disabled={loading}>
-          <SearchIcon className="size-4" />
-          {t("ticket.query")}
-        </Button>
-      </DashboardToolbar>
-
-      <DashboardTableShell>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("ticket.columnTicket")}</TableHead>
-              <TableHead className="w-28">{t("ticket.columnStatus")}</TableHead>
-              <TableHead className="w-36">{t("ticket.columnAssignee")}</TableHead>
-              <TableHead className="w-40">{t("ticket.columnUpdated")}</TableHead>
-              <TableHead className="w-24 text-right">{t("ticket.columnActions")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {tickets.length === 0 ? (
-              <DashboardTableStateRow
-                colSpan={5}
-                loading={loading}
-                loadingText={t("ticket.loadingRows")}
-                emptyText={t("ticket.emptyRows")}
-              />
-            ) : (
-              tickets.map((ticket) => (
-                <TableRow key={ticket.id}>
-                  <TableCell>
-                    <div className="min-w-0 space-y-1">
-                      <div className="truncate text-sm font-medium">{ticket.title}</div>
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                        <span className="font-mono">{ticket.ticketNo}</span>
-                        <span>{ticket.customer?.name || (ticket.customerId ? t("ticket.customerFallback", { id: ticket.customerId }) : t("ticket.noCustomer"))}</span>
-                        <span>{sourceLabel(ticket.source, t)}</span>
-                        {ticket.channel ? <span>{ticket.channel}</span> : null}
-                      </div>
-                      {ticket.tags && ticket.tags.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {ticket.tags.slice(0, 3).map((tag) => (
-                            <Badge key={tag.id} variant="outline" className="px-1.5 py-0 text-[11px]">
-                              {tag.name}
-                            </Badge>
-                          ))}
-                          {ticket.tags.length > 3 ? (
-                            <Badge variant="outline" className="px-1.5 py-0 text-[11px]">
-                              +{ticket.tags.length - 3}
-                            </Badge>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <TicketStatusBadge status={ticket.status} />
-                  </TableCell>
-                  <TableCell className="max-w-36 truncate text-sm text-muted-foreground">
-                    {assigneeLabel(ticket, t)}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {ticket.updatedAt ? formatDateTime(ticket.updatedAt) : "-"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedTicketId(ticket.id)
-                        setDetailOpen(true)
-                      }}
-                    >
-                      {t("ticket.detail")}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </DashboardTableShell>
+    <>
+      <DashboardListPage<TicketItem>
+        filters={filters}
+        fetchList={fetchList}
+        columns={columns}
+        getItemId={(ticket) => ticket.id}
+        pageSize={50}
+        renderToolbarActions={(context) => {
+          listReloadRef.current = context.reload
+          return (
+            <>
+              <Button type="button" variant="outline" onClick={context.resetFilters}>
+                <SearchXIcon className="size-4" />
+                {t("ticket.reset")}
+              </Button>
+              <Button type="button" onClick={() => setCreateOpen(true)}>
+                <PlusIcon className="size-4" />
+                {t("ticket.newTicket")}
+              </Button>
+            </>
+          )
+        }}
+        labels={{
+          refresh: t("ticket.refresh"),
+          query: t("ticket.query"),
+          loading: t("ticket.loadingRows"),
+          empty: t("ticket.emptyRows"),
+          loadFailed: t("ticket.loadFailed"),
+        }}
+      />
 
       <EditDialog
         open={createOpen}
@@ -447,8 +437,8 @@ export default function TicketsPage() {
             setSelectedTicketId(null)
           }
         }}
-        onChanged={loadData}
+        onChanged={() => listReloadRef.current()}
       />
-    </DashboardPage>
+    </>
   )
 }

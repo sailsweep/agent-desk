@@ -1,7 +1,7 @@
 "use client"
 
 import type { ReactNode } from "react"
-import { useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
   closestCenter,
   DndContext,
@@ -111,6 +111,12 @@ export type DashboardCrudRowAction<TItem> = DashboardCrudActionRule<TItem> & {
   run: (context: DashboardCrudRowActionContext<TItem>) => Promise<void> | void
 }
 
+export type DashboardCrudActionState = {
+  onRefresh: () => void
+  onCreate: () => void
+  loading: boolean
+}
+
 export type DashboardCrudPageProps<TItem, TPayload> = {
   filters: DashboardCrudFilter[]
   columns: DashboardCrudColumn<TItem>[]
@@ -142,6 +148,7 @@ export type DashboardCrudPageProps<TItem, TPayload> = {
   getItemId: (item: TItem) => number
   createItem: (payload: TPayload) => Promise<unknown>
   updateItem: (item: TItem, payload: TPayload) => Promise<unknown>
+  canEdit?: (item: TItem) => boolean
   deleteItem?: (item: TItem) => Promise<unknown>
   canDelete?: (item: TItem) => boolean
   deleteConfirm?: false | ConfirmOptions | ((item: TItem) => ConfirmOptions)
@@ -156,6 +163,11 @@ export type DashboardCrudPageProps<TItem, TPayload> = {
     handleLabel: string
   }
   pageSize?: number
+  layout?: "page" | "fragment"
+  showToolbar?: boolean
+  showToolbarActions?: boolean
+  tableShellClassName?: string
+  onActionStateChange?: (state: DashboardCrudActionState) => void
   labels: {
     refresh: string
     create: string
@@ -185,6 +197,7 @@ export function DashboardCrudPage<TItem, TPayload>({
   getItemId,
   createItem,
   updateItem,
+  canEdit,
   deleteItem,
   canDelete,
   deleteConfirm,
@@ -192,6 +205,11 @@ export function DashboardCrudPage<TItem, TPayload>({
   renderRowActions,
   sort,
   pageSize = 20,
+  layout = "page",
+  showToolbar = true,
+  showToolbarActions = true,
+  tableShellClassName,
+  onActionStateChange,
   labels,
 }: DashboardCrudPageProps<TItem, TPayload>) {
   const confirm = useConfirm()
@@ -231,15 +249,23 @@ export function DashboardCrudPage<TItem, TPayload>({
     handleApplyFilters()
   }
 
-  function openCreateDialog() {
+  const openCreateDialog = useCallback(() => {
     setEditingItem(null)
     setDialogOpen(true)
-  }
+  }, [])
 
   function openEditDialog(item: TItem) {
     setEditingItem(item)
     setDialogOpen(true)
   }
+
+  useEffect(() => {
+    onActionStateChange?.({
+      onRefresh: () => void loadData(),
+      onCreate: openCreateDialog,
+      loading,
+    })
+  }, [loadData, loading, onActionStateChange, openCreateDialog])
 
   function handleDialogOpenChange(open: boolean) {
     if (saving) return
@@ -379,7 +405,12 @@ export function DashboardCrudPage<TItem, TPayload>({
         ))}
         <TableCell className="text-right">
           <ButtonGroup className="ml-auto">
-            <Button variant="outline" size="sm" onClick={() => openEditDialog(item)}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={canEdit ? !canEdit(item) : false}
+              onClick={() => openEditDialog(item)}
+            >
               {labels.edit}
             </Button>
             {renderRowActions || rowActions.length > 0 || deleteItem ? (
@@ -475,21 +506,23 @@ export function DashboardCrudPage<TItem, TPayload>({
     )
   }
 
-  return (
+  const content = (
     <>
-      <DashboardPage>
+      {showToolbar ? (
         <DashboardToolbar
           actions={
-            <>
-              <Button variant="outline" onClick={() => void loadData()} disabled={loading}>
-                <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
-                {labels.refresh}
-              </Button>
-              <Button onClick={openCreateDialog}>
-                <PlusIcon />
-                {labels.create}
-              </Button>
-            </>
+            showToolbarActions ? (
+              <>
+                <Button variant="outline" onClick={() => void loadData()} disabled={loading}>
+                  <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
+                  {labels.refresh}
+                </Button>
+                <Button onClick={openCreateDialog}>
+                  <PlusIcon />
+                  {labels.create}
+                </Button>
+              </>
+            ) : null
           }
         >
           {filters.map((filter) => {
@@ -525,86 +558,104 @@ export function DashboardCrudPage<TItem, TPayload>({
             {labels.query}
           </Button>
         </DashboardToolbar>
+      ) : null}
 
-        <DashboardTableShell
-          pagination={
-            <ListPagination
-              page={result.page.page}
-              total={result.page.total}
-              limit={list.limit}
-              loading={loading}
-              onPageChange={list.handlePageChange}
-              onLimitChange={list.handleLimitChange}
-            />
-          }
-        >
-          <Table>
-            <TableHeader className="bg-muted/40">
-              <TableRow>
-                {sortable ? <TableHead className="w-10" /> : null}
-                {columns.map((column) => (
-                  <TableHead key={column.key} className={column.className}>
-                    {column.label}
-                  </TableHead>
-                ))}
-                <TableHead className="w-[92px] text-right">
-                  {labels.actions}
+      <DashboardTableShell
+        className={tableShellClassName}
+        pagination={
+          <ListPagination
+            page={result.page.page}
+            total={result.page.total}
+            limit={list.limit}
+            loading={loading}
+            onPageChange={list.handlePageChange}
+            onLimitChange={list.handleLimitChange}
+          />
+        }
+      >
+        <Table>
+          <TableHeader className="bg-muted/40">
+            <TableRow>
+              {sortable ? <TableHead className="w-10" /> : null}
+              {columns.map((column) => (
+                <TableHead key={column.key} className={column.className}>
+                  {column.label}
                 </TableHead>
-              </TableRow>
-            </TableHeader>
-            {sortable ? (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={(event) => void handleSortEnd(event)}
+              ))}
+              <TableHead className="w-[92px] text-right">
+                {labels.actions}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          {sortable ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={(event) => void handleSortEnd(event)}
+            >
+              <SortableContext
+                items={result.results.map((item) => String(getItemId(item)))}
+                strategy={verticalListSortingStrategy}
               >
-                <SortableContext
-                  items={result.results.map((item) => String(getItemId(item)))}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <TableBody>
-                    {result.results.map((item) =>
-                      renderTableRow(item, {
-                        sortable: true,
-                        sortDisabled: sort?.disabled,
-                      })
-                    )}
-                    {renderStateRow()}
-                  </TableBody>
-                </SortableContext>
-              </DndContext>
-            ) : (
-              <TableBody>
-                {result.results.map((item) => renderTableRow(item))}
-                {renderStateRow()}
-              </TableBody>
-            )}
-          </Table>
-        </DashboardTableShell>
-      </DashboardPage>
-      {form ? (
-        <DashboardCrudFormDialog
-          open={dialogOpen}
-          saving={saving}
-          item={editingItem}
-          itemId={editingItem ? getItemId(editingItem) : null}
-          fields={form.fields}
-          fetchDetail={form.fetchDetail}
-          transformSubmitValues={form.transformSubmitValues}
-          labels={form.labels}
-          onOpenChange={handleDialogOpenChange}
-          onSubmit={handleSubmit}
-        />
-      ) : (
-        renderEditDialog?.({
-          open: dialogOpen,
-          saving,
-          item: editingItem,
-          itemId: editingItem ? getItemId(editingItem) : null,
-          onOpenChange: handleDialogOpenChange,
-          onSubmit: handleSubmit,
-        })
-      )}
+                <TableBody>
+                  {result.results.map((item) =>
+                    renderTableRow(item, {
+                      sortable: true,
+                      sortDisabled: sort?.disabled,
+                    })
+                  )}
+                  {renderStateRow()}
+                </TableBody>
+              </SortableContext>
+            </DndContext>
+          ) : (
+            <TableBody>
+              {result.results.map((item) => renderTableRow(item))}
+              {renderStateRow()}
+            </TableBody>
+          )}
+        </Table>
+      </DashboardTableShell>
+    </>
+  )
+
+  const dialog = form ? (
+    <DashboardCrudFormDialog
+      open={dialogOpen}
+      saving={saving}
+      item={editingItem}
+      itemId={editingItem ? getItemId(editingItem) : null}
+      fields={form.fields}
+      fetchDetail={form.fetchDetail}
+      transformSubmitValues={form.transformSubmitValues}
+      labels={form.labels}
+      onOpenChange={handleDialogOpenChange}
+      onSubmit={handleSubmit}
+    />
+  ) : (
+    renderEditDialog?.({
+      open: dialogOpen,
+      saving,
+      item: editingItem,
+      itemId: editingItem ? getItemId(editingItem) : null,
+      onOpenChange: handleDialogOpenChange,
+      onSubmit: handleSubmit,
+    })
+  )
+
+  if (layout === "fragment") {
+    return (
+      <>
+        {content}
+        {dialog}
+      </>
+    )
+  }
+
+  return (
+    <>
+      <DashboardPage>{content}</DashboardPage>
+      {dialog}
     </>
   )
 }

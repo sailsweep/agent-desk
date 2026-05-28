@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
-  CalendarClockIcon,
   CalendarDaysIcon,
   CalendarRangeIcon,
   CalendarSearchIcon,
@@ -10,32 +9,20 @@ import {
   ChevronRightIcon,
   LayersIcon,
   ListIcon,
-  MoreHorizontalIcon,
   PlusIcon,
   RefreshCwIcon,
   SearchIcon,
-  Trash2Icon,
 } from "lucide-react"
 import { toast } from "sonner"
 
-import { ListPagination } from "@/components/list-pagination"
+import {
+  DashboardCrudPage,
+  type DashboardCrudColumn,
+  type DashboardCrudFilter,
+} from "@/components/dashboard/crud"
 import { Button } from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
 import { OptionCombobox } from "@/components/option-combobox"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import {
   createAgentTeamSchedule,
   deleteAgentTeamSchedule,
@@ -46,7 +33,6 @@ import {
   type AdminAgentTeam,
   type AdminAgentTeamSchedule,
   type CreateAdminAgentTeamSchedulePayload,
-  type PageResult,
   type UpdateAdminAgentTeamSchedulePayload,
 } from "@/lib/api/admin"
 import { useI18n } from "@/i18n/provider"
@@ -83,11 +69,9 @@ export default function DashboardAgentTeamSchedulesPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("month")
   const [teamFilterInput, setTeamFilterInput] = useState("all")
   const [teamFilter, setTeamFilter] = useState("all")
+  const [listReloadKey, setListReloadKey] = useState(0)
   const [monthStart, setMonthStart] = useState(() => startOfMonth(new Date()))
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()))
-  const [page, setPage] = useState(1)
-  const [limit, setLimit] = useState(20)
-  const [loading, setLoading] = useState(false)
   const [calendarLoading, setCalendarLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null)
@@ -97,10 +81,6 @@ export default function DashboardAgentTeamSchedulesPage() {
   const [dialogDefaults, setDialogDefaults] = useState<Partial<CreateAdminAgentTeamSchedulePayload> | null>(null)
   const [teams, setTeams] = useState<AdminAgentTeam[]>([])
   const [calendarItems, setCalendarItems] = useState<AdminAgentTeamSchedule[]>([])
-  const [result, setResult] = useState<PageResult<AdminAgentTeamSchedule>>({
-    results: [],
-    page: { page: 1, limit: 20, total: 0 },
-  })
 
   const visibleTeams = useMemo(() => {
     if (teamFilter === "all") {
@@ -109,23 +89,56 @@ export default function DashboardAgentTeamSchedulesPage() {
     return teams.filter((team) => String(team.id) === teamFilter)
   }, [teamFilter, teams])
 
-  const refreshing = viewMode === "list" ? loading || calendarLoading : calendarLoading
+  const refreshing = calendarLoading
 
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await fetchAgentTeamSchedules({
-        teamId: teamFilter === "all" ? undefined : teamFilter,
-        page,
-        limit,
-      })
-      setResult(data)
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("agentTeamSchedule.loadFailed"))
-    } finally {
-      setLoading(false)
-    }
-  }, [limit, page, t, teamFilter])
+  const listFilters = useMemo<DashboardCrudFilter[]>(
+    () => [
+      {
+        name: "teamId",
+        label: t("agentTeamSchedule.filterTeam"),
+        defaultValue: teamFilter,
+        allValue: "all",
+        type: "select",
+        options: [
+          { value: "all", label: t("agentTeamSchedule.allTeams") },
+          ...teams.map((team) => ({ value: String(team.id), label: team.name })),
+        ],
+      },
+    ],
+    [t, teamFilter, teams],
+  )
+
+  const listColumns = useMemo<DashboardCrudColumn<AdminAgentTeamSchedule>[]>(
+    () => [
+      {
+        key: "team",
+        label: t("agentTeamSchedule.team"),
+        render: (item) => (
+          <div className="min-w-0">
+            <div className="font-medium">
+              {item.teamName || t("agentTeamSchedule.teamFallback", { id: item.teamId })}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {t("agentTeamSchedule.teamId", { id: item.teamId })}
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: "timeRange",
+        label: t("agentTeamSchedule.timeRange"),
+        render: (item) => (
+          <>
+            <div className="text-sm">{formatDateTime(item.startAt)}</div>
+            <div className="text-sm text-muted-foreground">
+              {formatDateTime(item.endAt)}
+            </div>
+          </>
+        ),
+      },
+    ],
+    [t],
+  )
 
   const loadCalendarData = useCallback(async () => {
     setCalendarLoading(true)
@@ -155,21 +168,15 @@ export default function DashboardAgentTeamSchedulesPage() {
   }, [t])
 
   const refreshActiveView = useCallback(async () => {
-    await Promise.all([
-      loadCalendarData(),
-      viewMode === "list" ? loadData() : Promise.resolve(),
-    ])
-  }, [loadCalendarData, loadData, viewMode])
+    await loadCalendarData()
+    if (viewMode === "list") {
+      setListReloadKey((value) => value + 1)
+    }
+  }, [loadCalendarData, viewMode])
 
   useEffect(() => {
     void loadCalendarData()
   }, [loadCalendarData])
-
-  useEffect(() => {
-    if (viewMode === "list") {
-      void loadData()
-    }
-  }, [loadData, viewMode])
 
   useEffect(() => {
     void loadTeams()
@@ -177,14 +184,7 @@ export default function DashboardAgentTeamSchedulesPage() {
 
   function applyFilters() {
     setTeamFilter(teamFilterInput)
-    setPage(1)
-  }
-
-  function handlePageChange(nextPage: number) {
-    if (nextPage < 1 || nextPage === page) {
-      return
-    }
-    setPage(nextPage)
+    setListReloadKey((value) => value + 1)
   }
 
   function openCreateDialog(defaults?: Partial<CreateAdminAgentTeamSchedulePayload>) {
@@ -256,10 +256,6 @@ export default function DashboardAgentTeamSchedulesPage() {
     } finally {
       setActionLoadingId(null)
     }
-  }
-
-  async function handleDelete(item: AdminAgentTeamSchedule) {
-    await handleDeleteById(item.id)
   }
 
   async function handleCalendarUpdate(payload: UpdateAdminAgentTeamSchedulePayload) {
@@ -420,78 +416,60 @@ export default function DashboardAgentTeamSchedulesPage() {
           </div>
         ) : (
           <div className="min-h-0 flex-1 space-y-4 overflow-auto">
-            <div className="min-w-[720px] overflow-hidden rounded-lg border bg-background">
-              <Table>
-                <TableHeader className="bg-muted/40">
-                  <TableRow>
-                    <TableHead>{t("agentTeamSchedule.team")}</TableHead>
-                    <TableHead>{t("agentTeamSchedule.timeRange")}</TableHead>
-                    <TableHead className="w-[92px] text-right">{t("agentTeamSchedule.actions")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {result.results.map((item) => (
-                    <TableRow key={item.id} className={isHistoricalSchedule(item) ? "opacity-60" : undefined}>
-                      <TableCell>
-                        <div className="flex items-start gap-3">
-                          <div className="mt-0.5 flex size-10 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                            <CalendarClockIcon className="size-4" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="font-medium">{item.teamName || t("agentTeamSchedule.teamFallback", { id: item.teamId })}</div>
-                            <div className="text-xs text-muted-foreground">{t("agentTeamSchedule.teamId", { id: item.teamId })}</div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">{formatDateTime(item.startAt)}</div>
-                        <div className="text-sm text-muted-foreground">{formatDateTime(item.endAt)}</div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <ButtonGroup className="ml-auto">
-                          <Button variant="outline" size="sm" onClick={() => openEditDialog(item)} disabled={isHistoricalSchedule(item)}>
-                            {t("agentTeamSchedule.edit")}
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger
-                              render={<Button variant="outline" size="icon-sm" />}
-                              aria-label={t("agentTeamSchedule.moreActions", { name: item.startAt })}
-                            >
-                              <MoreHorizontalIcon />
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-40 min-w-40">
-                              <DropdownMenuItem
-                                onClick={() => void handleDelete(item)}
-                                className="text-destructive focus:text-destructive"
-                              >
-                                <Trash2Icon />
-                                {actionLoadingId === item.id ? t("agentTeamSchedule.deleting") : t("agentTeamSchedule.delete")}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </ButtonGroup>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {!loading && result.results.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="py-12 text-center text-muted-foreground">
-                        {t("agentTeamSchedule.emptyRows")}
-                      </TableCell>
-                    </TableRow>
-                  ) : null}
-                </TableBody>
-              </Table>
-            </div>
-            <ListPagination
-              page={result.page.page}
-              total={result.page.total}
-              limit={limit}
-              loading={loading}
-              onPageChange={handlePageChange}
-              onLimitChange={(nextLimit) => {
-                setLimit(nextLimit)
-                setPage(1)
+            <DashboardCrudPage<AdminAgentTeamSchedule, CreateAdminAgentTeamSchedulePayload>
+              key={`${teamFilter}-${listReloadKey}`}
+              layout="fragment"
+              showToolbar={false}
+              filters={listFilters}
+              columns={listColumns}
+              fetchList={(query) =>
+                fetchAgentTeamSchedules({
+                  teamId:
+                    typeof query.teamId === "string" ? query.teamId : undefined,
+                  page: Number(query.page),
+                  limit: Number(query.limit),
+                })
+              }
+              getItemId={(item) => item.id}
+              createItem={createAgentTeamSchedule}
+              updateItem={async (item, payload) => {
+                await updateAgentTeamSchedule({ id: item.id, ...payload })
+                await loadCalendarData()
+              }}
+              canEdit={(item) => !isHistoricalSchedule(item)}
+              deleteItem={async (item) => {
+                await deleteAgentTeamSchedule(item.id)
+                await loadCalendarData()
+              }}
+              canDelete={(item) => !isHistoricalSchedule(item)}
+              renderEditDialog={({ open, saving: dialogSaving, itemId, onOpenChange, onSubmit }) => (
+                <EditDialog
+                  open={open}
+                  saving={dialogSaving}
+                  itemId={itemId}
+                  defaultValues={null}
+                  onOpenChange={onOpenChange}
+                  onSubmit={onSubmit}
+                />
+              )}
+              labels={{
+                refresh: t("agentTeamSchedule.refresh"),
+                create: t("agentTeamSchedule.new"),
+                query: t("agentTeamSchedule.query"),
+                loading: t("agentTeamSchedule.loading"),
+                empty: t("agentTeamSchedule.emptyRows"),
+                actions: t("agentTeamSchedule.actions"),
+                edit: t("agentTeamSchedule.edit"),
+                delete: t("agentTeamSchedule.delete"),
+                processing: t("agentTeamSchedule.deleting"),
+                moreActions: (item) =>
+                  t("agentTeamSchedule.moreActions", { name: item.startAt }),
+                loadFailed: t("agentTeamSchedule.loadFailed"),
+                saveFailed: t("agentTeamSchedule.saveFailed"),
+                deleteFailed: t("agentTeamSchedule.deleteFailed"),
+                created: () => t("agentTeamSchedule.created"),
+                updated: () => t("agentTeamSchedule.updated"),
+                deleted: () => t("agentTeamSchedule.deleted"),
               }}
             />
           </div>
