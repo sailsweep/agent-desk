@@ -10,8 +10,8 @@ import {
   type DashboardCrudFilterStateConfig,
   type DashboardCrudQueryFilter,
   type DashboardCrudQueryValue,
-} from "@/components/dashboard/crud"
-import { useDashboardCrudFilters } from "@/components/dashboard/crud"
+} from "@/components/dashboard/crud/dashboard-crud-utils"
+import { useDashboardCrudFilters } from "@/components/dashboard/crud/use-dashboard-crud-filters"
 
 export type DashboardPagedListFilter = DashboardCrudQueryFilter &
   DashboardCrudFilterStateConfig

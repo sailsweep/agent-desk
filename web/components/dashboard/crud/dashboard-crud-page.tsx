@@ -1,7 +1,7 @@
 "use client"
 
 import type { ReactNode } from "react"
-import { useCallback, useEffect, useState } from "react"
+import { useState } from "react"
 import {
   closestCenter,
   DndContext,
@@ -38,6 +38,7 @@ import {
 } from "@/components/dashboard-page"
 import { ListPagination } from "@/components/list-pagination"
 import { OptionCombobox } from "@/components/option-combobox"
+import { useDashboardPagedList } from "@/components/dashboard/list"
 import { Button } from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
 import {
@@ -56,10 +57,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
-  buildDashboardCrudQuery,
   isDashboardCrudActionDisabled,
   isDashboardCrudActionVisible,
-  normalizeDashboardCrudPageResult,
   type DashboardCrudActionRule,
   type DashboardCrudFormField,
   type DashboardCrudPageResult,
@@ -67,7 +66,6 @@ import {
   type DashboardCrudQueryValue,
 } from "./dashboard-crud-utils"
 import { DashboardCrudFormDialog } from "./dashboard-crud-form-dialog"
-import { useDashboardCrudFilters } from "./use-dashboard-crud-filters"
 
 export type DashboardCrudFilter<TValue extends string | number = string> =
   DashboardCrudQueryFilter & {
@@ -207,53 +205,24 @@ export function DashboardCrudPage<TItem, TPayload>({
       coordinateGetter: sortableKeyboardCoordinates,
     })
   )
-  const { draftFilters, appliedFilters, setDraftFilter, applyFilters } =
-    useDashboardCrudFilters(filters)
-  const filtersKey = filters
-    .map(
-      (filter) =>
-        `${filter.name}:${String(filter.defaultValue)}:${String(filter.allValue)}:${filter.trim ? "1" : "0"}:${filter.valueType ?? ""}`
-    )
-    .join("|")
-  const [page, setPage] = useState(1)
-  const [limit, setLimit] = useState(pageSize)
-  const [loading, setLoading] = useState(true)
+  const list = useDashboardPagedList<TItem>({
+    filters,
+    fetchList,
+    pageSize,
+    loadFailed: labels.loadFailed,
+  })
+  const draftFilters = list.draftFilters
+  const setDraftFilter = list.setDraftFilter
+  const loading = list.loading
+  const result = list.result
+  const loadData = list.loadData
   const [saving, setSaving] = useState(false)
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<TItem | null>(null)
-  const [result, setResult] = useState<DashboardCrudPageResult<TItem>>({
-    results: [],
-    page: { page: 1, limit: pageSize, total: 0 },
-  })
-
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await fetchList(
-        buildDashboardCrudQuery({
-          values: appliedFilters,
-          filters,
-          page,
-          limit,
-        })
-      )
-      setResult(normalizeDashboardCrudPageResult(data, page, limit))
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : labels.loadFailed)
-    } finally {
-      setLoading(false)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appliedFilters, fetchList, filtersKey, labels.loadFailed, limit, page])
-
-  useEffect(() => {
-    void loadData()
-  }, [loadData])
 
   function handleApplyFilters() {
-    applyFilters()
-    setPage(1)
+    list.applyFilters()
   }
 
   function handleFilterKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -366,7 +335,7 @@ export function DashboardCrudPage<TItem, TPayload>({
 
     const previousResults = result.results
     const nextResults = arrayMove(result.results, oldIndex, newIndex)
-    setResult((current) => ({ ...current, results: nextResults }))
+    list.setResult((current) => ({ ...current, results: nextResults }))
 
     try {
       await sort.onReorder(nextResults)
@@ -374,7 +343,7 @@ export function DashboardCrudPage<TItem, TPayload>({
         toast.success(sort.successMessage)
       }
     } catch (error) {
-      setResult((current) => ({ ...current, results: previousResults }))
+      list.setResult((current) => ({ ...current, results: previousResults }))
       toast.error(error instanceof Error ? error.message : sort.errorMessage)
     }
   }
@@ -556,16 +525,10 @@ export function DashboardCrudPage<TItem, TPayload>({
             <ListPagination
               page={result.page.page}
               total={result.page.total}
-              limit={limit}
+              limit={list.limit}
               loading={loading}
-              onPageChange={(nextPage) => {
-                if (nextPage < 1 || nextPage === page) return
-                setPage(nextPage)
-              }}
-              onLimitChange={(nextLimit) => {
-                setLimit(nextLimit)
-                setPage(1)
-              }}
+              onPageChange={list.handlePageChange}
+              onLimitChange={list.handleLimitChange}
             />
           }
         >
