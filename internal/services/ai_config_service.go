@@ -110,11 +110,10 @@ func (s *aIConfigService) UpdateAIConfig(req request.UpdateAIConfigRequest, oper
 		return err
 	}
 
-	return repositories.AIConfigRepository.Updates(sqls.DB(), req.ID, map[string]any{
+	columns := map[string]any{
 		"name":               item.Name,
 		"provider":           item.Provider,
 		"base_url":           item.BaseURL,
-		"api_key":            item.APIKey,
 		"model_type":         item.ModelType,
 		"model_name":         item.ModelName,
 		"dimension":          item.Dimension,
@@ -128,7 +127,11 @@ func (s *aIConfigService) UpdateAIConfig(req request.UpdateAIConfigRequest, oper
 		"update_user_id":     operator.UserID,
 		"update_user_name":   operator.Username,
 		"updated_at":         time.Now(),
-	})
+	}
+	if item.APIKey != "" {
+		columns["api_key"] = item.APIKey
+	}
+	return repositories.AIConfigRepository.Updates(sqls.DB(), req.ID, columns)
 }
 
 func (s *aIConfigService) DeleteAIConfig(id int64, operator *dto.AuthPrincipal) error {

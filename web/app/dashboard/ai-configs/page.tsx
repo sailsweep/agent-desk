@@ -78,13 +78,6 @@ function getModelTypeLabel(value: AIModelType, t: TFunction) {
   );
 }
 
-function maskAPIKey(value: string) {
-  const text = value.trim();
-  if (!text) return "-";
-  if (text.length <= 8) return "****";
-  return `${text.slice(0, 4)}****${text.slice(-4)}`;
-}
-
 function getNextStatus(item: AIConfig) {
   return item.status === Status.Ok ? Status.Disabled : Status.Ok;
 }
@@ -178,7 +171,7 @@ export default function DashboardAIConfigsPage() {
           <div className="space-y-1 text-sm">
             <div className="line-clamp-1">{item.baseUrl}</div>
             <div className="text-xs text-muted-foreground">
-              {t("aiConfig.apiKey", { key: maskAPIKey(item.apiKey) })}
+              {t("aiConfig.apiKey", { key: item.hasApiKey ? "****" : "-" })}
             </div>
           </div>
         ),

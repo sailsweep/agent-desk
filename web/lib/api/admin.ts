@@ -1181,7 +1181,7 @@ export type AIConfig = {
   name: string
   provider: string
   baseUrl: string
-  apiKey: string
+  hasApiKey: boolean
   modelType: string
   modelName: string
   dimension: number

@@ -30,7 +30,7 @@ type AIConfigResponse struct {
 	Name             string            `json:"name"`
 	Provider         enums.AIProvider  `json:"provider"`
 	BaseURL          string            `json:"baseUrl"`
-	APIKey           string            `json:"apiKey"`
+	HasAPIKey        bool              `json:"hasApiKey"`
 	ModelType        enums.AIModelType `json:"modelType"`
 	ModelName        string            `json:"modelName"`
 	Dimension        int               `json:"dimension"`
@@ -51,7 +51,7 @@ func BuildAIConfigResponse(item *models.AIConfig) AIConfigResponse {
 		Name:             item.Name,
 		Provider:         item.Provider,
 		BaseURL:          item.BaseURL,
-		APIKey:           item.APIKey,
+		HasAPIKey:        item.APIKey != "",
 		ModelType:        item.ModelType,
 		ModelName:        item.ModelName,
 		Dimension:        item.Dimension,

@@ -88,7 +88,7 @@ function buildForm(item: AIConfig | null): EditForm {
     name: item.name,
     provider: item.provider,
     baseUrl: item.baseUrl,
-    apiKey: item.apiKey,
+    apiKey: "",
     modelType: item.modelType,
     modelName: item.modelName,
     dimension: String(item.dimension),
