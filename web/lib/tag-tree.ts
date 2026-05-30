@@ -87,3 +87,40 @@ export function flattenVisibleTagTree(
   walk(nodes, 0, "")
   return result
 }
+
+type MutableTagTreeLike<T> = {
+  id: number
+  status: number
+  children: T[]
+}
+
+export function updateTagTreeStatus<T extends MutableTagTreeLike<T>>(
+  nodes: T[] | null | undefined,
+  id: number,
+  status: number
+): T[] {
+  const safeNodes = Array.isArray(nodes) ? nodes : []
+
+  function walk(items: T[]): { nodes: T[]; changed: boolean } {
+    let changed = false
+    const nextNodes = items.map((item) => {
+      const nextChildren = walk(item.children)
+      const statusChanged = item.id === id && item.status !== status
+
+      if (!statusChanged && !nextChildren.changed) {
+        return item
+      }
+
+      changed = true
+      return {
+        ...item,
+        status: statusChanged ? status : item.status,
+        children: nextChildren.nodes,
+      }
+    })
+
+    return { nodes: changed ? nextNodes : items, changed }
+  }
+
+  return walk(safeNodes).nodes
+}

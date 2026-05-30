@@ -102,3 +102,14 @@ test("flattens only visible branches when a parent is collapsed", async () => {
     JSON.stringify([1, 3])
   )
 })
+
+test("updates a tag status in tree data without mutating the original tree", async () => {
+  const { updateTagTreeStatus } = await loadModule()
+
+  const nextTags = updateTagTreeStatus(tags, 2, 1)
+
+  assert.equal(tags[0].children[0].status, 0)
+  assert.equal(nextTags[0].children[0].status, 1)
+  assert.equal(nextTags[0].status, 0)
+  assert.equal(nextTags[1], tags[1])
+})

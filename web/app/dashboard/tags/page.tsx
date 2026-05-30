@@ -64,6 +64,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { updateTagTreeStatus } from "@/lib/tag-tree"
 import {
   Table,
   TableBody,
@@ -443,7 +444,10 @@ export default function DashboardTagsPage() {
       const nextStatus = item.status === 0 ? 1 : 0
       await updateTagStatus(item.id, nextStatus)
       toast.success(t(nextStatus === 0 ? "tag.enabled" : "tag.disabled", { name: item.name }))
-      await loadData()
+      setTree((prev) => updateTagTreeStatus(prev, item.id, nextStatus))
+      setAllTags((prev) =>
+        prev.map((tag) => (tag.id === item.id ? { ...tag, status: nextStatus } : tag))
+      )
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("tag.statusUpdateFailed"))
     } finally {
