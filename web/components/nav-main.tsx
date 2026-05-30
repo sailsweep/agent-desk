@@ -7,7 +7,9 @@ import { useEffect, useState } from "react"
 
 import {
   dashboardNavSectionHasActiveItem,
+  getDashboardNavSectionStorageKey,
   isDashboardNavItemActive,
+  parseDashboardNavSectionOpenState,
 } from "@/lib/navigation-active"
 import {
   Collapsible,
@@ -26,10 +28,12 @@ import {
 
 export function NavMain({
   icon,
+  sectionKey,
   title,
   items,
 }: {
   icon?: React.ReactNode
+  sectionKey: string
   title: string
   items: ReadonlyArray<{
     title: string
@@ -39,20 +43,38 @@ export function NavMain({
 }) {
   const pathname = usePathname()
   const hasActiveItem = dashboardNavSectionHasActiveItem(items, pathname)
-  const [open, setOpen] = useState(true)
+  const storageKey = getDashboardNavSectionStorageKey(sectionKey)
+  const [open, setOpen] = useState(() => {
+    if (typeof window === "undefined") {
+      return true
+    }
+    return parseDashboardNavSectionOpenState(window.localStorage.getItem(storageKey)) ?? true
+  })
 
   useEffect(() => {
+    const storedOpen = parseDashboardNavSectionOpenState(
+      window.localStorage.getItem(storageKey)
+    )
+    if (storedOpen !== undefined) {
+      setOpen(storedOpen)
+      return
+    }
     if (hasActiveItem) {
       setOpen(true)
     }
-  }, [hasActiveItem])
+  }, [hasActiveItem, storageKey])
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen)
+    window.localStorage.setItem(storageKey, String(nextOpen))
+  }
 
   return (
     <SidebarGroup className="px-2 py-0 first:pt-2 last:pb-2">
       <SidebarMenu>
         <Collapsible
           open={open}
-          onOpenChange={setOpen}
+          onOpenChange={handleOpenChange}
           className="group/collapsible"
           render={<SidebarMenuItem />}
         >

@@ -63,3 +63,23 @@ describe("dashboardNavSectionHasActiveItem", () => {
     assert.equal(dashboardNavSectionHasActiveItem(items, "/dashboard/users"), false)
   })
 })
+
+describe("dashboard nav section storage helpers", () => {
+  it("builds stable localStorage keys from section identifiers", async () => {
+    const { getDashboardNavSectionStorageKey } = await loadModule()
+
+    assert.equal(
+      getDashboardNavSectionStorageKey("nav.receptionCenter"),
+      "dashboard.sidebar.navSection.nav.receptionCenter.open"
+    )
+  })
+
+  it("parses stored open states and ignores unknown values", async () => {
+    const { parseDashboardNavSectionOpenState } = await loadModule()
+
+    assert.equal(parseDashboardNavSectionOpenState("true"), true)
+    assert.equal(parseDashboardNavSectionOpenState("false"), false)
+    assert.equal(parseDashboardNavSectionOpenState(null), undefined)
+    assert.equal(parseDashboardNavSectionOpenState("bad"), undefined)
+  })
+})
