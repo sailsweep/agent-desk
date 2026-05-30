@@ -74,6 +74,8 @@
 docker compose up -d --build
 ```
 
+完整英文配置与排查说明见 [Docker Compose Quick Start](https://aiagent.huabei.pro/en/docs/getting-started/docker-compose)。
+
 Compose 默认会启动：
 
 - `cs-ai-agent`：应用服务，端口 `8083`

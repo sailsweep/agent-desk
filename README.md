@@ -74,6 +74,8 @@ The fastest way to try the full stack is Docker Compose:
 docker compose up -d --build
 ```
 
+For the full English setup guide, see [Docker Compose Quick Start](https://aiagent.huabei.pro/en/docs/getting-started/docker-compose).
+
 Compose starts:
 
 - `cs-ai-agent`: application service on port `8083`
