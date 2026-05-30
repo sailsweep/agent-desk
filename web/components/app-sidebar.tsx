@@ -65,6 +65,7 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
         {navSections.map((section) => (
           <NavMain
             key={section.titleKey}
+            icon={section.icon}
             title={t(section.titleKey)}
             items={section.items.map((item) => ({
               ...item,

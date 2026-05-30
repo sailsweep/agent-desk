@@ -37,6 +37,7 @@ export type DashboardNavItemConfig = Omit<DashboardNavMenuItem, "title"> & {
 
 export type DashboardNavSectionConfig = {
   titleKey: string;
+  icon: ReactNode;
   items: DashboardNavItemConfig[];
 };
 
@@ -57,12 +58,13 @@ function navItemVisible(
 export function filterDashboardNavForSession(
   permissions: readonly string[] | undefined,
   roles: readonly string[] | undefined,
-): { titleKey: string; items: DashboardNavMenuItem[] }[] {
+): { titleKey: string; icon: ReactNode; items: DashboardNavMenuItem[] }[] {
   const superAdmin = roles?.includes(DASHBOARD_ROLE_SUPER_ADMIN) ?? false;
   const permissionSet = new Set(permissions ?? []);
   return dashboardNavSections
     .map((section) => ({
       titleKey: section.titleKey,
+      icon: section.icon,
       items: section.items
         .filter((item) => navItemVisible(item, superAdmin, permissionSet))
         .map(({ titleKey, url, icon }) => ({ title: titleKey, titleKey, url, icon })),
@@ -94,6 +96,7 @@ export const dashboardNavSections: DashboardNavSectionConfig[] = [
   // },
   {
     titleKey: "nav.receptionCenter",
+    icon: <BotMessageSquareIcon />,
     items: [
       {
         titleKey: "nav.overview",
@@ -134,6 +137,7 @@ export const dashboardNavSections: DashboardNavSectionConfig[] = [
   },
   {
     titleKey: "nav.agentConfig",
+    icon: <UserCogIcon />,
     items: [
       {
         titleKey: "nav.tags",
@@ -169,6 +173,7 @@ export const dashboardNavSections: DashboardNavSectionConfig[] = [
   },
   {
     titleKey: "nav.aiCapabilities",
+    icon: <BrainCircuitIcon />,
     items: [
       {
         titleKey: "nav.knowledge",
@@ -210,6 +215,7 @@ export const dashboardNavSections: DashboardNavSectionConfig[] = [
   },
   {
     titleKey: "nav.system",
+    icon: <ShieldCheckIcon />,
     items: [
       {
         titleKey: "nav.users",
