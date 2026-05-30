@@ -37,9 +37,10 @@ export function NavSecondary({
               <SidebarMenuButton
                 render={<Link href={item.url} />}
                 isActive={isActive(item.url)}
+                tooltip={item.title}
               >
                 {item.icon}
-                <span>{item.title}</span>
+                <span title={item.title}>{item.title}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}

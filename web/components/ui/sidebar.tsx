@@ -668,14 +668,17 @@ function SidebarMenuSubButton({
   render,
   size = "md",
   isActive = false,
+  tooltip,
   className,
   ...props
 }: useRender.ComponentProps<"a"> &
   React.ComponentProps<"a"> & {
     size?: "sm" | "md"
     isActive?: boolean
+    tooltip?: string | React.ComponentProps<typeof TooltipContent>
   }) {
-  return useRender({
+  const { isMobile } = useSidebar()
+  const comp = useRender({
     defaultTagName: "a",
     props: mergeProps<"a">(
       {
@@ -686,7 +689,7 @@ function SidebarMenuSubButton({
       },
       props
     ),
-    render,
+    render: !tooltip ? render : <TooltipTrigger render={render} />,
     state: {
       slot: "sidebar-menu-sub-button",
       sidebar: "menu-sub-button",
@@ -694,6 +697,23 @@ function SidebarMenuSubButton({
       active: isActive,
     },
   })
+
+  if (!tooltip) {
+    return comp
+  }
+
+  if (typeof tooltip === "string") {
+    tooltip = {
+      children: tooltip,
+    }
+  }
+
+  return (
+    <Tooltip>
+      {comp}
+      <TooltipContent side="right" align="center" hidden={isMobile} {...tooltip} />
+    </Tooltip>
+  )
 }
 
 export {
