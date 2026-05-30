@@ -114,6 +114,8 @@ test("getChatUrl resolves a fresh userToken for each call", async () => {
   const first = await sandbox.window.CSAgentWidget.getChatUrl()
   const second = await sandbox.window.CSAgentWidget.getChatUrl()
 
+  assert.equal(new URL(first).pathname, "/support/chat/")
+  assert.equal(new URL(second).pathname, "/support/chat/")
   assert.equal(new URL(first).searchParams.get("userToken"), "token_1")
   assert.equal(new URL(second).searchParams.get("userToken"), "token_2")
   assert.equal(calls, 2)
@@ -140,6 +142,7 @@ test("launcher click creates chat iframe with a freshly resolved userToken", asy
   )
 
   assert.ok(frame)
+  assert.equal(new URL(frame.src).pathname, "/support/chat/")
   assert.equal(new URL(frame.src).searchParams.get("userToken"), "click_token")
 })
 

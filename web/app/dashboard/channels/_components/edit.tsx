@@ -720,7 +720,7 @@ function WebAccessGuide({ channelId }: { channelId: string }) {
     if (!origin || !channelId) {
       return ""
     }
-    const url = new URL("/kefu/chat/", origin)
+    const url = new URL("/support/chat/", origin)
     url.searchParams.set("channelId", channelId)
     return url.toString()
   }, [channelId, origin])
@@ -729,7 +729,7 @@ function WebAccessGuide({ channelId }: { channelId: string }) {
     if (!origin || !channelId) {
       return ""
     }
-    const url = new URL("/kefu", origin)
+    const url = new URL("/support", origin)
     url.searchParams.set("channelId", channelId)
     return url.toString()
   }, [channelId, origin])
@@ -858,7 +858,7 @@ function WechatMPAccessGuide({ channelId }: { channelId: string }) {
     if (!origin || !channelId) {
       return ""
     }
-    const url = new URL("/kefu/chat/", origin)
+    const url = new URL("/support/chat/", origin)
     url.searchParams.set("channelId", channelId)
     return url.toString()
   }, [channelId, origin])

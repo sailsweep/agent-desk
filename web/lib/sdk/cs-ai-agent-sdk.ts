@@ -122,7 +122,7 @@ type FrameMessage =
 
   function createFrameUrl(config: NormalizedCSAgentConfig, userToken: string) {
     const widgetBaseUrl = resolveWidgetBaseUrl(config)
-    const frameUrl = new URL(`${widgetBaseUrl}/kefu/chat/`)
+    const frameUrl = new URL(`${widgetBaseUrl}/support/chat/`)
     frameUrl.searchParams.set("channelId", config.channelId)
     frameUrl.searchParams.set("baseUrl", config.baseUrl)
     if (config.apiBaseUrl) frameUrl.searchParams.set("apiBaseUrl", config.apiBaseUrl)

@@ -17,7 +17,7 @@ export type CSAgentConfig = {
 }
 
 export type KefuChatRuntimeConfig = Omit<CSAgentConfig, "getUserToken"> & {
-  /** Used only by /kefu/chat to exchange for a chat token; not part of CSAgentConfig. */
+  /** Used only by /support/chat to exchange for a chat token; not part of CSAgentConfig. */
   userToken?: string
 }
 

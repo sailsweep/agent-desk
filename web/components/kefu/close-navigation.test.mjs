@@ -25,5 +25,5 @@ async function loadCloseNavigation() {
 test("standalone close navigates to the non-bootstrapping closed page", async () => {
   const { getStandaloneClosedUrl } = await loadCloseNavigation()
 
-  assert.equal(getStandaloneClosedUrl(), "/kefu/closed")
+  assert.equal(getStandaloneClosedUrl(), "/support/closed")
 })
