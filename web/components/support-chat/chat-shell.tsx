@@ -20,20 +20,20 @@ import {
 } from "react"
 import { useShallow } from "zustand/react/shallow"
 
-import { KefuConnectionStatus } from "@/components/kefu/connection-status"
-import { getStandaloneClosedUrl } from "@/components/kefu/close-navigation"
-import { CustomerMessageEditor } from "@/components/kefu/customer-message-editor"
+import { SupportChatConnectionStatus } from "@/components/support-chat/connection-status"
+import { getStandaloneClosedUrl } from "@/components/support-chat/close-navigation"
+import { CustomerMessageEditor } from "@/components/support-chat/customer-message-editor"
 import {
-  KefuMessageList,
-  type KefuMessageListHandle,
-} from "@/components/kefu/message-list"
+  SupportChatMessageList,
+  type SupportChatMessageListHandle,
+} from "@/components/support-chat/message-list"
 import {
-  bindKefuHostBridge,
-  requestKefuHostClose,
-  requestKefuHostMinimize,
-  requestKefuHostToggleMaximize,
-} from "@/lib/kefu-host-bridge"
-import { useKefuChatStore } from "@/lib/stores/kefu-chat"
+  bindSupportHostBridge,
+  requestSupportHostClose,
+  requestSupportHostMinimize,
+  requestSupportHostToggleMaximize,
+} from "@/lib/support-host-bridge"
+import { useSupportChatStore } from "@/lib/stores/support-chat"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -80,7 +80,7 @@ function getMobileStatusDotClass(status: string) {
   return "bg-muted-foreground shadow-[0_0_0_3px_rgba(148,163,184,0.14)]"
 }
 
-function useKefuSystemTheme() {
+function useSupportChatSystemTheme() {
   useLayoutEffect(() => {
     if (typeof window === "undefined") {
       return
@@ -119,11 +119,11 @@ function isEmbeddedInHost() {
   }
 }
 
-export function KefuChatShell() {
+export function SupportChatShell() {
   const t = useI18n()
-  useKefuSystemTheme()
+  useSupportChatSystemTheme()
 
-  const messageListRef = useRef<KefuMessageListHandle | null>(null)
+  const messageListRef = useRef<SupportChatMessageListHandle | null>(null)
   const [isEmbedded, setIsEmbedded] = useState(false)
   const [isMaximized, setIsMaximized] = useState(false)
   const [isCloseDialogOpen, setIsCloseDialogOpen] = useState(false)
@@ -152,7 +152,7 @@ export function KefuChatShell() {
     disconnectSocket,
     markConversationRead,
     closeConversation,
-  } = useKefuChatStore(
+  } = useSupportChatStore(
     useShallow((state) => ({
       title: state.title,
       subtitle: state.subtitle,
@@ -192,12 +192,12 @@ export function KefuChatShell() {
       return
     }
     void markConversationRead().catch((readError) => {
-      console.error("Failed to mark kefu conversation read", readError)
+      console.error("Failed to mark support chat conversation read", readError)
     })
   }, [conversation?.id, isVisible, markConversationRead])
 
   useEffect(() => {
-    return bindKefuHostBridge({
+    return bindSupportHostBridge({
       onOpen: () => {
         setIsOpen(true)
         setIsVisible(true)
@@ -250,11 +250,11 @@ export function KefuChatShell() {
 
   function handleMinimize() {
     setIsVisible(false)
-    requestKefuHostMinimize()
+    requestSupportHostMinimize()
   }
 
   function handleToggleMaximize() {
-    requestKefuHostToggleMaximize()
+    requestSupportHostToggleMaximize()
   }
 
   async function confirmCloseConversation() {
@@ -268,12 +268,12 @@ export function KefuChatShell() {
       }
       setIsCloseDialogOpen(false)
       if (isEmbedded) {
-        requestKefuHostClose()
+        requestSupportHostClose()
       } else {
         window.location.replace(getStandaloneClosedUrl())
       }
     } catch (closeError) {
-      window.alert(closeError instanceof Error ? closeError.message : t("kefu.closeConversationFailed"))
+      window.alert(closeError instanceof Error ? closeError.message : t("supportChat.closeConversationFailed"))
     } finally {
       setIsClosingConversation(false)
     }
@@ -326,8 +326,8 @@ export function KefuChatShell() {
               {!isEmbedded && status !== "connected" ? (
                 <WindowActionButton
                   onClick={retry}
-                  aria-label={t("kefu.retry")}
-                  title={t("kefu.retry")}
+                  aria-label={t("supportChat.retry")}
+                  title={t("supportChat.retry")}
                 >
                   <RotateCwIcon className="size-4" />
                 </WindowActionButton>
@@ -335,18 +335,18 @@ export function KefuChatShell() {
               {isEmbedded ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger
-                    render={<WindowActionButton aria-label={t("kefu.moreActions")} title={t("kefu.moreActions")} />}
+                    render={<WindowActionButton aria-label={t("supportChat.moreActions")} title={t("supportChat.moreActions")} />}
                   >
                     <MoreHorizontalIcon className="size-4" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-36">
                     <DropdownMenuItem onClick={retry}>
                       <RotateCwIcon className="size-4" />
-                      {t("kefu.retry")}
+                      {t("supportChat.retry")}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleMinimize}>
                       <MinusIcon className="size-4" />
-                      {t("kefu.minimize")}
+                      {t("supportChat.minimize")}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleToggleMaximize}>
                       {isMaximized ? (
@@ -354,22 +354,22 @@ export function KefuChatShell() {
                       ) : (
                         <Maximize2Icon className="size-4" />
                       )}
-                      {isMaximized ? t("kefu.restoreWindow") : t("kefu.maximize")}
+                      {isMaximized ? t("supportChat.restoreWindow") : t("supportChat.maximize")}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       variant="destructive"
                       onClick={() => setIsCloseDialogOpen(true)}
                     >
                       <XIcon className="size-4" />
-                      {t("kefu.closeWindow")}
+                      {t("supportChat.closeWindow")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
                 <WindowActionButton
                   onClick={() => setIsCloseDialogOpen(true)}
-                  aria-label={t("kefu.closeChatWindow")}
-                  title={t("kefu.closeChatWindow")}
+                  aria-label={t("supportChat.closeChatWindow")}
+                  title={t("supportChat.closeChatWindow")}
                   className="hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/45 dark:hover:text-rose-300"
                 >
                   <XIcon className="size-4" />
@@ -378,13 +378,13 @@ export function KefuChatShell() {
             </div>
             <div className="hidden shrink-0 items-center gap-1 sm:flex sm:gap-2">
               {status !== "connected" ? (
-                <KefuConnectionStatus status={status} />
+                <SupportChatConnectionStatus status={status} />
               ) : null}
               <div className="flex items-center gap-0.5 rounded-lg bg-background/55 p-0.5 shadow-sm ring-1 ring-border/70 dark:bg-background/25 dark:ring-white/10">
                 <WindowActionButton
                   onClick={retry}
-                  aria-label={t("kefu.retry")}
-                  title={t("kefu.retry")}
+                  aria-label={t("supportChat.retry")}
+                  title={t("supportChat.retry")}
                 >
                   <RotateCwIcon className="size-4" />
                 </WindowActionButton>
@@ -392,15 +392,15 @@ export function KefuChatShell() {
                   <>
                     <WindowActionButton
                       onClick={handleMinimize}
-                      aria-label={t("kefu.minimize")}
-                      title={t("kefu.minimize")}
+                      aria-label={t("supportChat.minimize")}
+                      title={t("supportChat.minimize")}
                     >
                       <MinusIcon className="size-4" />
                     </WindowActionButton>
                     <WindowActionButton
                       onClick={handleToggleMaximize}
-                      aria-label={isMaximized ? t("kefu.restoreWindow") : t("kefu.maximizeWindow")}
-                      title={isMaximized ? t("kefu.restoreWindow") : t("kefu.maximizeWindow")}
+                      aria-label={isMaximized ? t("supportChat.restoreWindow") : t("supportChat.maximizeWindow")}
+                      title={isMaximized ? t("supportChat.restoreWindow") : t("supportChat.maximizeWindow")}
                     >
                       {isMaximized ? (
                         <Minimize2Icon className="size-4" />
@@ -412,8 +412,8 @@ export function KefuChatShell() {
                 ) : null}
                 <WindowActionButton
                   onClick={() => setIsCloseDialogOpen(true)}
-                  aria-label={t("kefu.closeChatWindow")}
-                  title={t("kefu.closeChatWindow")}
+                  aria-label={t("supportChat.closeChatWindow")}
+                  title={t("supportChat.closeChatWindow")}
                   className="hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/45 dark:hover:text-rose-300"
                 >
                   <XIcon className="size-4" />
@@ -424,7 +424,7 @@ export function KefuChatShell() {
         </header>
 
         <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] overflow-hidden bg-muted/60 dark:bg-muted/30">
-          <KefuMessageList
+          <SupportChatMessageList
             ref={messageListRef}
             messages={safeMessages}
             onNearBottomVisible={maybeMarkConversationRead}
@@ -459,9 +459,9 @@ export function KefuChatShell() {
       >
         <DialogContent className="max-w-[320px]" showCloseButton={!isClosingConversation}>
           <DialogHeader>
-            <DialogTitle>{t("kefu.closeDialogTitle")}</DialogTitle>
+            <DialogTitle>{t("supportChat.closeDialogTitle")}</DialogTitle>
             <DialogDescription className="text-xs leading-5">
-              {t("kefu.closeDialogDescription")}
+              {t("supportChat.closeDialogDescription")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -471,7 +471,7 @@ export function KefuChatShell() {
               disabled={isClosingConversation}
               onClick={() => setIsCloseDialogOpen(false)}
             >
-              {t("kefu.continueConversation")}
+              {t("supportChat.continueConversation")}
             </Button>
             <Button
               type="button"
@@ -479,7 +479,7 @@ export function KefuChatShell() {
               disabled={isClosingConversation}
               onClick={() => void confirmCloseConversation()}
             >
-              {isClosingConversation ? t("kefu.closing") : t("kefu.confirmClose")}
+              {isClosingConversation ? t("supportChat.closing") : t("supportChat.confirmClose")}
             </Button>
           </DialogFooter>
         </DialogContent>

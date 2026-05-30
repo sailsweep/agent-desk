@@ -38,8 +38,8 @@ import { summarizeIMMessage } from "@/lib/im-message"
 import { createRealtimeConnectionManager } from "@/lib/realtime-connection"
 import { generateUUID } from "@/lib/utils"
 import {
-  readKefuChatRuntimeConfig,
-  setKefuChatRuntimeConfig,
+  readSupportChatRuntimeConfig,
+  setSupportChatRuntimeConfig,
 } from "@/lib/sdk/runtime-config"
 import { translateCurrentMessage } from "@/i18n/messages"
 
@@ -107,7 +107,7 @@ function markConversationReadMessages(
   return next
 }
 
-export type KefuChatStore = {
+export type SupportChatStore = {
   title: string
   subtitle: string
   themeColor: string
@@ -149,7 +149,7 @@ function t(key: string) {
   return translateCurrentMessage(key)
 }
 
-export const useKefuChatStore = create<KefuChatStore>((set, get) => {
+export const useSupportChatStore = create<SupportChatStore>((set, get) => {
   const realtime = createRealtimeConnectionManager({
     createSocket: createImRealtimeConnection,
     canReconnect: () => Boolean(get().isOpen && get().conversation?.id),
@@ -204,7 +204,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
           document.visibilityState !== "visible"
         ) {
           const state = get()
-          showNotification(t("kefu.newMessage"), getNotificationBody(message), () => {
+          showNotification(t("supportChat.newMessage"), getNotificationBody(message), () => {
             state.setIsOpen(true)
             state.setIsVisible(true)
           })
@@ -236,7 +236,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
   }
 
   return {
-    title: t("kefu.title"),
+    title: t("supportChat.title"),
     subtitle: "",
     themeColor: "#2563eb",
     conversation: null,
@@ -285,15 +285,15 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
           }
 
           if (widgetConfig.channelId) {
-            setKefuChatRuntimeConfig({
-              ...readKefuChatRuntimeConfig(),
+            setSupportChatRuntimeConfig({
+              ...readSupportChatRuntimeConfig(),
               channelId:
-                widgetConfig.channelId || readKefuChatRuntimeConfig().channelId,
+                widgetConfig.channelId || readSupportChatRuntimeConfig().channelId,
             })
           }
 
           set({
-            title: widgetConfig.title || t("kefu.title"),
+            title: widgetConfig.title || t("supportChat.title"),
             subtitle: widgetConfig.subtitle || "",
             themeColor: widgetConfig.themeColor || "#2563eb",
           })
@@ -324,7 +324,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
           }
           set({
             status: "disconnected",
-            error: error instanceof Error ? error.message : t("kefu.initFailed"),
+            error: error instanceof Error ? error.message : t("supportChat.initFailed"),
           })
         }
       }
@@ -355,7 +355,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
         })
       } catch (error) {
         set({
-          error: error instanceof Error ? error.message : t("kefu.loadMessagesFailed"),
+          error: error instanceof Error ? error.message : t("supportChat.loadMessagesFailed"),
         })
         throw error
       }
@@ -391,7 +391,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
         })
       } catch (error) {
         set({
-          error: error instanceof Error ? error.message : t("kefu.syncMessagesFailed"),
+          error: error instanceof Error ? error.message : t("supportChat.syncMessagesFailed"),
         })
       }
     },
@@ -434,7 +434,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
       } catch (error) {
         set({
           messagesLoadingMore: false,
-          error: error instanceof Error ? error.message : t("kefu.loadHistoryFailed"),
+          error: error instanceof Error ? error.message : t("supportChat.loadHistoryFailed"),
         })
         throw error
       }
@@ -496,7 +496,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
           conversationId,
           messageType: "html",
           content,
-          clientMsgId: `kefu_html_${generateUUID()}`,
+          clientMsgId: `support_chat_html_${generateUUID()}`,
         })
         set((state) => ({
           sending: false,
@@ -519,7 +519,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
       } catch (error) {
         set({
           sending: false,
-          error: error instanceof Error ? error.message : t("kefu.sendMessageFailed"),
+          error: error instanceof Error ? error.message : t("supportChat.sendMessageFailed"),
         })
         throw error
       }
@@ -540,7 +540,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
         return await uploadImImage(conversationId, file)
       } catch (error) {
         set({
-          error: error instanceof Error ? error.message : t("kefu.uploadImageFailed"),
+          error: error instanceof Error ? error.message : t("supportChat.uploadImageFailed"),
         })
         return null
       } finally {
@@ -562,7 +562,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
           messageType: "attachment",
           content: asset.filename,
           payload: JSON.stringify({ assetId: asset.assetId }),
-          clientMsgId: `kefu_attachment_${generateUUID()}`,
+          clientMsgId: `support_chat_attachment_${generateUUID()}`,
         })
         set((state) => ({
           uploadingAsset: false,
@@ -585,7 +585,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
       } catch (error) {
         set({
           uploadingAsset: false,
-          error: error instanceof Error ? error.message : t("kefu.sendAttachmentFailed"),
+          error: error instanceof Error ? error.message : t("supportChat.sendAttachmentFailed"),
         })
         throw error
       }
@@ -614,7 +614,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
       } catch (error) {
         set({
           closingConversation: false,
-          error: error instanceof Error ? error.message : t("kefu.closeConversationFailed"),
+          error: error instanceof Error ? error.message : t("supportChat.closeConversationFailed"),
         })
         throw error
       }
@@ -634,7 +634,7 @@ export const useKefuChatStore = create<KefuChatStore>((set, get) => {
       } catch (error) {
         set({
           status: "disconnected",
-          error: error instanceof Error ? error.message : t("kefu.refreshFailed"),
+          error: error instanceof Error ? error.message : t("supportChat.refreshFailed"),
         })
       }
     },

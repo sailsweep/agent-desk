@@ -1,5 +1,5 @@
-import { KefuWidgetDemo } from "@/components/kefu/widget-demo"
+import { SupportWidgetDemo } from "@/components/support-chat/widget-demo"
 
 export default function Page() {
-  return <KefuWidgetDemo />
+  return <SupportWidgetDemo />
 }

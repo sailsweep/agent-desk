@@ -1,6 +1,6 @@
 import { request } from "@/lib/api/client"
 import { translateCurrentMessage } from "@/i18n/messages"
-import { readKefuChatRuntimeConfig } from "@/lib/sdk/runtime-config"
+import { readSupportChatRuntimeConfig } from "@/lib/sdk/runtime-config"
 import { generateUUID } from "@/lib/utils"
 
 export type Paging = {
@@ -159,7 +159,7 @@ export function getGuestId() {
 }
 
 function getRuntimeImConfig() {
-  const widgetConfig = readKefuChatRuntimeConfig()
+  const widgetConfig = readSupportChatRuntimeConfig()
   const baseUrl = (widgetConfig.apiBaseUrl || widgetConfig.baseUrl || API_BASE_URL)
     .trim()
     .replace(/\/$/, "")

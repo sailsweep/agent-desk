@@ -1,5 +1,5 @@
-import { setKefuChatRuntimeConfig } from "@/lib/sdk/runtime-config"
-import type { KefuChatRuntimeConfig } from "@/lib/sdk/config-types"
+import { setSupportChatRuntimeConfig } from "@/lib/sdk/runtime-config"
+import type { SupportChatRuntimeConfig } from "@/lib/sdk/config-types"
 
 type HostBridgeOptions = {
   onInit?: () => void
@@ -17,7 +17,7 @@ const REQUEST_MINIMIZE_MESSAGE_TYPE = "cs-agent:request-minimize"
 const REQUEST_CLOSE_MESSAGE_TYPE = "cs-agent:request-close"
 const REQUEST_TOGGLE_MAXIMIZE_MESSAGE_TYPE = "cs-agent:request-toggle-maximize"
 
-export function bindKefuHostBridge(options: HostBridgeOptions = {}) {
+export function bindSupportHostBridge(options: HostBridgeOptions = {}) {
   if (typeof window === "undefined") {
     return () => undefined
   }
@@ -30,7 +30,7 @@ export function bindKefuHostBridge(options: HostBridgeOptions = {}) {
     const data = event.data as
       | {
           type?: string
-          payload?: KefuChatRuntimeConfig | { isMaximized?: boolean }
+          payload?: SupportChatRuntimeConfig | { isMaximized?: boolean }
         }
       | undefined
     if (!data?.type) {
@@ -38,7 +38,7 @@ export function bindKefuHostBridge(options: HostBridgeOptions = {}) {
     }
 
     if (data.type === INIT_MESSAGE_TYPE && data.payload) {
-      setKefuChatRuntimeConfig(data.payload as KefuChatRuntimeConfig)
+      setSupportChatRuntimeConfig(data.payload as SupportChatRuntimeConfig)
       options.onInit?.()
       return
     }
@@ -72,14 +72,14 @@ function postToParent(type: string) {
   }
 }
 
-export function requestKefuHostMinimize() {
+export function requestSupportHostMinimize() {
   postToParent(REQUEST_MINIMIZE_MESSAGE_TYPE)
 }
 
-export function requestKefuHostClose() {
+export function requestSupportHostClose() {
   postToParent(REQUEST_CLOSE_MESSAGE_TYPE)
 }
 
-export function requestKefuHostToggleMaximize() {
+export function requestSupportHostToggleMaximize() {
   postToParent(REQUEST_TOGGLE_MAXIMIZE_MESSAGE_TYPE)
 }

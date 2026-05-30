@@ -1,6 +1,6 @@
-import type { KefuChatRuntimeConfig } from "@/lib/sdk/config-types"
+import type { SupportChatRuntimeConfig } from "@/lib/sdk/config-types"
 
-export function readKefuChatRuntimeConfig(): KefuChatRuntimeConfig {
+export function readSupportChatRuntimeConfig(): SupportChatRuntimeConfig {
   if (typeof window === "undefined") {
     return {
       channelId: "",
@@ -10,7 +10,7 @@ export function readKefuChatRuntimeConfig(): KefuChatRuntimeConfig {
   }
 
   const query = new URLSearchParams(window.location.search)
-  const fallback: KefuChatRuntimeConfig = {
+  const fallback: SupportChatRuntimeConfig = {
     channelId:
       query.get("channelId") ??
       process.env.NEXT_PUBLIC_OPEN_IM_CHANNEL_ID?.trim() ??
@@ -46,7 +46,7 @@ export function readKefuChatRuntimeConfig(): KefuChatRuntimeConfig {
   return fallback
 }
 
-export function setKefuChatRuntimeConfig(config: KefuChatRuntimeConfig) {
+export function setSupportChatRuntimeConfig(config: SupportChatRuntimeConfig) {
   if (typeof window === "undefined") {
     return
   }

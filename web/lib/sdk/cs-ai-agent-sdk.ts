@@ -1,7 +1,7 @@
 import type {
   CSAgentConfig,
   CSAgentWidget,
-  KefuChatRuntimeConfig,
+  SupportChatRuntimeConfig,
 } from "./config-types"
 
 type NormalizedCSAgentConfig = CSAgentConfig & {
@@ -24,7 +24,7 @@ type WidgetState = {
   frameHideTimer: number | null
   frameDestroyTimer: number | null
   config: NormalizedCSAgentConfig | null
-  frameConfig: KefuChatRuntimeConfig | null
+  frameConfig: SupportChatRuntimeConfig | null
   frameUrl: URL | null
   animationDuration: number
   listenerBound?: boolean
@@ -57,7 +57,7 @@ function getLauncherText() {
 }
 
 type FrameMessage =
-  | { type: "cs-agent:init"; payload: KefuChatRuntimeConfig }
+  | { type: "cs-agent:init"; payload: SupportChatRuntimeConfig }
   | { type: "cs-agent:open" }
   | { type: "cs-agent:minimize" }
   | { type: "cs-agent:maximized"; payload: { isMaximized: boolean } }
@@ -135,7 +135,7 @@ type FrameMessage =
   function createFrameConfig(
     config: NormalizedCSAgentConfig,
     userToken: string
-  ): KefuChatRuntimeConfig {
+  ): SupportChatRuntimeConfig {
     const { getUserToken: _getUserToken, ...payload } = config
     if (userToken) {
       return { ...payload, userToken }

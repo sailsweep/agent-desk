@@ -1,7 +1,7 @@
 server:
   port: 8083
   cors:
-    # 浏览器跨域白名单。生产环境必须改为实际前端/嵌入站点域名，例如 https://kefu.example.com。
+    # 浏览器跨域白名单。生产环境必须改为实际前端/嵌入站点域名，例如 https://support.example.com。
     # 留空表示不允许跨域请求，只支持同源或非浏览器调用。
     allowedOrigins:
       - http://127.0.0.1:8083

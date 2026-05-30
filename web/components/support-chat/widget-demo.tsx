@@ -115,7 +115,7 @@ async function signUserToken(config: WidgetDemoConfig, t: (key: string) => strin
     .sign(new TextEncoder().encode(secret))
 }
 
-export function KefuWidgetDemo() {
+export function SupportWidgetDemo() {
   const t = useI18n()
   const [config, setConfig] = useState<WidgetDemoConfig>({
     ...INITIAL_CONFIG,
@@ -193,7 +193,7 @@ export function KefuWidgetDemo() {
     const configLines = [`    channelId: "${config.channelId || ""}"`]
     if (config.authMode === "jwt") {
       configLines.push(`    async getUserToken() {
-      const res = await fetch("/api/kefu/user-token", { credentials: "include" });
+      const res = await fetch("/api/support/user-token", { credentials: "include" });
       const data = await res.json();
       return data.userToken;
     }`)

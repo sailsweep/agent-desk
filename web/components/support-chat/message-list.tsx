@@ -20,7 +20,7 @@ import { renderIMMessageHTML } from "@/lib/im-message"
 import { cn, formatDateTime } from "@/lib/utils"
 import { useI18n } from "@/i18n/provider"
 
-type KefuMessageListProps = {
+type SupportChatMessageListProps = {
   messages?: ImMessage[] | null
   onNearBottomVisible?: () => void
   hasMoreOlder?: boolean
@@ -28,7 +28,7 @@ type KefuMessageListProps = {
   onLoadOlder?: () => Promise<void>
 }
 
-export type KefuMessageListHandle = {
+export type SupportChatMessageListHandle = {
   scrollToBottom: () => void
 }
 
@@ -50,7 +50,7 @@ function getTimelineLabel(
   t: (key: string, values?: Record<string, string | number>) => string
 ) {
   if (!value) {
-    return t("kefu.justNow")
+    return t("supportChat.justNow")
   }
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
@@ -62,13 +62,13 @@ function getTimelineLabel(
     date.getMinutes()
   ).padStart(2, "0")}`
   if (currentDayKey === todayDayKey) {
-    return t("kefu.todayAt", { time: timeText })
+    return t("supportChat.todayAt", { time: timeText })
   }
   return `${currentDayKey} ${timeText}`
 }
 
-export const KefuMessageList = forwardRef<KefuMessageListHandle, KefuMessageListProps>(
-  function KefuMessageList(
+export const SupportChatMessageList = forwardRef<SupportChatMessageListHandle, SupportChatMessageListProps>(
+  function SupportChatMessageList(
     {
       messages,
       onNearBottomVisible,
@@ -232,14 +232,14 @@ export const KefuMessageList = forwardRef<KefuMessageListHandle, KefuMessageList
                 onClick={() => void handleLoadOlder()}
                 className="h-7 rounded-full bg-background/90 text-xs text-muted-foreground shadow-sm hover:bg-background hover:text-sky-700 dark:hover:text-sky-400"
               >
-                {loadingOlder ? t("kefu.loadingOlder") : t("kefu.loadOlder")}
+                {loadingOlder ? t("supportChat.loadingOlder") : t("supportChat.loadOlder")}
               </Button>
             </div>
           ) : null}
 
           {safeMessages.length === 0 ? (
             <div className="flex min-h-32 items-center justify-center px-3 py-6 text-center text-sm leading-6 text-muted-foreground">
-              {t("kefu.emptyPrompt")}
+              {t("supportChat.emptyPrompt")}
             </div>
           ) : null}
 
@@ -277,7 +277,7 @@ const MessageItem = memo(
     const t = useI18n()
     const { open } = useImageLightbox()
     const isCustomer = message.senderType === "customer"
-    const senderName = isCustomer ? t("kefu.customerSelf") : message.senderName?.trim() || t("kefu.agentLabel")
+    const senderName = isCustomer ? t("supportChat.customerSelf") : message.senderName?.trim() || t("supportChat.agentLabel")
     const avatarSrc =
       !isCustomer && message.senderAvatar?.trim() ? message.senderAvatar.trim() : undefined
     const htmlContent = renderIMMessageHTML(message)
@@ -301,7 +301,7 @@ const MessageItem = memo(
             <Avatar className="mt-5">
               {avatarSrc ? <AvatarImage src={avatarSrc} alt="" /> : null}
               <AvatarFallback className="bg-muted text-muted-foreground">
-                {fallbackName || t("kefu.customerFallback")}
+                {fallbackName || t("supportChat.customerFallback")}
               </AvatarFallback>
             </Avatar>
           ) : null}
@@ -316,7 +316,7 @@ const MessageItem = memo(
               <span className="font-medium">{senderName}</span>
               <span>{formatDateTime(message.sentAt)}</span>
               {isCustomer ? (
-                <span>{message.agentRead ? t("kefu.agentRead") : t("kefu.agentUnread")}</span>
+                <span>{message.agentRead ? t("supportChat.agentRead") : t("supportChat.agentUnread")}</span>
               ) : null}
             </div>
             <div

@@ -7,7 +7,7 @@ import { z } from "zod/v4"
 import { CopyIcon, ExternalLinkIcon } from "lucide-react"
 import { toast } from "sonner"
 
-import { getWidgetDemoPath } from "@/components/kefu/demo-navigation"
+import { getWidgetDemoPath } from "@/components/support-chat/demo-navigation"
 import { OptionCombobox } from "@/components/option-combobox"
 import { ProjectDialog } from "@/components/project-dialog"
 import { Button } from "@/components/ui/button"

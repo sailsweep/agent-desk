@@ -1,5 +1,5 @@
-import { KefuChatShell } from "@/components/kefu/chat-shell"
+import { SupportChatShell } from "@/components/support-chat/chat-shell"
 
 export default function Page() {
-  return <KefuChatShell />
+  return <SupportChatShell />
 }

@@ -14,9 +14,9 @@ export default function Page() {
           <CheckCircle2Icon className="size-7" />
         </div>
         <div className="grid gap-2">
-          <h1 className="text-lg font-semibold text-foreground">{t("kefu.closedTitle")}</h1>
+          <h1 className="text-lg font-semibold text-foreground">{t("supportChat.closedTitle")}</h1>
           <p className="text-sm leading-6 text-muted-foreground">
-            {t("kefu.closedDescription")}
+            {t("supportChat.closedDescription")}
           </p>
         </div>
       </section>

@@ -4,11 +4,11 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/i18n/provider"
 
-type KefuConnectionStatusProps = {
+type SupportChatConnectionStatusProps = {
   status: "connecting" | "connected" | "disconnected"
 }
 
-export function KefuConnectionStatus({ status }: KefuConnectionStatusProps) {
+export function SupportChatConnectionStatus({ status }: SupportChatConnectionStatusProps) {
   const t = useI18n()
   const toneClass =
     status === "connected"
@@ -32,7 +32,7 @@ export function KefuConnectionStatus({ status }: KefuConnectionStatusProps) {
               : "bg-muted-foreground shadow-[0_0_0_4px_rgba(148,163,184,0.14)]"
         )}
       />
-      <span>{t(`kefu.${status}`)}</span>
+      <span>{t(`supportChat.${status}`)}</span>
     </Badge>
   )
 }

@@ -16,7 +16,7 @@ export type CSAgentConfig = {
   width?: string
 }
 
-export type KefuChatRuntimeConfig = Omit<CSAgentConfig, "getUserToken"> & {
+export type SupportChatRuntimeConfig = Omit<CSAgentConfig, "getUserToken"> & {
   /** Used only by /support/chat to exchange for a chat token; not part of CSAgentConfig. */
   userToken?: string
 }
@@ -33,7 +33,7 @@ declare global {
   interface Window {
     CSAgentConfig?: CSAgentConfig
     CSAgentWidget?: CSAgentWidget
-    __CS_AGENT_WIDGET_CONFIG__?: KefuChatRuntimeConfig
+    __CS_AGENT_WIDGET_CONFIG__?: SupportChatRuntimeConfig
     __CS_AGENT_WIDGET_STATE__?: unknown
   }
 }

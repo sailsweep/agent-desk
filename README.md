@@ -188,7 +188,7 @@ flowchart TD
 │   └── ai/                 # LLM / RAG / MCP related logic
 ├── web/                    # unified Next.js frontend
 │   ├── app/dashboard/      # admin dashboard
-│   ├── app/kefu/           # customer service entry and chat pages
+│   ├── app/support/        # customer service entry and chat pages
 │   ├── components/         # React components
 │   ├── lib/                # API client, SDK source and utilities
 │   ├── public/sdk/         # built embeddable SDK assets
@@ -255,8 +255,8 @@ make web-dev
 
 - 管理后台：`http://localhost:3000/dashboard`
 - 客服工作台：`http://localhost:3000/dashboard/conversations`
-- 客户侧 Web 接入示例：`http://localhost:3000/kefu`
-- 客户侧聊天页：`http://localhost:3000/kefu/chat`
+- 客户侧 Web 接入示例：`http://localhost:3000/support/demo`
+- 客户侧聊天页：`http://localhost:3000/support/chat`
 
 生产构建时，前端统一由 `web` 工程构建，静态产物输出到 `web/out`，后端会从 `web/out` 提供静态资源。
 
@@ -308,7 +308,7 @@ docker run --rm -p 8083:8083 \
 
 - 管理后台：负责 AI Agent、知识库、客服组、工单与运营配置
 - 客服工作台：负责接管会话、处理消息与人工服务
-- 客户侧 Web 接入：通过 `/kefu`、`/kefu/chat` 和 `web/public/sdk` 中的嵌入式脚本承接用户咨询入口
+- 客户侧 Web 接入：通过 `/support/demo`、`/support/chat` 和 `web/public/sdk` 中的嵌入式脚本承接用户咨询入口
 
 这使得`贝壳AI客服`可以同时覆盖：
 
