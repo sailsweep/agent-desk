@@ -48,7 +48,7 @@ export function NavMain({
   }, [hasActiveItem])
 
   return (
-    <SidebarGroup>
+    <SidebarGroup className="px-2 py-0 first:pt-2 last:pb-2">
       <SidebarMenu>
         <Collapsible
           open={open}
