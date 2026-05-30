@@ -202,7 +202,7 @@ export function TagSelector(props: TagSelectorProps) {
   }
 
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={className}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           render={
@@ -312,7 +312,7 @@ export function TagSelector(props: TagSelectorProps) {
       </Popover>
 
       {showSelectedBadges && props.mode === "multiple" && selectedTags.length > 0 ? (
-        <TagBadges ids={props.value ?? []} tags={tags} />
+        <TagBadges ids={props.value ?? []} tags={tags} className="mt-2" />
       ) : null}
     </div>
   )
