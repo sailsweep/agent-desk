@@ -7,6 +7,7 @@ import { z } from "zod/v4"
 import { CopyIcon, ExternalLinkIcon } from "lucide-react"
 import { toast } from "sonner"
 
+import { getWidgetDemoPath } from "@/components/kefu/demo-navigation"
 import { OptionCombobox } from "@/components/option-combobox"
 import { ProjectDialog } from "@/components/project-dialog"
 import { Button } from "@/components/ui/button"
@@ -729,7 +730,7 @@ function WebAccessGuide({ channelId }: { channelId: string }) {
     if (!origin || !channelId) {
       return ""
     }
-    const url = new URL("/support", origin)
+    const url = new URL(getWidgetDemoPath(), origin)
     url.searchParams.set("channelId", channelId)
     return url.toString()
   }, [channelId, origin])
