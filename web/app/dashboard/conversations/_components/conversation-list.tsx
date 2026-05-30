@@ -9,21 +9,6 @@ import { useAgentConversationsStore } from "@/lib/stores/agent-conversations";
 import { formatDateTime } from "@/lib/utils";
 import { useI18n } from "@/i18n/provider";
 
-function getStatusVariant(status: number) {
-  switch (status) {
-    case IMConversationStatus.AIServing:
-      return "bg-primary/10 text-primary"
-    case IMConversationStatus.Pending:
-      return "bg-amber-500/15 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300"
-    case IMConversationStatus.Active:
-      return "bg-emerald-500/15 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300"
-    case IMConversationStatus.Closed:
-      return "bg-muted text-muted-foreground"
-    default:
-      return "bg-muted text-muted-foreground"
-  }
-}
-
 type ConversationListProps = {
   onAfterSelect?: () => void
 }
@@ -93,23 +78,16 @@ export function ConversationList({ onAfterSelect }: ConversationListProps) {
                 <div className="mt-0.5 truncate text-xs leading-4 text-muted-foreground">
                   {conversation.lastMessageSummary || t("conversation.noLatestMessage")}
                 </div>
-                <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
-                  <span
-                    className={`rounded-md px-1.5 py-0.5 ${getStatusVariant(
-                      conversation.status
-                    )}`}
-                  >
-                    {getConversationStatusLabel(conversation.status, t)}
-                  </span>
-                  {conversation.status === IMConversationStatus.Pending &&
-                  conversation.currentTeamName ? (
+                {conversation.status === IMConversationStatus.Pending &&
+                conversation.currentTeamName ? (
+                  <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
                     <span className="rounded-md bg-muted px-1.5 py-0.5">
                       {t("conversation.teamOnDuty", {
                         name: conversation.currentTeamName,
                       })}
                     </span>
-                  ) : null}
-                </div>
+                  </div>
+                ) : null}
               </div>
             </div>
           )
@@ -121,22 +99,4 @@ export function ConversationList({ onAfterSelect }: ConversationListProps) {
       )}
     </ScrollArea>
   )
-}
-
-function getConversationStatusLabel(
-  status: number,
-  t: (key: string, values?: Record<string, string | number>) => string
-) {
-  switch (status) {
-    case IMConversationStatus.AIServing:
-      return t("conversation.filterAiServing")
-    case IMConversationStatus.Pending:
-      return t("conversation.filterPending")
-    case IMConversationStatus.Active:
-      return t("conversation.filterActive")
-    case IMConversationStatus.Closed:
-      return t("conversation.filterClosed")
-    default:
-      return "-"
-  }
 }
