@@ -575,15 +575,17 @@ export default function DashboardTagsPage() {
               className="pl-9"
             />
           </div>
-          <OptionCombobox
-            value={statusFilterInput}
-            options={listStatusOptions}
-            placeholder={t("status.all")}
-            searchPlaceholder={t("tag.searchStatus")}
-            emptyText={t("tag.emptyStatus")}
-            disabled={loading}
-            onChange={handleStatusFilterChange}
-          />
+          <div className="w-full sm:w-40">
+            <OptionCombobox
+              value={statusFilterInput}
+              options={listStatusOptions}
+              placeholder={t("status.all")}
+              searchPlaceholder={t("tag.searchStatus")}
+              emptyText={t("tag.emptyStatus")}
+              disabled={loading}
+              onChange={handleStatusFilterChange}
+            />
+          </div>
           <Button variant="outline" onClick={applyFilters} disabled={loading}>
             <SearchIcon />
             {t("tag.query")}
