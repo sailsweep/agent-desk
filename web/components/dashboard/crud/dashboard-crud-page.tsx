@@ -509,6 +509,57 @@ export function DashboardCrudPage<TItem, TPayload>({
     )
   }
 
+  const tableElement = (
+    <Table>
+      <TableHeader className="bg-muted/40">
+        <TableRow>
+          {sortable ? <TableHead className="w-10" /> : null}
+          {columns.map((column) => (
+            <TableHead key={column.key} className={column.className}>
+              {column.label}
+            </TableHead>
+          ))}
+          <TableHead className="w-[92px] text-right">
+            {labels.actions}
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+      {sortable ? (
+        <SortableContext
+          items={result.results.map((item) => String(getItemId(item)))}
+          strategy={verticalListSortingStrategy}
+        >
+          <TableBody>
+            {result.results.map((item) =>
+              renderTableRow(item, {
+                sortable: true,
+                sortDisabled: sort?.disabled,
+              })
+            )}
+            {renderStateRow()}
+          </TableBody>
+        </SortableContext>
+      ) : (
+        <TableBody>
+          {result.results.map((item) => renderTableRow(item))}
+          {renderStateRow()}
+        </TableBody>
+      )}
+    </Table>
+  )
+
+  const table = sortable ? (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={(event) => void handleSortEnd(event)}
+    >
+      {tableElement}
+    </DndContext>
+  ) : (
+    tableElement
+  )
+
   const content = (
     <>
       {showToolbar ? (
@@ -576,48 +627,7 @@ export function DashboardCrudPage<TItem, TPayload>({
           />
         }
       >
-        <Table>
-          <TableHeader className="bg-muted/40">
-            <TableRow>
-              {sortable ? <TableHead className="w-10" /> : null}
-              {columns.map((column) => (
-                <TableHead key={column.key} className={column.className}>
-                  {column.label}
-                </TableHead>
-              ))}
-              <TableHead className="w-[92px] text-right">
-                {labels.actions}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          {sortable ? (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={(event) => void handleSortEnd(event)}
-            >
-              <SortableContext
-                items={result.results.map((item) => String(getItemId(item)))}
-                strategy={verticalListSortingStrategy}
-              >
-                <TableBody>
-                  {result.results.map((item) =>
-                    renderTableRow(item, {
-                      sortable: true,
-                      sortDisabled: sort?.disabled,
-                    })
-                  )}
-                  {renderStateRow()}
-                </TableBody>
-              </SortableContext>
-            </DndContext>
-          ) : (
-            <TableBody>
-              {result.results.map((item) => renderTableRow(item))}
-              {renderStateRow()}
-            </TableBody>
-          )}
-        </Table>
+        {table}
       </DashboardTableShell>
     </>
   )
