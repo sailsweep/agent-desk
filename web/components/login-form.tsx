@@ -212,9 +212,9 @@ export function LoginForm({
                   </Field>
                 </>
               ) : null}
-              <FieldDescription className="text-center">
+              {/* <FieldDescription className="text-center">
                 {t("auth.noAccount")} <a href="#">{t("auth.signUp")}</a>
-              </FieldDescription>
+              </FieldDescription> */}
             </FieldGroup>
           </form>
           <div className="relative hidden bg-muted md:block">
