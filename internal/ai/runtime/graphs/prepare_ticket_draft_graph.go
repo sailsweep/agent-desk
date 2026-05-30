@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/services"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/services"
 )
 
 type PrepareTicketDraftInput struct {

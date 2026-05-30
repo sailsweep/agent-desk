@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"cs-agent/internal/pkg/errorsx"
+	"cs-ai-agent/internal/pkg/errorsx"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -116,7 +116,7 @@ func (c *Client) connect(ctx context.Context, cfg ServerConfig) (*mcp.ClientSess
 		},
 	}
 	client := mcp.NewClient(&mcp.Implementation{
-		Name:    "cs-agent-mcp-client",
+		Name:    "cs-ai-agent-mcp-client",
 		Version: "v1",
 	}, nil)
 	transport := &mcp.StreamableClientTransport{

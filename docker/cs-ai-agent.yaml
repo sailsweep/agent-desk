@@ -8,7 +8,7 @@ server:
 
 db:
   type: mysql
-  dsn: cs_agent:cs_agent_password@tcp(mysql:3306)/cs_ai_agent?charset=utf8mb4&parseTime=True&multiStatements=true&loc=Local
+  dsn: cs_ai_agent:cs_ai_agent_password@tcp(mysql:3306)/cs_ai_agent?charset=utf8mb4&parseTime=True&multiStatements=true&loc=Local
   maxIdleConns: 5
   maxOpenConns: 20
   connMaxIdleTimeSeconds: 300

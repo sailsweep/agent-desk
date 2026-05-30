@@ -1,10 +1,10 @@
 package repositories
 
 import (
-	"cs-agent/internal/models"
+	"cs-ai-agent/internal/models"
 
+	"cs-ai-agent/internal/pkg/httpx/params"
 	"github.com/mlogclub/simple/sqls"
-	"cs-agent/internal/pkg/httpx/params"
 	"gorm.io/gorm"
 )
 
@@ -62,12 +62,12 @@ func (r *wxWorkKFMessageRefRepository) FindPageByCnd(db *gorm.DB, cnd *sqls.Cnd)
 	return
 }
 
-func (r *wxWorkKFMessageRefRepository) FindBySql(db *gorm.DB, sqlStr string, paramArr... interface{}) (list []models.WxWorkKFMessageRef) {
+func (r *wxWorkKFMessageRefRepository) FindBySql(db *gorm.DB, sqlStr string, paramArr ...interface{}) (list []models.WxWorkKFMessageRef) {
 	db.Raw(sqlStr, paramArr...).Scan(&list)
 	return
 }
 
-func (r *wxWorkKFMessageRefRepository) CountBySql(db *gorm.DB, sqlStr string, paramArr... interface{}) (count int64) {
+func (r *wxWorkKFMessageRefRepository) CountBySql(db *gorm.DB, sqlStr string, paramArr ...interface{}) (count int64) {
 	db.Raw(sqlStr, paramArr...).Count(&count)
 	return
 }
@@ -99,4 +99,3 @@ func (r *wxWorkKFMessageRefRepository) UpdateColumn(db *gorm.DB, id int64, name 
 func (r *wxWorkKFMessageRefRepository) Delete(db *gorm.DB, id int64) {
 	db.Delete(&models.WxWorkKFMessageRef{}, "id = ?", id)
 }
-

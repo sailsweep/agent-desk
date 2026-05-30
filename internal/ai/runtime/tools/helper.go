@@ -3,8 +3,8 @@ package tools
 import (
 	"strings"
 
-	"cs-agent/internal/ai/runtime/registry"
-	"cs-agent/internal/pkg/toolx"
+	"cs-ai-agent/internal/ai/runtime/registry"
+	"cs-ai-agent/internal/pkg/toolx"
 )
 
 type Decision string

@@ -4,14 +4,14 @@ import (
 	"context"
 	"strings"
 
-	applicationruntime "cs-agent/internal/ai/application/runtime"
-	"cs-agent/internal/ai/runtime/graphs"
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/dto/request"
-	"cs-agent/internal/pkg/dto/response"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/pkg/errorsx"
-	svc "cs-agent/internal/services"
+	applicationruntime "cs-ai-agent/internal/ai/application/runtime"
+	"cs-ai-agent/internal/ai/runtime/graphs"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/dto/request"
+	"cs-ai-agent/internal/pkg/dto/response"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/errorsx"
+	svc "cs-ai-agent/internal/services"
 )
 
 func init() {

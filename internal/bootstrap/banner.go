@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	"cs-agent/internal/pkg/config"
+	"cs-ai-agent/internal/pkg/config"
 )
 
 func printBanner() {

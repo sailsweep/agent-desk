@@ -4,7 +4,7 @@
 $thumb: #cbd5e1;
 $thumb-hover: #94a3b8;
 
-.cs-agent-scrollbar {
+.cs-ai-agent-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: $thumb transparent;
 
@@ -29,7 +29,7 @@ $thumb-hover: #94a3b8;
   }
 }
 
-.dark .cs-agent-scrollbar {
+.dark .cs-ai-agent-scrollbar {
   scrollbar-color: hsl(var(--border)) transparent;
 
   &::-webkit-scrollbar-thumb {

@@ -27,7 +27,7 @@ ARG TARGETARCH
 RUN --mount=type=cache,target=/go/pkg/mod \
 	--mount=type=cache,target=/root/.cache/go-build \
 	CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
-	go build -v -trimpath -ldflags="-s -w" -o /out/cs-agent ./cmd/server
+	go build -v -trimpath -ldflags="-s -w" -o /out/cs-ai-agent ./cmd/server
 
 FROM alpine:3.22 AS app
 WORKDIR /app
@@ -37,7 +37,7 @@ ENV TZ=Asia/Shanghai
 RUN apk add --no-cache ca-certificates tzdata wget \
 	&& mkdir -p /app/config /app/data/storage
 
-COPY --from=server-builder /out/cs-agent /app/cs-agent
+COPY --from=server-builder /out/cs-ai-agent /app/cs-ai-agent
 COPY config/config.example.yaml /app/config/config.example.yaml
 COPY config/config.example.yaml /app/config/config.yaml
 
@@ -47,4 +47,4 @@ VOLUME ["/app/data"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 	CMD wget -qO- http://127.0.0.1:8083/ >/dev/null || exit 1
 
-CMD ["/app/cs-agent", "-config", "/app/config/config.yaml"]
+CMD ["/app/cs-ai-agent", "-config", "/app/config/config.yaml"]

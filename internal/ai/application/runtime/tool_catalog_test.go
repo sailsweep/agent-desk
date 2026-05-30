@@ -3,8 +3,8 @@ package runtime
 import (
 	"testing"
 
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/toolx"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/toolx"
 )
 
 func TestNormalizeAllowedToolCodes(t *testing.T) {

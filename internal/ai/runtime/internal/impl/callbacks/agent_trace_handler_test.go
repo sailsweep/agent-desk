@@ -3,7 +3,7 @@ package callbacks
 import (
 	"testing"
 
-	"cs-agent/internal/pkg/toolx"
+	"cs-ai-agent/internal/pkg/toolx"
 )
 
 func TestParseGraphToolOutcome(t *testing.T) {

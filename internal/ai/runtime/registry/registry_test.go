@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"cs-agent/internal/ai/runtime/registry"
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/toolx"
+	"cs-ai-agent/internal/ai/runtime/registry"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/toolx"
 
 	einotool "github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"

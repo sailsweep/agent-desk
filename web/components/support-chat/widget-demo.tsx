@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from "react"
 import type { CSAgentConfig } from "@/lib/sdk/config-types"
 import { useI18n } from "@/i18n/provider"
 
-const STORAGE_KEY = "cs-agent-web-widget-test-config"
+const STORAGE_KEY = "cs-ai-agent-web-widget-test-config"
 const DEFAULT_JWT_TTL_MINUTES = "30"
 const INITIAL_CONFIG: CSAgentConfig = {
   channelId: "",
@@ -56,13 +56,13 @@ function removeMountedWidget() {
   window.CSAgentWidget?.destroy()
   document
     .querySelectorAll(
-      '[data-cs-agent-widget="launcher"], [data-cs-agent-widget="frame"], [data-cs-agent-widget="script"]'
+      '[data-cs-ai-agent-widget="launcher"], [data-cs-ai-agent-widget="frame"], [data-cs-ai-agent-widget="script"]'
     )
     .forEach((node) => node.remove())
 
   delete window.CSAgentConfig
-  delete window.__CS_AGENT_WIDGET_CONFIG__
-  delete window.__CS_AGENT_WIDGET_STATE__
+  delete window.__CS_AI_AGENT_WIDGET_CONFIG__
+  delete window.__CS_AI_AGENT_WIDGET_STATE__
   delete window.CSAgentWidget
 }
 

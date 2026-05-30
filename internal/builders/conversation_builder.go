@@ -3,12 +3,12 @@ package builders
 import (
 	"strings"
 
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/dto/response"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/pkg/i18nx"
-	"cs-agent/internal/pkg/utils"
-	"cs-agent/internal/services"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/dto/response"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/i18nx"
+	"cs-ai-agent/internal/pkg/utils"
+	"cs-ai-agent/internal/services"
 
 	"github.com/mlogclub/simple/sqls"
 )

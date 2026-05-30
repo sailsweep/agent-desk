@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"cs-agent/internal/models"
-	"cs-agent/internal/repositories"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/repositories"
 
 	"github.com/mlogclub/simple/sqls"
 )

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/dto"
-	"cs-agent/internal/pkg/dto/response"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/dto"
+	"cs-ai-agent/internal/pkg/dto/response"
 
 	"github.com/google/uuid"
 	"github.com/mlogclub/simple/sqls"

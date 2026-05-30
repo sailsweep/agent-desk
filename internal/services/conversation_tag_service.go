@@ -1,15 +1,15 @@
 package services
 
 import (
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/dto"
-	"cs-agent/internal/pkg/dto/request"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/pkg/utils"
-	"cs-agent/internal/repositories"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/dto"
+	"cs-ai-agent/internal/pkg/dto/request"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/utils"
+	"cs-ai-agent/internal/repositories"
 	"errors"
 
-	"cs-agent/internal/pkg/httpx/params"
+	"cs-ai-agent/internal/pkg/httpx/params"
 	"github.com/mlogclub/simple/sqls"
 )
 

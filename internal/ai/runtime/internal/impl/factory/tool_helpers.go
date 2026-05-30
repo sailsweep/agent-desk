@@ -3,12 +3,12 @@ package factory
 import (
 	"strings"
 
-	runtimeinstruction "cs-agent/internal/ai/runtime/instruction"
-	einocallbacks "cs-agent/internal/ai/runtime/internal/impl/callbacks"
-	"cs-agent/internal/ai/runtime/registry"
-	runtimetooling "cs-agent/internal/ai/runtime/tooling"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/pkg/toolx"
+	runtimeinstruction "cs-ai-agent/internal/ai/runtime/instruction"
+	einocallbacks "cs-ai-agent/internal/ai/runtime/internal/impl/callbacks"
+	"cs-ai-agent/internal/ai/runtime/registry"
+	runtimetooling "cs-ai-agent/internal/ai/runtime/tooling"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/toolx"
 )
 
 func buildInstructionTraceSummary(summary runtimeinstruction.AssemblySummary) einocallbacks.InstructionTraceSummary {

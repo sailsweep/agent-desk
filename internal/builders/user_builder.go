@@ -1,10 +1,10 @@
 package builders
 
 import (
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/dto/response"
-	"cs-agent/internal/pkg/utils"
-	"cs-agent/internal/services"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/dto/response"
+	"cs-ai-agent/internal/pkg/utils"
+	"cs-ai-agent/internal/services"
 )
 
 type UserBuildOptions struct {

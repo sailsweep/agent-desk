@@ -1,10 +1,10 @@
 package repositories
 
 import (
-	"cs-agent/internal/models"
+	"cs-ai-agent/internal/models"
 
+	"cs-ai-agent/internal/pkg/httpx/params"
 	"github.com/mlogclub/simple/sqls"
-	"cs-agent/internal/pkg/httpx/params"
 	"gorm.io/gorm"
 )
 
@@ -62,12 +62,12 @@ func (r *systemConfigRepository) FindPageByCnd(db *gorm.DB, cnd *sqls.Cnd) (list
 	return
 }
 
-func (r *systemConfigRepository) FindBySql(db *gorm.DB, sqlStr string, paramArr... interface{}) (list []models.SystemConfig) {
+func (r *systemConfigRepository) FindBySql(db *gorm.DB, sqlStr string, paramArr ...interface{}) (list []models.SystemConfig) {
 	db.Raw(sqlStr, paramArr...).Scan(&list)
 	return
 }
 
-func (r *systemConfigRepository) CountBySql(db *gorm.DB, sqlStr string, paramArr... interface{}) (count int64) {
+func (r *systemConfigRepository) CountBySql(db *gorm.DB, sqlStr string, paramArr ...interface{}) (count int64) {
 	db.Raw(sqlStr, paramArr...).Count(&count)
 	return
 }
@@ -99,4 +99,3 @@ func (r *systemConfigRepository) UpdateColumn(db *gorm.DB, id int64, name string
 func (r *systemConfigRepository) Delete(db *gorm.DB, id int64) {
 	db.Delete(&models.SystemConfig{}, "id = ?", id)
 }
-

@@ -1,4 +1,4 @@
-module cs-agent
+module cs-ai-agent
 
 go 1.26.0
 

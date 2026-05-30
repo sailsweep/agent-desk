@@ -3,7 +3,7 @@ package factory
 import (
 	"testing"
 
-	runtimeinstruction "cs-agent/internal/ai/runtime/instruction"
+	runtimeinstruction "cs-ai-agent/internal/ai/runtime/instruction"
 )
 
 func TestBuildInstructionTraceSummary(t *testing.T) {

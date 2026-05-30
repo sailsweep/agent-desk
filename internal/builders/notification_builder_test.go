@@ -3,8 +3,8 @@ package builders
 import (
 	"testing"
 
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/i18nx"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/i18nx"
 )
 
 func TestBuildNotificationListReturnsEmptySlice(t *testing.T) {

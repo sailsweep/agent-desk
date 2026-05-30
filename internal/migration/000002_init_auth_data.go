@@ -1,10 +1,10 @@
 package migration
 
 import (
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/constants"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/repositories"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/constants"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/repositories"
 	"errors"
 	"log/slog"
 	"strings"

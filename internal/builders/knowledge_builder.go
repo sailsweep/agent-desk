@@ -1,9 +1,9 @@
 package builders
 
 import (
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/dto/response"
-	"cs-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/dto/response"
+	"cs-ai-agent/internal/pkg/enums"
 	"encoding/json"
 )
 

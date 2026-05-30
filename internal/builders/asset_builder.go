@@ -1,9 +1,9 @@
 package builders
 
 import (
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/dto/response"
-	"cs-agent/internal/services/storage"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/dto/response"
+	"cs-ai-agent/internal/services/storage"
 	"log/slog"
 )
 

@@ -1,9 +1,9 @@
 package utils
 
 import (
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/config"
-	"cs-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/config"
+	"cs-ai-agent/internal/pkg/enums"
 	"strings"
 	"testing"
 	"time"

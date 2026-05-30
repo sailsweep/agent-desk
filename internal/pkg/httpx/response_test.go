@@ -1,7 +1,7 @@
 package httpx
 
 import (
-	"cs-agent/internal/pkg/i18nx"
+	"cs-ai-agent/internal/pkg/i18nx"
 	"encoding/json"
 	"errors"
 	"net/http"

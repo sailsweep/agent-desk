@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"cs-agent/internal/events"
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/pkg/eventbus"
-	"cs-agent/internal/services"
+	"cs-ai-agent/internal/events"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/eventbus"
+	"cs-ai-agent/internal/services"
 
 	"github.com/mlogclub/simple/common/strs"
 )

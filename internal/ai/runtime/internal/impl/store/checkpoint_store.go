@@ -5,8 +5,8 @@ import (
 	"encoding/base64"
 	"time"
 
-	"cs-agent/internal/models"
-	"cs-agent/internal/repositories"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/repositories"
 
 	"github.com/cloudwego/eino/adk"
 	"github.com/mlogclub/simple/sqls"

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"cs-agent/internal/pkg/config"
+	"cs-ai-agent/internal/pkg/config"
 
 	"github.com/mlogclub/simple/sqls"
 	"gorm.io/driver/mysql"

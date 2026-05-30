@@ -2,9 +2,9 @@ package utils
 
 import (
 	"crypto/rand"
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/dto"
-	"cs-agent/internal/pkg/errorsx"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/dto"
+	"cs-ai-agent/internal/pkg/errorsx"
 	"strconv"
 	"strings"
 	"time"

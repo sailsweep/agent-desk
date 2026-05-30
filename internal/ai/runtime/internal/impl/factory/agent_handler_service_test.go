@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	einocallbacks "cs-agent/internal/ai/runtime/internal/impl/callbacks"
+	einocallbacks "cs-ai-agent/internal/ai/runtime/internal/impl/callbacks"
 )
 
 func TestAgentHandlerServiceBuildWithCollectorOnly(t *testing.T) {

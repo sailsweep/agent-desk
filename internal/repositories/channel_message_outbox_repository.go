@@ -1,10 +1,10 @@
 package repositories
 
 import (
-	"cs-agent/internal/models"
+	"cs-ai-agent/internal/models"
 
+	"cs-ai-agent/internal/pkg/httpx/params"
 	"github.com/mlogclub/simple/sqls"
-	"cs-agent/internal/pkg/httpx/params"
 	"gorm.io/gorm"
 )
 
@@ -62,12 +62,12 @@ func (r *channelMessageOutboxRepository) FindPageByCnd(db *gorm.DB, cnd *sqls.Cn
 	return
 }
 
-func (r *channelMessageOutboxRepository) FindBySql(db *gorm.DB, sqlStr string, paramArr... interface{}) (list []models.ChannelMessageOutbox) {
+func (r *channelMessageOutboxRepository) FindBySql(db *gorm.DB, sqlStr string, paramArr ...interface{}) (list []models.ChannelMessageOutbox) {
 	db.Raw(sqlStr, paramArr...).Scan(&list)
 	return
 }
 
-func (r *channelMessageOutboxRepository) CountBySql(db *gorm.DB, sqlStr string, paramArr... interface{}) (count int64) {
+func (r *channelMessageOutboxRepository) CountBySql(db *gorm.DB, sqlStr string, paramArr ...interface{}) (count int64) {
 	db.Raw(sqlStr, paramArr...).Count(&count)
 	return
 }
@@ -99,4 +99,3 @@ func (r *channelMessageOutboxRepository) UpdateColumn(db *gorm.DB, id int64, nam
 func (r *channelMessageOutboxRepository) Delete(db *gorm.DB, id int64) {
 	db.Delete(&models.ChannelMessageOutbox{}, "id = ?", id)
 }
-

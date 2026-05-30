@@ -1,8 +1,8 @@
 package builders
 
 import (
-	"cs-agent/internal/pkg/dto/response"
-	"cs-agent/internal/services"
+	"cs-ai-agent/internal/pkg/dto/response"
+	"cs-ai-agent/internal/services"
 	"time"
 )
 

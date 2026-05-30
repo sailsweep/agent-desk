@@ -3,7 +3,7 @@ package services
 import (
 	"testing"
 
-	"cs-agent/internal/pkg/dto/response"
+	"cs-ai-agent/internal/pkg/dto/response"
 )
 
 func TestWsNotificationTopic(t *testing.T) {

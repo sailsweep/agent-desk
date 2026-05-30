@@ -1,7 +1,7 @@
 package main
 
 import (
-	"cs-agent/internal/models"
+	"cs-ai-agent/internal/models"
 
 	"github.com/mlogclub/codegen"
 )
@@ -10,7 +10,7 @@ func main() {
 	codegen.GenerateWithOption(
 		codegen.Options{
 			BaseDir:    "./",
-			PkgName:    "cs-agent",
+			PkgName:    "cs-ai-agent",
 			Version:    1,
 			Repository: true,
 			Service:    true,

@@ -8,14 +8,14 @@ import (
 
 	"github.com/mlogclub/simple/sqls"
 
-	"cs-agent/internal/ai"
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/dto"
-	"cs-agent/internal/pkg/dto/request"
-	"cs-agent/internal/pkg/dto/response"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/pkg/errorsx"
-	"cs-agent/internal/repositories"
+	"cs-ai-agent/internal/ai"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/dto"
+	"cs-ai-agent/internal/pkg/dto/request"
+	"cs-ai-agent/internal/pkg/dto/response"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/errorsx"
+	"cs-ai-agent/internal/repositories"
 )
 
 type answer struct {

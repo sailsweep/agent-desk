@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"cs-agent/internal/ai/mcps"
-	"cs-agent/internal/ai/runtime/tooling"
+	"cs-ai-agent/internal/ai/mcps"
+	"cs-ai-agent/internal/ai/runtime/tooling"
 
 	"github.com/eino-contrib/jsonschema"
 

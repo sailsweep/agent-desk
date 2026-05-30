@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"cs-agent/internal/ai/mcps"
-	"cs-agent/internal/pkg/config"
-	"cs-agent/internal/pkg/errorsx"
+	"cs-ai-agent/internal/ai/mcps"
+	"cs-ai-agent/internal/pkg/config"
+	"cs-ai-agent/internal/pkg/errorsx"
 )
 
 var MCPDebugService = newMCPDebugService()

@@ -4,12 +4,12 @@ import (
 	"context"
 	"strings"
 
-	"cs-agent/internal/ai/mcps"
-	impladapter "cs-agent/internal/ai/runtime/internal/impl/adapter"
-	runtimetooling "cs-agent/internal/ai/runtime/tooling"
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/pkg/toolx"
+	"cs-ai-agent/internal/ai/mcps"
+	impladapter "cs-ai-agent/internal/ai/runtime/internal/impl/adapter"
+	runtimetooling "cs-ai-agent/internal/ai/runtime/tooling"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/toolx"
 
 	einotool "github.com/cloudwego/eino/components/tool"
 )

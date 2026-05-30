@@ -6,9 +6,9 @@ import (
 
 	openai "github.com/openai/openai-go/v3"
 
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/pkg/errorsx"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/errorsx"
 )
 
 type EmbeddingResult struct {

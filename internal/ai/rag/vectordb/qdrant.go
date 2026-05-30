@@ -6,7 +6,7 @@ import (
 
 	"github.com/qdrant/go-client/qdrant"
 
-	"cs-agent/internal/pkg/config"
+	"cs-ai-agent/internal/pkg/config"
 )
 
 type Vector struct {

@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"strings"
 
-	"cs-agent/internal/ai/runtime/registry"
-	"cs-agent/internal/ai/runtime/tools"
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/toolx"
+	"cs-ai-agent/internal/ai/runtime/registry"
+	"cs-ai-agent/internal/ai/runtime/tools"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/toolx"
 )
 
 type toolCatalog struct {

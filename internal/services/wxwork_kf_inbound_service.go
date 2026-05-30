@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/pkg/errorsx"
-	"cs-agent/internal/pkg/openidentity"
-	"cs-agent/internal/wxwork"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/errorsx"
+	"cs-ai-agent/internal/pkg/openidentity"
+	"cs-ai-agent/internal/wxwork"
 
 	"github.com/mlogclub/simple/common/strs"
 	"github.com/silenceper/wechat/v2/work/kf"

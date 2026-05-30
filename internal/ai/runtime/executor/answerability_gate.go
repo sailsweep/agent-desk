@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"cs-agent/internal/ai/runtime/internal/impl/callbacks"
-	"cs-agent/internal/ai/runtime/internal/impl/retrievers"
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/utils"
+	"cs-ai-agent/internal/ai/runtime/internal/impl/callbacks"
+	"cs-ai-agent/internal/ai/runtime/internal/impl/retrievers"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/utils"
 
 	"github.com/cloudwego/eino/compose"
 	"github.com/cloudwego/eino/schema"

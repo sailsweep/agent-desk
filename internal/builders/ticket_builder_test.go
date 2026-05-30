@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/enums"
 )
 
 func TestBuildLightweightTicket(t *testing.T) {

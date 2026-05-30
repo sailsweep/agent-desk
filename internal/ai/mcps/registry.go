@@ -1,7 +1,7 @@
 package mcps
 
 import (
-	"cs-agent/internal/ai/mcps/providers"
+	"cs-ai-agent/internal/ai/mcps/providers"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )

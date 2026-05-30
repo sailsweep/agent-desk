@@ -1,4 +1,4 @@
-APP := cs-agent
+APP := cs-ai-agent
 MAIN := ./cmd/server
 WEB_DIR := web
 SPA_INDEX := $(WEB_DIR)/out/index.html

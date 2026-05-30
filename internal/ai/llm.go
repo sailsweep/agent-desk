@@ -10,8 +10,8 @@ import (
 	openai "github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/shared"
 
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/enums"
 )
 
 type ChatCompletionResult struct {

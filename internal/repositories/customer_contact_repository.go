@@ -1,10 +1,10 @@
 package repositories
 
 import (
-	"cs-agent/internal/models"
+	"cs-ai-agent/internal/models"
 
+	"cs-ai-agent/internal/pkg/httpx/params"
 	"github.com/mlogclub/simple/sqls"
-	"cs-agent/internal/pkg/httpx/params"
 	"gorm.io/gorm"
 )
 
@@ -62,12 +62,12 @@ func (r *customerContactRepository) FindPageByCnd(db *gorm.DB, cnd *sqls.Cnd) (l
 	return
 }
 
-func (r *customerContactRepository) FindBySql(db *gorm.DB, sqlStr string, paramArr... interface{}) (list []models.CustomerContact) {
+func (r *customerContactRepository) FindBySql(db *gorm.DB, sqlStr string, paramArr ...interface{}) (list []models.CustomerContact) {
 	db.Raw(sqlStr, paramArr...).Scan(&list)
 	return
 }
 
-func (r *customerContactRepository) CountBySql(db *gorm.DB, sqlStr string, paramArr... interface{}) (count int64) {
+func (r *customerContactRepository) CountBySql(db *gorm.DB, sqlStr string, paramArr ...interface{}) (count int64) {
 	db.Raw(sqlStr, paramArr...).Count(&count)
 	return
 }
@@ -99,4 +99,3 @@ func (r *customerContactRepository) UpdateColumn(db *gorm.DB, id int64, name str
 func (r *customerContactRepository) Delete(db *gorm.DB, id int64) {
 	db.Delete(&models.CustomerContact{}, "id = ?", id)
 }
-

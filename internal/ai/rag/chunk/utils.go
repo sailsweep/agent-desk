@@ -2,7 +2,7 @@ package chunk
 
 import (
 	"crypto/sha256"
-	"cs-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/enums"
 	"encoding/hex"
 	"strings"
 	"unicode"

@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	applicationruntime "cs-agent/internal/ai/application/runtime"
-	"cs-agent/internal/ai/runtime/graphs"
-	"cs-agent/internal/models"
-	svc "cs-agent/internal/services"
+	applicationruntime "cs-ai-agent/internal/ai/application/runtime"
+	"cs-ai-agent/internal/ai/runtime/graphs"
+	"cs-ai-agent/internal/models"
+	svc "cs-ai-agent/internal/services"
 )
 
 type runtimeReplyExecutor struct{}

@@ -446,9 +446,9 @@ export function SharedMessageEditor({
 
 function getEditorClassName(variant: SharedMessageEditorVariant) {
   if (variant === "customer") {
-    return "cs-agent-scrollbar min-h-12 max-h-40 overflow-y-auto px-1.5 py-1 text-sm leading-6 text-foreground outline-none [&_p]:m-0 [&_p+*]:mt-2 [&_.cs-agent-editor-image-wrap]:my-2 [&_.cs-agent-editor-image]:max-h-64 [&_.cs-agent-editor-image]:max-w-full [&_.cs-agent-editor-image]:rounded-lg [&_.cs-agent-editor-image]:object-contain [&_.cs-agent-editor-image-wrap-uploading_.cs-agent-editor-image]:opacity-55"
+    return "cs-ai-agent-scrollbar min-h-12 max-h-40 overflow-y-auto px-1.5 py-1 text-sm leading-6 text-foreground outline-none [&_p]:m-0 [&_p+*]:mt-2 [&_.cs-ai-agent-editor-image-wrap]:my-2 [&_.cs-ai-agent-editor-image]:max-h-64 [&_.cs-ai-agent-editor-image]:max-w-full [&_.cs-ai-agent-editor-image]:rounded-lg [&_.cs-ai-agent-editor-image]:object-contain [&_.cs-ai-agent-editor-image-wrap-uploading_.cs-ai-agent-editor-image]:opacity-55"
   }
-  return "h-full min-h-12 max-h-[20vh] overflow-y-auto px-1.5 py-1 text-sm leading-6 text-foreground outline-none sm:max-h-none [&_.ProseMirror-focused]:outline-none [&_p]:m-0 [&_p+.cs-agent-editor-image-wrap]:mt-2 [&_.cs-agent-editor-image-wrap]:my-2 [&_.cs-agent-editor-image]:max-h-64 [&_.cs-agent-editor-image]:max-w-full [&_.cs-agent-editor-image]:rounded-md [&_.cs-agent-editor-image]:object-contain [&_.cs-agent-editor-image-wrap-uploading_.cs-agent-editor-image]:opacity-55 [&_p.is-editor-empty:first-child]:before:text-muted-foreground"
+  return "h-full min-h-12 max-h-[20vh] overflow-y-auto px-1.5 py-1 text-sm leading-6 text-foreground outline-none sm:max-h-none [&_.ProseMirror-focused]:outline-none [&_p]:m-0 [&_p+.cs-ai-agent-editor-image-wrap]:mt-2 [&_.cs-ai-agent-editor-image-wrap]:my-2 [&_.cs-ai-agent-editor-image]:max-h-64 [&_.cs-ai-agent-editor-image]:max-w-full [&_.cs-ai-agent-editor-image]:rounded-md [&_.cs-ai-agent-editor-image]:object-contain [&_.cs-ai-agent-editor-image-wrap-uploading_.cs-ai-agent-editor-image]:opacity-55 [&_p.is-editor-empty:first-child]:before:text-muted-foreground"
 }
 
 function getToolbarClassName(variant: SharedMessageEditorVariant) {

@@ -10,13 +10,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	"cs-agent/internal/events"
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/dto"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/pkg/eventbus"
-	"cs-agent/internal/pkg/utils"
-	"cs-agent/internal/repositories"
+	"cs-ai-agent/internal/events"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/dto"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/eventbus"
+	"cs-ai-agent/internal/pkg/utils"
+	"cs-ai-agent/internal/repositories"
 
 	"github.com/mlogclub/simple/sqls"
 )

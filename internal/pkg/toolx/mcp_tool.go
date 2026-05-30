@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 
-	"cs-agent/internal/pkg/dto/request"
-	"cs-agent/internal/pkg/errorsx"
+	"cs-ai-agent/internal/pkg/dto/request"
+	"cs-ai-agent/internal/pkg/errorsx"
 )
 
 func BuildMCPToolCode(serverCode, toolName string) string {

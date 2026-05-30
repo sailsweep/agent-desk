@@ -1,10 +1,10 @@
 package services
 
 import (
-	"cs-agent/internal/pkg/dto"
-	"cs-agent/internal/pkg/dto/response"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/pkg/openidentity"
+	"cs-ai-agent/internal/pkg/dto"
+	"cs-ai-agent/internal/pkg/dto/response"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/openidentity"
 	"encoding/json"
 	"sync"
 	"sync/atomic"

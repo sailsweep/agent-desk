@@ -1,10 +1,10 @@
 package repositories
 
 import (
-	"cs-agent/internal/models"
+	"cs-ai-agent/internal/models"
 
+	"cs-ai-agent/internal/pkg/httpx/params"
 	"github.com/mlogclub/simple/sqls"
-	"cs-agent/internal/pkg/httpx/params"
 	"gorm.io/gorm"
 )
 
@@ -62,12 +62,12 @@ func (r *ticketRepository) FindPageByCnd(db *gorm.DB, cnd *sqls.Cnd) (list []mod
 	return
 }
 
-func (r *ticketRepository) FindBySql(db *gorm.DB, sqlStr string, paramArr... interface{}) (list []models.Ticket) {
+func (r *ticketRepository) FindBySql(db *gorm.DB, sqlStr string, paramArr ...interface{}) (list []models.Ticket) {
 	db.Raw(sqlStr, paramArr...).Scan(&list)
 	return
 }
 
-func (r *ticketRepository) CountBySql(db *gorm.DB, sqlStr string, paramArr... interface{}) (count int64) {
+func (r *ticketRepository) CountBySql(db *gorm.DB, sqlStr string, paramArr ...interface{}) (count int64) {
 	db.Raw(sqlStr, paramArr...).Count(&count)
 	return
 }
@@ -99,4 +99,3 @@ func (r *ticketRepository) UpdateColumn(db *gorm.DB, id int64, name string, valu
 func (r *ticketRepository) Delete(db *gorm.DB, id int64) {
 	db.Delete(&models.Ticket{}, "id = ?", id)
 }
-

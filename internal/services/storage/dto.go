@@ -1,8 +1,8 @@
 package storage
 
 import (
-	"cs-agent/internal/pkg/dto"
-	"cs-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/dto"
+	"cs-ai-agent/internal/pkg/enums"
 )
 
 type UploadInfo struct {

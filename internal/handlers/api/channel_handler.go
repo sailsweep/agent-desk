@@ -1,11 +1,11 @@
 package api
 
 import (
-	"cs-agent/internal/pkg/dto/response"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/pkg/errorsx"
-	"cs-agent/internal/pkg/httpx"
-	"cs-agent/internal/services"
+	"cs-ai-agent/internal/pkg/dto/response"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/errorsx"
+	"cs-ai-agent/internal/pkg/httpx"
+	"cs-ai-agent/internal/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/web"

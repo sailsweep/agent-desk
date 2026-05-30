@@ -1,7 +1,7 @@
 package response
 
 import (
-	"cs-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/enums"
 	"time"
 )
 

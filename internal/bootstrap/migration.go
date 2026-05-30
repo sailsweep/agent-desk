@@ -1,8 +1,8 @@
 package bootstrap
 
 import (
-	"cs-agent/internal/migration"
-	"cs-agent/internal/models"
+	"cs-ai-agent/internal/migration"
+	"cs-ai-agent/internal/models"
 
 	"github.com/mlogclub/simple/sqls"
 )

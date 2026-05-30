@@ -4,12 +4,12 @@ import (
 	"context"
 	"strings"
 
-	"cs-agent/internal/ai/rag"
-	"cs-agent/internal/ai/runtime/internal/impl/callbacks"
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/pkg/utils"
-	"cs-agent/internal/repositories"
+	"cs-ai-agent/internal/ai/rag"
+	"cs-ai-agent/internal/ai/runtime/internal/impl/callbacks"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/utils"
+	"cs-ai-agent/internal/repositories"
 
 	"github.com/mlogclub/simple/sqls"
 )

@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"cs-agent/internal/ai"
-	"cs-agent/internal/ai/rag/vectordb"
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/repositories"
+	"cs-ai-agent/internal/ai"
+	"cs-ai-agent/internal/ai/rag/vectordb"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/repositories"
 
 	"github.com/mlogclub/simple/sqls"
 )

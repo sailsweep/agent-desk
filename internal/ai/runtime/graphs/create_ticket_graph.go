@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"strings"
 
-	"cs-agent/internal/ai/runtime/tooling"
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/dto"
-	"cs-agent/internal/pkg/dto/request"
-	"cs-agent/internal/services"
+	"cs-ai-agent/internal/ai/runtime/tooling"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/dto"
+	"cs-ai-agent/internal/pkg/dto/request"
+	"cs-ai-agent/internal/services"
 
 	componenttool "github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
@@ -31,8 +31,8 @@ type createTicketGraphArgs struct {
 }
 
 func init() {
-	schema.RegisterName[CreateTicketGraphState]("cs_agent_create_ticket_graph_state")
-	schema.RegisterName[CreateTicketGraphInterruptInfo]("cs_agent_create_ticket_graph_interrupt_info")
+	schema.RegisterName[CreateTicketGraphState]("cs_ai_agent_create_ticket_graph_state")
+	schema.RegisterName[CreateTicketGraphInterruptInfo]("cs_ai_agent_create_ticket_graph_interrupt_info")
 }
 
 type CreateTicketGraph struct {

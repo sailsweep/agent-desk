@@ -8,14 +8,14 @@ type HostBridgeOptions = {
   onMaximizedChange?: (isMaximized: boolean) => void
 }
 
-const INIT_MESSAGE_TYPE = "cs-agent:init"
-const OPEN_MESSAGE_TYPE = "cs-agent:open"
-const MINIMIZE_MESSAGE_TYPE = "cs-agent:minimize"
-const MAXIMIZED_MESSAGE_TYPE = "cs-agent:maximized"
-const READY_MESSAGE_TYPE = "cs-agent:ready"
-const REQUEST_MINIMIZE_MESSAGE_TYPE = "cs-agent:request-minimize"
-const REQUEST_CLOSE_MESSAGE_TYPE = "cs-agent:request-close"
-const REQUEST_TOGGLE_MAXIMIZE_MESSAGE_TYPE = "cs-agent:request-toggle-maximize"
+const INIT_MESSAGE_TYPE = "cs-ai-agent:init"
+const OPEN_MESSAGE_TYPE = "cs-ai-agent:open"
+const MINIMIZE_MESSAGE_TYPE = "cs-ai-agent:minimize"
+const MAXIMIZED_MESSAGE_TYPE = "cs-ai-agent:maximized"
+const READY_MESSAGE_TYPE = "cs-ai-agent:ready"
+const REQUEST_MINIMIZE_MESSAGE_TYPE = "cs-ai-agent:request-minimize"
+const REQUEST_CLOSE_MESSAGE_TYPE = "cs-ai-agent:request-close"
+const REQUEST_TOGGLE_MAXIMIZE_MESSAGE_TYPE = "cs-ai-agent:request-toggle-maximize"
 
 export function bindSupportHostBridge(options: HostBridgeOptions = {}) {
   if (typeof window === "undefined") {

@@ -1,6 +1,6 @@
 package request
 
-import "cs-agent/internal/pkg/enums"
+import "cs-ai-agent/internal/pkg/enums"
 
 type CreateAgentProfileRequest struct {
 	UserID                int64               `json:"userId"`

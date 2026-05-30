@@ -2,18 +2,18 @@ package dashboard
 
 import (
 	"context"
-	"cs-agent/internal/pkg/httpx"
+	"cs-ai-agent/internal/pkg/httpx"
 	"strings"
 	"time"
 
-	"cs-agent/internal/builders"
-	"cs-agent/internal/pkg/constants"
-	"cs-agent/internal/pkg/dto/request"
-	"cs-agent/internal/pkg/dto/response"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/services"
+	"cs-ai-agent/internal/builders"
+	"cs-ai-agent/internal/pkg/constants"
+	"cs-ai-agent/internal/pkg/dto/request"
+	"cs-ai-agent/internal/pkg/dto/response"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/services"
 
-	"cs-agent/internal/pkg/httpx/params"
+	"cs-ai-agent/internal/pkg/httpx/params"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/web"

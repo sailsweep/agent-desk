@@ -1,10 +1,10 @@
 package repositories
 
 import (
-	"cs-agent/internal/models"
+	"cs-ai-agent/internal/models"
 
+	"cs-ai-agent/internal/pkg/httpx/params"
 	"github.com/mlogclub/simple/sqls"
-	"cs-agent/internal/pkg/httpx/params"
 	"gorm.io/gorm"
 )
 
@@ -62,12 +62,12 @@ func (r *wxWorkKFSyncStateRepository) FindPageByCnd(db *gorm.DB, cnd *sqls.Cnd) 
 	return
 }
 
-func (r *wxWorkKFSyncStateRepository) FindBySql(db *gorm.DB, sqlStr string, paramArr... interface{}) (list []models.WxWorkKFSyncState) {
+func (r *wxWorkKFSyncStateRepository) FindBySql(db *gorm.DB, sqlStr string, paramArr ...interface{}) (list []models.WxWorkKFSyncState) {
 	db.Raw(sqlStr, paramArr...).Scan(&list)
 	return
 }
 
-func (r *wxWorkKFSyncStateRepository) CountBySql(db *gorm.DB, sqlStr string, paramArr... interface{}) (count int64) {
+func (r *wxWorkKFSyncStateRepository) CountBySql(db *gorm.DB, sqlStr string, paramArr ...interface{}) (count int64) {
 	db.Raw(sqlStr, paramArr...).Count(&count)
 	return
 }
@@ -99,4 +99,3 @@ func (r *wxWorkKFSyncStateRepository) UpdateColumn(db *gorm.DB, id int64, name s
 func (r *wxWorkKFSyncStateRepository) Delete(db *gorm.DB, id int64) {
 	db.Delete(&models.WxWorkKFSyncState{}, "id = ?", id)
 }
-

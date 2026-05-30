@@ -1,8 +1,8 @@
 package response
 
 import (
-	"cs-agent/internal/ai/mcps"
-	"cs-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/ai/mcps"
+	"cs-ai-agent/internal/pkg/enums"
 )
 
 type MCPConnectionResponse struct {

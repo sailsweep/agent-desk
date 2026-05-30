@@ -1,8 +1,8 @@
 package migration
 
 import (
-	"cs-agent/internal/models"
-	"cs-agent/internal/services"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/services"
 	"errors"
 	"log/slog"
 	"sync"

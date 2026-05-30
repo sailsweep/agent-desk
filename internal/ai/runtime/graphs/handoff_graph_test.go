@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"cs-agent/internal/ai/runtime/tooling"
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/services"
+	"cs-ai-agent/internal/ai/runtime/tooling"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/services"
 
 	"github.com/glebarez/sqlite"
 	"github.com/mlogclub/simple/sqls"

@@ -57,10 +57,10 @@ function getLauncherText() {
 }
 
 type FrameMessage =
-  | { type: "cs-agent:init"; payload: SupportChatRuntimeConfig }
-  | { type: "cs-agent:open" }
-  | { type: "cs-agent:minimize" }
-  | { type: "cs-agent:maximized"; payload: { isMaximized: boolean } }
+  | { type: "cs-ai-agent:init"; payload: SupportChatRuntimeConfig }
+  | { type: "cs-ai-agent:open" }
+  | { type: "cs-ai-agent:minimize" }
+  | { type: "cs-ai-agent:maximized"; payload: { isMaximized: boolean } }
 
 (function () {
   const DEFAULT_CONFIG: Pick<
@@ -72,7 +72,7 @@ type FrameMessage =
     width: "380px",
   }
 
-  const existingState = window.__CS_AGENT_WIDGET_STATE__ as WidgetState | undefined
+  const existingState = window.__CS_AI_AGENT_WIDGET_STATE__ as WidgetState | undefined
   const state: WidgetState =
     existingState || {
       button: null,
@@ -91,7 +91,7 @@ type FrameMessage =
       animationDuration: 260,
     }
   if (!existingState) {
-    window.__CS_AGENT_WIDGET_STATE__ = state
+    window.__CS_AI_AGENT_WIDGET_STATE__ = state
   }
 
   function normalizeConfig(config?: CSAgentConfig): NormalizedCSAgentConfig {
@@ -272,7 +272,7 @@ type FrameMessage =
     try {
       state.frame.contentWindow.postMessage(message, state.frameUrl.origin)
     } catch (error) {
-      console.error("[cs-agent-widget] postMessage failed", error)
+      console.error("[cs-ai-agent-widget] postMessage failed", error)
     }
   }
 
@@ -284,14 +284,14 @@ type FrameMessage =
     if (!state.initSent) {
       state.initSent = true
       postToFrame({
-        type: "cs-agent:init",
+        type: "cs-ai-agent:init",
         payload: state.frameConfig || createFrameConfig(state.config, ""),
       })
     }
 
-    postToFrame({ type: state.isOpen ? "cs-agent:open" : "cs-agent:minimize" })
+    postToFrame({ type: state.isOpen ? "cs-ai-agent:open" : "cs-ai-agent:minimize" })
     postToFrame({
-      type: "cs-agent:maximized",
+      type: "cs-ai-agent:maximized",
       payload: { isMaximized: state.isMaximized },
     })
   }
@@ -392,24 +392,24 @@ type FrameMessage =
     }
 
     const data = (event.data || {}) as { type?: string }
-    if (data.type === "cs-agent:ready") {
+    if (data.type === "cs-ai-agent:ready") {
       state.frameReady = true
       flushFrameState()
       return
     }
 
-    if (data.type === "cs-agent:request-minimize") {
+    if (data.type === "cs-ai-agent:request-minimize") {
       state.isOpen = false
       syncFrameVisibility()
       return
     }
 
-    if (data.type === "cs-agent:request-close") {
+    if (data.type === "cs-ai-agent:request-close") {
       destroyFrame()
       return
     }
 
-    if (data.type === "cs-agent:request-toggle-maximize") {
+    if (data.type === "cs-ai-agent:request-toggle-maximize") {
       state.isMaximized = !state.isMaximized
       syncFrameVisibility()
     }
@@ -499,7 +499,7 @@ type FrameMessage =
       state.config.baseUrl = widgetBaseUrl
     }
     if (!state.config.channelId) {
-      console.error("[cs-agent-widget] channelId is required")
+      console.error("[cs-ai-agent-widget] channelId is required")
       return
     }
 
@@ -548,7 +548,7 @@ type FrameMessage =
         syncFrameVisibility()
       })
       .catch((error) => {
-        console.error("[cs-agent-widget] open failed", error)
+        console.error("[cs-ai-agent-widget] open failed", error)
       })
   }
 

@@ -4,9 +4,9 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: cs_ai_agent
-      MYSQL_USER: cs_agent
-      MYSQL_PASSWORD: cs_agent_password
-      MYSQL_ROOT_PASSWORD: cs_agent_root_password
+      MYSQL_USER: cs_ai_agent
+      MYSQL_PASSWORD: cs_ai_agent_password
+      MYSQL_ROOT_PASSWORD: cs_ai_agent_root_password
       TZ: Asia/Shanghai
     command:
       - --character-set-server=utf8mb4
@@ -28,11 +28,11 @@ services:
       - "6333:6333"
       - "6334:6334"
 
-  cs-agent:
+  cs-ai-agent:
     build:
       context: .
       dockerfile: Dockerfile
-    image: cs-agent:latest
+    image: cs-ai-agent:latest
     restart: unless-stopped
     depends_on:
       mysql:
@@ -42,12 +42,12 @@ services:
     ports:
       - "8083:8083"
     volumes:
-      - cs-agent-data:/app/data
-      - ./docker/cs-agent.yaml:/app/config/config.yaml:ro
+      - cs-ai-agent-data:/app/data
+      - ./docker/cs-ai-agent.yaml:/app/config/config.yaml:ro
     environment:
       TZ: Asia/Shanghai
 
 volumes:
   mysql-data:
   qdrant-data:
-  cs-agent-data:
+  cs-ai-agent-data:

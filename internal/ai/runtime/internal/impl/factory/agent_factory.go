@@ -4,12 +4,12 @@ import (
 	"context"
 	"strings"
 
-	"cs-agent/internal/ai/runtime/instruction"
-	"cs-agent/internal/ai/runtime/internal/impl/agents"
-	"cs-agent/internal/ai/runtime/internal/impl/callbacks"
-	"cs-agent/internal/ai/runtime/registry"
-	"cs-agent/internal/ai/runtime/tooling"
-	"cs-agent/internal/models"
+	"cs-ai-agent/internal/ai/runtime/instruction"
+	"cs-ai-agent/internal/ai/runtime/internal/impl/agents"
+	"cs-ai-agent/internal/ai/runtime/internal/impl/callbacks"
+	"cs-ai-agent/internal/ai/runtime/registry"
+	"cs-ai-agent/internal/ai/runtime/tooling"
+	"cs-ai-agent/internal/models"
 
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/components/tool"

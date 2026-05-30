@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"cs-agent/internal/models"
+	"cs-ai-agent/internal/models"
 )
 
 func TestParseSkillExamples(t *testing.T) {

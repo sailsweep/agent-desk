@@ -33,7 +33,7 @@ declare global {
   interface Window {
     CSAgentConfig?: CSAgentConfig
     CSAgentWidget?: CSAgentWidget
-    __CS_AGENT_WIDGET_CONFIG__?: SupportChatRuntimeConfig
-    __CS_AGENT_WIDGET_STATE__?: unknown
+    __CS_AI_AGENT_WIDGET_CONFIG__?: SupportChatRuntimeConfig
+    __CS_AI_AGENT_WIDGET_STATE__?: unknown
   }
 }

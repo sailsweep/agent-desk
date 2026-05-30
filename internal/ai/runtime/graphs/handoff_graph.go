@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"strings"
 
-	"cs-agent/internal/ai/runtime/tooling"
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/tracex"
-	"cs-agent/internal/services"
+	"cs-ai-agent/internal/ai/runtime/tooling"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/tracex"
+	"cs-ai-agent/internal/services"
 
 	componenttool "github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
@@ -29,8 +29,8 @@ type handoffGraphArgs struct {
 }
 
 func init() {
-	schema.RegisterName[HandoffGraphState]("cs_agent_handoff_graph_state")
-	schema.RegisterName[HandoffGraphInterruptInfo]("cs_agent_handoff_graph_interrupt_info")
+	schema.RegisterName[HandoffGraphState]("cs_ai_agent_handoff_graph_state")
+	schema.RegisterName[HandoffGraphInterruptInfo]("cs_ai_agent_handoff_graph_interrupt_info")
 }
 
 type HandoffGraph struct {

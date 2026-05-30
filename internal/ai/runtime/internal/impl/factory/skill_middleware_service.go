@@ -3,9 +3,9 @@ package factory
 import (
 	"context"
 
-	runtimetooling "cs-agent/internal/ai/runtime/tooling"
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/toolx"
+	runtimetooling "cs-ai-agent/internal/ai/runtime/tooling"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/toolx"
 
 	"github.com/cloudwego/eino/adk"
 	einoskill "github.com/cloudwego/eino/adk/middlewares/skill"

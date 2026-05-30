@@ -6,12 +6,12 @@ import (
 	"log/slog"
 	"time"
 
-	ragchunk "cs-agent/internal/ai/rag/chunk"
-	"cs-agent/internal/ai/rag/vectordb"
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/enums"
+	ragchunk "cs-ai-agent/internal/ai/rag/chunk"
+	"cs-ai-agent/internal/ai/rag/vectordb"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/enums"
 
-	"cs-agent/internal/ai"
+	"cs-ai-agent/internal/ai"
 	"github.com/mlogclub/simple/common/strs"
 )
 

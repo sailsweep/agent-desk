@@ -2,15 +2,15 @@ package bootstrap
 
 import (
 	"context"
-	"cs-agent/internal/ai/rag/vectordb"
-	"cs-agent/internal/oidcclient"
-	"cs-agent/internal/pkg/config"
-	"cs-agent/internal/pkg/logx"
-	"cs-agent/internal/services/cronx"
-	"cs-agent/internal/wxwork"
+	"cs-ai-agent/internal/ai/rag/vectordb"
+	"cs-ai-agent/internal/oidcclient"
+	"cs-ai-agent/internal/pkg/config"
+	"cs-ai-agent/internal/pkg/logx"
+	"cs-ai-agent/internal/services/cronx"
+	"cs-ai-agent/internal/wxwork"
 	"log/slog"
 
-	_ "cs-agent/internal/services/event_handlers"
+	_ "cs-ai-agent/internal/services/event_handlers"
 )
 
 func Init(configPath string) error {

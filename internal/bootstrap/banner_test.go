@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"cs-agent/internal/pkg/config"
+	"cs-ai-agent/internal/pkg/config"
 )
 
 func TestRenderBanner(t *testing.T) {

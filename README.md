@@ -288,20 +288,20 @@ docker compose up -d --build
 
 Compose 默认会启动：
 
-- `cs-agent`：应用服务，端口 `8083`
+- `cs-ai-agent`：应用服务，端口 `8083`
 - `mysql`：MySQL 8.4，数据卷 `mysql-data`
 - `qdrant`：向量数据库，数据卷 `qdrant-data`，端口 `6333`/`6334`
 
-Compose 使用 [docker/cs-agent.yaml](docker/cs-agent.yaml) 作为容器内配置，应用会通过 Docker 内部服务名访问 `mysql` 和 `qdrant`。
+Compose 使用 [docker/cs-ai-agent.yaml](docker/cs-ai-agent.yaml) 作为容器内配置，应用会通过 Docker 内部服务名访问 `mysql` 和 `qdrant`。
 
 也可以只构建应用镜像，但需要自行准备 MySQL 和 Qdrant，并挂载对应配置：
 
 ```bash
-docker build -t cs-agent .
+docker build -t cs-ai-agent .
 docker run --rm -p 8083:8083 \
-  -v $(pwd)/docker/cs-agent.yaml:/app/config/config.yaml:ro \
-  -v cs-agent-data:/app/data \
-  cs-agent
+  -v $(pwd)/docker/cs-ai-agent.yaml:/app/config/config.yaml:ro \
+  -v cs-ai-agent-data:/app/data \
+  cs-ai-agent
 ```
 
 ## 系统视角

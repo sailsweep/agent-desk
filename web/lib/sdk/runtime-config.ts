@@ -33,8 +33,8 @@ export function readSupportChatRuntimeConfig(): SupportChatRuntimeConfig {
     width: query.get("width") ?? undefined,
   }
 
-  if (window.__CS_AGENT_WIDGET_CONFIG__) {
-    return window.__CS_AGENT_WIDGET_CONFIG__
+  if (window.__CS_AI_AGENT_WIDGET_CONFIG__) {
+    return window.__CS_AI_AGENT_WIDGET_CONFIG__
   }
   if (window.CSAgentConfig) {
     const { getUserToken: _getUserToken, ...hostConfig } = window.CSAgentConfig
@@ -50,5 +50,5 @@ export function setSupportChatRuntimeConfig(config: SupportChatRuntimeConfig) {
   if (typeof window === "undefined") {
     return
   }
-  window.__CS_AGENT_WIDGET_CONFIG__ = config
+  window.__CS_AI_AGENT_WIDGET_CONFIG__ = config
 }

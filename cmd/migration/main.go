@@ -3,9 +3,9 @@ package main
 import (
 	"log/slog"
 
-	"cs-agent/internal/bootstrap"
-	"cs-agent/internal/pkg/config"
-	"cs-agent/internal/pkg/logx"
+	"cs-ai-agent/internal/bootstrap"
+	"cs-ai-agent/internal/pkg/config"
+	"cs-ai-agent/internal/pkg/logx"
 )
 
 func main() {

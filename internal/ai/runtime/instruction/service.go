@@ -3,8 +3,8 @@ package instruction
 import (
 	"strings"
 
-	runtimetooling "cs-agent/internal/ai/runtime/tooling"
-	"cs-agent/internal/models"
+	runtimetooling "cs-ai-agent/internal/ai/runtime/tooling"
+	"cs-ai-agent/internal/models"
 )
 
 type Service struct {

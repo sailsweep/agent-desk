@@ -130,8 +130,8 @@ export type ImCustomerSession = ImCustomerSessionExchangeResponse & {
   channelId: string
 }
 
-const GUEST_STORAGE_KEY = "cs_agent_im_guest_id"
-const CUSTOMER_SESSION_STORAGE_KEY = "cs_agent_customer_session"
+const GUEST_STORAGE_KEY = "cs_ai_agent_im_guest_id"
+const CUSTOMER_SESSION_STORAGE_KEY = "cs_ai_agent_customer_session"
 const CUSTOMER_SESSION_TOKEN_HEADER = "X-Customer-Session-Token"
 const CUSTOMER_SESSION_EXPIRES_HEADER = "X-Customer-Session-Expires-At"
 const API_BASE_URL =

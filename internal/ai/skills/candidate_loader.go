@@ -1,10 +1,10 @@
 package skills
 
 import (
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/pkg/utils"
-	"cs-agent/internal/repositories"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/utils"
+	"cs-ai-agent/internal/repositories"
 
 	"github.com/mlogclub/simple/sqls"
 )

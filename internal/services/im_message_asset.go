@@ -1,10 +1,10 @@
 package services
 
 import (
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/pkg/errorsx"
-	"cs-agent/internal/services/storage"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/errorsx"
+	"cs-ai-agent/internal/services/storage"
 	"encoding/json"
 	"strings"
 )

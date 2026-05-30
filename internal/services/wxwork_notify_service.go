@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"cs-agent/internal/pkg/config"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/repositories"
-	"cs-agent/internal/wxwork"
+	"cs-ai-agent/internal/pkg/config"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/repositories"
+	"cs-ai-agent/internal/wxwork"
 
 	"github.com/mlogclub/simple/common/arrs"
 	"github.com/mlogclub/simple/sqls"

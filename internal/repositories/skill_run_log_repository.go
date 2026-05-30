@@ -1,10 +1,10 @@
 package repositories
 
 import (
-	"cs-agent/internal/models"
+	"cs-ai-agent/internal/models"
 
+	"cs-ai-agent/internal/pkg/httpx/params"
 	"github.com/mlogclub/simple/sqls"
-	"cs-agent/internal/pkg/httpx/params"
 	"gorm.io/gorm"
 )
 
@@ -62,12 +62,12 @@ func (r *skillRunLogRepository) FindPageByCnd(db *gorm.DB, cnd *sqls.Cnd) (list 
 	return
 }
 
-func (r *skillRunLogRepository) FindBySql(db *gorm.DB, sqlStr string, paramArr... interface{}) (list []models.SkillRunLog) {
+func (r *skillRunLogRepository) FindBySql(db *gorm.DB, sqlStr string, paramArr ...interface{}) (list []models.SkillRunLog) {
 	db.Raw(sqlStr, paramArr...).Scan(&list)
 	return
 }
 
-func (r *skillRunLogRepository) CountBySql(db *gorm.DB, sqlStr string, paramArr... interface{}) (count int64) {
+func (r *skillRunLogRepository) CountBySql(db *gorm.DB, sqlStr string, paramArr ...interface{}) (count int64) {
 	db.Raw(sqlStr, paramArr...).Count(&count)
 	return
 }
@@ -99,4 +99,3 @@ func (r *skillRunLogRepository) UpdateColumn(db *gorm.DB, id int64, name string,
 func (r *skillRunLogRepository) Delete(db *gorm.DB, id int64) {
 	db.Delete(&models.SkillRunLog{}, "id = ?", id)
 }
-

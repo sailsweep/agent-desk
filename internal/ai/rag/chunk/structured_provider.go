@@ -2,7 +2,7 @@ package chunk
 
 import (
 	"context"
-	"cs-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/enums"
 	"strings"
 
 	"github.com/gomarkdown/markdown"

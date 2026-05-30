@@ -1,21 +1,21 @@
 package dashboard
 
 import (
-	"cs-agent/internal/pkg/httpx"
+	"cs-ai-agent/internal/pkg/httpx"
 	"encoding/json"
 	"strings"
 
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/constants"
-	"cs-agent/internal/pkg/dto/request"
-	"cs-agent/internal/pkg/dto/response"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/pkg/i18nx"
-	"cs-agent/internal/pkg/toolx"
-	"cs-agent/internal/pkg/utils"
-	"cs-agent/internal/services"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/constants"
+	"cs-ai-agent/internal/pkg/dto/request"
+	"cs-ai-agent/internal/pkg/dto/response"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/i18nx"
+	"cs-ai-agent/internal/pkg/toolx"
+	"cs-ai-agent/internal/pkg/utils"
+	"cs-ai-agent/internal/services"
 
-	"cs-agent/internal/pkg/httpx/params"
+	"cs-ai-agent/internal/pkg/httpx/params"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/sqls"

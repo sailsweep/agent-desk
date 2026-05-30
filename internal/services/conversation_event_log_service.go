@@ -1,14 +1,14 @@
 package services
 
 import (
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/pkg/tracex"
-	"cs-agent/internal/repositories"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/tracex"
+	"cs-ai-agent/internal/repositories"
 	"strings"
 	"time"
 
-	"cs-agent/internal/pkg/httpx/params"
+	"cs-ai-agent/internal/pkg/httpx/params"
 	"github.com/mlogclub/simple/sqls"
 )
 

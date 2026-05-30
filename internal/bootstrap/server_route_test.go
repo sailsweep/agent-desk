@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"cs-agent/internal/pkg/config"
+	"cs-ai-agent/internal/pkg/config"
 )
 
 func TestNewServerRegistersGinRoutes(t *testing.T) {

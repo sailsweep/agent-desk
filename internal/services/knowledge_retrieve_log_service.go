@@ -1,9 +1,9 @@
 package services
 
 import (
-	"cs-agent/internal/models"
+	"cs-ai-agent/internal/models"
 
-	"cs-agent/internal/pkg/httpx/params"
+	"cs-ai-agent/internal/pkg/httpx/params"
 	"github.com/mlogclub/simple/sqls"
 )
 

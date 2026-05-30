@@ -1,7 +1,7 @@
 package cronx
 
 import (
-	"cs-agent/internal/services"
+	"cs-ai-agent/internal/services"
 	"fmt"
 	"log/slog"
 

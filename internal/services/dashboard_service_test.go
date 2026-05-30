@@ -1,8 +1,8 @@
 package services
 
 import (
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/pkg/i18nx"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/i18nx"
 	"testing"
 )
 

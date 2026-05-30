@@ -1,13 +1,13 @@
 package services
 
 import (
-	"cs-agent/internal/models"
-	"cs-agent/internal/pkg/config"
-	"cs-agent/internal/pkg/dto/response"
-	"cs-agent/internal/pkg/enums"
-	"cs-agent/internal/pkg/errorsx"
-	"cs-agent/internal/repositories"
-	"cs-agent/internal/wxwork"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/pkg/config"
+	"cs-ai-agent/internal/pkg/dto/response"
+	"cs-ai-agent/internal/pkg/enums"
+	"cs-ai-agent/internal/pkg/errorsx"
+	"cs-ai-agent/internal/repositories"
+	"cs-ai-agent/internal/wxwork"
 	"strings"
 	"time"
 

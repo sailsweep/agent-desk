@@ -1,6 +1,6 @@
 package runtime
 
-import "cs-agent/internal/ai/runtime/registry"
+import "cs-ai-agent/internal/ai/runtime/registry"
 
 func newPrepareService(catalog *toolCatalog) *prepareService {
 	return &prepareService{catalog: catalog}

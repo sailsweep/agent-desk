@@ -95,7 +95,7 @@ AuditFields{
 运行所有测试数据初始化：
 
 ```bash
-cd cs-agent
+cd cs-ai-agent
 go run cmd/testdata/main.go -config config/config.yaml
 # 或使用 -yes 标志跳过确认
 go run cmd/testdata/main.go -config config/config.yaml -yes

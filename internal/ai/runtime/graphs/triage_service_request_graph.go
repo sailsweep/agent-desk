@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"cs-agent/internal/models"
-	"cs-agent/internal/services"
+	"cs-ai-agent/internal/models"
+	"cs-ai-agent/internal/services"
 )
 
 type TriageServiceRequestInput struct {
