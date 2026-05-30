@@ -186,15 +186,15 @@ export function LoginForm({
                             : "/api/auth/wxwork_qr_login"
                           window.location.href = `${path}?next=${encodeURIComponent(redirectPath)}`
                         }}
-                      >
-                        <Image
-                          src="/images/wxwork.svg"
-                          alt=""
+                        >
+                          <Image
+                            src="/images/wxwork.svg"
+                            alt=""
                           width={16}
-                          height={16}
-                          className="size-4 shrink-0"
-                        />
-                        <span className="sr-only">{t("auth.wxworkSignIn")}</span>
+                            height={16}
+                            className="size-4 shrink-0"
+                          />
+                        <span>{t("auth.wxworkSignIn")}</span>
                       </Button>
                     ) : null}
                     {authOptions.oidcEnabled ? (
@@ -207,7 +207,7 @@ export function LoginForm({
                         }}
                       >
                         <KeyRoundIcon className="size-4 shrink-0" />
-                        <span className="sr-only">{t("auth.oidcSignIn")}</span>
+                        <span>{t("auth.oidcSignIn")}</span>
                       </Button>
                     ) : null}
                   </Field>
