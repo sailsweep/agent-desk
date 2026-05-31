@@ -76,6 +76,8 @@ docker compose up -d --build
 
 For the full English setup guide, see [Docker Compose Quick Start](https://aiagent.huabei.pro/en/docs/getting-started/docker-compose).
 
+To embed customer support on your website, see [Web Widget Integration](https://aiagent.huabei.pro/en/docs/integration/web-widget).
+
 Compose starts:
 
 - `cs-ai-agent`: application service on port `8083`
