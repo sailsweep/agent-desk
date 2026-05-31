@@ -22,7 +22,7 @@ func Init() error {
 			id:        1,
 			groupName: "新客接待",
 			title:     "首次接入欢迎语",
-			content:   "您好，欢迎来到贝壳AI客服中心，我是今天为您服务的顾问。您可以直接告诉我您想了解的产品、价格或接入方式，我这边先帮您快速判断。",
+			content:   "您好，欢迎来到 AgentDesk 客服中心，我是今天为您服务的顾问。您可以直接告诉我您想了解的产品、价格或接入方式，我这边先帮您快速判断。",
 			status:    enums.StatusOk,
 			sortNo:    100,
 		},

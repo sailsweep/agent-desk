@@ -1,4 +1,4 @@
-# Beike AI Support
+# AgentDesk
 
 English | [简体中文](README_ZH.md)
 
@@ -281,7 +281,7 @@ Compose uses [docker/cs-ai-agent.yaml](docker/cs-ai-agent.yaml) as the in-contai
 
 ## Open-source Positioning
 
-`Beike AI Support` is useful as an open-source foundation for:
+`AgentDesk` is useful as an open-source foundation for:
 
 - AI customer support systems
 - AI Helpdesk / AI Support Platform projects

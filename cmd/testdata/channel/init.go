@@ -66,7 +66,7 @@ func buildSeedItems(aiAgentID int64) []models.Channel {
 			AIAgentID:   aiAgentID,
 			ConfigJSON: jsons.ToJsonStr(dto.WebChannelConfig{
 				Title:      "在线客服",
-				Subtitle:   "贝壳AI提供技术支持",
+				Subtitle:   "AgentDesk 提供技术支持",
 				ThemeColor: "#2563eb",
 				Position:   "right",
 				Width:      "780px",
