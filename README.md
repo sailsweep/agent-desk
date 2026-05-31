@@ -270,11 +270,11 @@ flowchart LR
 If you only need to build the application image, prepare MySQL and Qdrant yourself and mount a configuration file:
 
 ```bash
-docker build -t cs-ai-agent .
+docker build -t mlogclub/agent-desk .
 docker run --rm -p 8083:8083 \
   -v $(pwd)/docker/cs-ai-agent.yaml:/app/config/config.yaml:ro \
   -v cs-ai-agent-data:/app/data \
-  cs-ai-agent
+  mlogclub/agent-desk
 ```
 
 Compose uses [docker/cs-ai-agent.yaml](docker/cs-ai-agent.yaml) as the in-container configuration. The application reaches `mysql` and `qdrant` through Docker service names.

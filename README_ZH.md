@@ -270,11 +270,11 @@ flowchart LR
 如果只需要构建应用镜像，可以自行准备 MySQL 和 Qdrant，并挂载配置文件：
 
 ```bash
-docker build -t cs-ai-agent .
+docker build -t mlogclub/agent-desk .
 docker run --rm -p 8083:8083 \
   -v $(pwd)/docker/cs-ai-agent.yaml:/app/config/config.yaml:ro \
   -v cs-ai-agent-data:/app/data \
-  cs-ai-agent
+  mlogclub/agent-desk
 ```
 
 Compose 使用 [docker/cs-ai-agent.yaml](docker/cs-ai-agent.yaml) 作为容器内配置，应用会通过 Docker 内部服务名访问 `mysql` 和 `qdrant`。

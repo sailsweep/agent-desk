@@ -32,7 +32,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: cs-ai-agent:latest
+    image: mlogclub/agent-desk:latest
     restart: unless-stopped
     depends_on:
       mysql:

@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 env:
-  IMAGE_NAME: mlogclub/cs-ai-agent
+  IMAGE_NAME: mlogclub/agent-desk
 
 jobs:
   build:
