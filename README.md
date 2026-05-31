@@ -74,11 +74,11 @@ The fastest way to try the full stack is Docker Compose:
 docker compose up -d --build
 ```
 
-For the full English setup guide, see [Docker Compose Quick Start](https://aiagent.huabei.pro/en/docs/getting-started/docker-compose.html).
+For the full English setup guide, see [Docker Compose Quick Start](https://aiagent.huabei.pro/docs/getting-started/docker-compose.html).
 
-To embed customer support on your website, see [Web Widget Integration](https://aiagent.huabei.pro/en/docs/integration/web-widget.html).
+To embed customer support on your website, see [Web Widget Integration](https://aiagent.huabei.pro/docs/integration/web-widget.html).
 
-To connect OpenAI-compatible model providers, see [Model Provider Configuration](https://aiagent.huabei.pro/en/docs/config/model-provider.html).
+To connect OpenAI-compatible model providers, see [Model Provider Configuration](https://aiagent.huabei.pro/docs/config/model-provider.html).
 
 Compose starts:
 
