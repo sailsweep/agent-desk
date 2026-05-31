@@ -31,16 +31,16 @@ func handleTicketAssignedInAppNotification(ctx context.Context, event events.Tic
 	if ticket == nil {
 		return nil
 	}
-	content := fmt.Sprintf("工单 %s 已指派给你", strs.DefaultIfBlank(ticket.TicketNo, fmt.Sprintf("#%d", ticket.ID)))
+	content := fmt.Sprintf("Ticket %s has been assigned to you.", strs.DefaultIfBlank(ticket.TicketNo, fmt.Sprintf("#%d", ticket.ID)))
 	if title := strings.TrimSpace(ticket.Title); title != "" {
 		content = content + "\n" + title
 	}
 	if reason := strings.TrimSpace(event.Reason); reason != "" {
-		content = content + "\n指派原因: " + reason
+		content = content + "\nAssignment reason: " + reason
 	}
 	_, err := services.NotificationService.CreateAndPush(request.CreateNotificationRequest{
 		RecipientUserID:  event.ToUserID,
-		Title:            "工单指派提醒",
+		Title:            "Ticket assigned",
 		Content:          content,
 		NotificationType: "ticket_assigned",
 		BizType:          "ticket",
@@ -61,12 +61,12 @@ func handleConversationAssignedInAppNotification(ctx context.Context, event even
 	if conversation == nil {
 		return nil
 	}
-	content := fmt.Sprintf("会话 #%d 已分配给你", conversation.ID)
+	content := fmt.Sprintf("Conversation #%d has been assigned to you.", conversation.ID)
 	if summary := strings.TrimSpace(services.ConversationService.BuildConversationSummary(conversation)); summary != "" {
 		content = content + "\n" + summary
 	}
 	if reason := strings.TrimSpace(event.Reason); reason != "" {
-		content = content + "\n分配原因: " + reason
+		content = content + "\nAssignment reason: " + reason
 	}
 	_, err := services.NotificationService.CreateAndPush(request.CreateNotificationRequest{
 		RecipientUserID:  event.ToUserID,

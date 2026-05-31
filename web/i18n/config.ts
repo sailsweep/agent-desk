@@ -1,7 +1,7 @@
 export const SUPPORTED_LOCALES = ["zh-CN", "en-US"] as const
 export type AppLocale = (typeof SUPPORTED_LOCALES)[number]
 
-export const DEFAULT_LOCALE: AppLocale = "zh-CN"
+export const DEFAULT_LOCALE: AppLocale = "en-US"
 export const LOCALE_STORAGE_KEY = "cs_ai_agent_locale"
 
 const LOCALE_ALIASES: Record<string, AppLocale> = {

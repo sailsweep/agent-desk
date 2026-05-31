@@ -16,14 +16,14 @@ func TestNormalizeLocale(t *testing.T) {
 		in   string
 		want string
 	}{
-		{name: "default for blank", in: "", want: LocaleZhCN},
+		{name: "default for blank", in: "", want: LocaleEnUS},
 		{name: "exact chinese", in: "zh-CN", want: LocaleZhCN},
 		{name: "underscore chinese", in: "zh_CN", want: LocaleZhCN},
 		{name: "short chinese", in: "zh", want: LocaleZhCN},
 		{name: "exact english", in: "en-US", want: LocaleEnUS},
 		{name: "underscore english", in: "en_US", want: LocaleEnUS},
 		{name: "short english", in: "en", want: LocaleEnUS},
-		{name: "unsupported falls back", in: "fr-FR", want: LocaleZhCN},
+		{name: "unsupported falls back", in: "fr-FR", want: LocaleEnUS},
 	}
 
 	for _, tt := range tests {
@@ -60,13 +60,13 @@ func TestResolveLocalePrefersXLocale(t *testing.T) {
 	}
 }
 
-func TestTranslateFallsBackToChinese(t *testing.T) {
+func TestTranslateFallsBackToEnglish(t *testing.T) {
 	t.Parallel()
 
 	if got := TLocale(LocaleEnUS, "error.auth.expired", nil); got != "Your session has expired. Please sign in again." {
 		t.Fatalf("english translation = %q", got)
 	}
-	if got := TLocale("fr-FR", "error.auth.expired", nil); got != "未登录或登录已过期" {
+	if got := TLocale("fr-FR", "error.auth.expired", nil); got != "Your session has expired. Please sign in again." {
 		t.Fatalf("fallback translation = %q", got)
 	}
 }

@@ -183,13 +183,13 @@ func recommendNextAction(intent string, signals []string, input AnalyzeConversat
 func recommendQuestions(intent string, signals []string, input AnalyzeConversationInput) []string {
 	questions := make([]string, 0, 3)
 	if containsSignal(signals, "ticket_expected") && strings.TrimSpace(input.ObservedIssue) == "" {
-		questions = append(questions, "请进一步确认用户遇到的具体问题现象、报错信息和期望处理结果。")
+		questions = append(questions, "Please confirm the specific issue, error message, and expected outcome.")
 	}
 	if containsSignal(signals, "handoff_requested") {
-		questions = append(questions, "请确认用户是否明确要求人工客服，以及当前问题为何需要人工继续处理。")
+		questions = append(questions, "Please confirm whether the user explicitly requested human support and why the issue needs human handling.")
 	}
 	if intent == "complaint" {
-		questions = append(questions, "请确认投诉点、影响范围和用户当前最希望解决的事项。")
+		questions = append(questions, "Please confirm the complaint, impact, and the user's most important desired outcome.")
 	}
 	return questions
 }

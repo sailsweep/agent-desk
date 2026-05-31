@@ -52,7 +52,7 @@ func (t *HandoffGraphTool) Build(ctx registry.Context) (einotool.BaseTool, error
 func (t *HandoffGraphTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
 	return &schema.ToolInfo{
 		Name: toolx.GraphHandoffConversation.Name,
-		Desc: "Graph Tool。用于封装转人工原因整理、用户确认、真正转人工和结果返回的确定性流程。仅在用户明确要求人工客服，或你已确认必须转人工处理时调用；若结果标记 terminal=true 且 shouldRetry=false，不要重复调用。",
+		Desc: "Graph Tool. Handles handoff reason preparation, user confirmation, actual human handoff, and result return. Use only when the user explicitly asks for a human agent or you have confirmed that human handling is required. Do not repeat the call when the result has terminal=true and shouldRetry=false.",
 		ParamsOneOf: schema.NewParamsOneOfByJSONSchema(&einojsonschema.Schema{
 			Version: einojsonschema.Version,
 			Type:    "object",
@@ -61,7 +61,7 @@ func (t *HandoffGraphTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
 					Key: "reason",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "转人工原因，简洁说明为何需要人工介入，例如用户明确要求人工、问题需要人工核验、需要人工售后处理等。",
+						Description: "Handoff reason. Briefly explain why a human is needed, such as explicit user request, manual verification, or after-sales handling.",
 					},
 				},
 			)),

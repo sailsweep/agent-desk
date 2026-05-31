@@ -237,7 +237,7 @@ func (s *ticketService) CreateTicket(req request.CreateTicketRequest, operator *
 		}
 		return repositories.TicketProgressRepository.Create(ctx.Tx, &models.TicketProgress{
 			TicketID:  ticket.ID,
-			Content:   "创建工单",
+			Content:   "Created ticket",
 			AuthorID:  operator.UserID,
 			CreatedAt: time.Now(),
 		})
@@ -265,7 +265,7 @@ func (s *ticketService) CreateFromConversation(req request.CreateTicketFromConve
 		title = strings.TrimSpace(ConversationService.BuildConversationSummary(conversation))
 	}
 	if title == "" {
-		title = "会话工单"
+		title = "Conversation ticket"
 	}
 	description := strings.TrimSpace(req.Description)
 	if description == "" {

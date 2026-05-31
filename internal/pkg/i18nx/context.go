@@ -6,15 +6,15 @@ const contextLocaleKey = "i18nx.locale"
 
 func Locale(ctx *gin.Context) string {
 	if ctx == nil {
-		return LocaleZhCN
+		return DefaultLocale
 	}
 	value, ok := ctx.Get(contextLocaleKey)
 	if !ok {
-		return LocaleZhCN
+		return DefaultLocale
 	}
 	locale, ok := value.(string)
 	if !ok {
-		return LocaleZhCN
+		return DefaultLocale
 	}
 	return NormalizeLocale(locale)
 }

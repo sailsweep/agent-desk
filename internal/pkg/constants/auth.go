@@ -18,7 +18,7 @@ const (
 const (
 	BootstrapAdminUsername = "admin"
 	BootstrapAdminPassword = "ChangeMe123!"
-	BootstrapAdminNickname = "超级管理员"
+	BootstrapAdminNickname = "Super Admin"
 )
 
 // Permission 权限结构体
@@ -278,9 +278,109 @@ var PermissionMap = make(map[string]Permission)
 
 // init 初始化 PermissionMap
 func init() {
+	normalizeBuiltinPermissionNames()
 	for _, permission := range Permissions {
 		PermissionMap[permission.Code] = permission
 	}
+}
+
+func normalizeBuiltinPermissionNames() {
+	for i := range Permissions {
+		Permissions[i].Name = builtinPermissionName(Permissions[i].Code, Permissions[i].Name)
+	}
+}
+
+func builtinPermissionName(code string, fallback string) string {
+	if name, ok := builtinPermissionNameOverrides[code]; ok {
+		return name
+	}
+	resourceKey, actionKey, ok := splitPermissionCode(code)
+	if !ok {
+		return fallback
+	}
+	action, ok := builtinPermissionActionLabels[actionKey]
+	if !ok {
+		return fallback
+	}
+	resource, ok := builtinPermissionResourceLabels[resourceKey]
+	if !ok {
+		return fallback
+	}
+	return action + " " + resource
+}
+
+func splitPermissionCode(code string) (string, string, bool) {
+	for i := 0; i < len(code); i++ {
+		if code[i] == '.' {
+			return code[:i], code[i+1:], i > 0 && i < len(code)-1
+		}
+	}
+	return "", "", false
+}
+
+var builtinPermissionActionLabels = map[string]string{
+	"view":             "View",
+	"create":           "Create",
+	"update":           "Update",
+	"delete":           "Delete",
+	"assignRole":       "Assign roles to",
+	"assignPermission": "Assign permissions to",
+	"sync":             "Sync",
+	"revoke":           "Revoke",
+	"assign":           "Assign",
+	"transfer":         "Transfer",
+	"close":            "Close",
+	"send":             "Send",
+	"tag":              "Manage tags for",
+	"handover":         "Handle handoffs for",
+	"recycle":          "Recycle",
+	"linkCustomer":     "Link customers to",
+	"changeStatus":     "Change status for",
+	"progress":         "Update progress for",
+	"updateStatus":     "Update status for",
+	"config":           "Configure service rules for",
+	"batchGenerate":    "Batch generate",
+	"call":             "Call",
+}
+
+var builtinPermissionResourceLabels = map[string]string{
+	"user":              "users",
+	"role":              "roles",
+	"permission":        "permissions",
+	"session":           "sessions",
+	"conversation":      "conversations",
+	"ticket":            "tickets",
+	"notification":      "notifications",
+	"quickReply":        "quick replies",
+	"tag":               "tags",
+	"company":           "companies",
+	"channel":           "channels",
+	"customer":          "customers",
+	"agent":             "agents",
+	"agentTeam":         "agent teams",
+	"agentTeamSchedule": "agent team schedules",
+	"asset":             "file assets",
+	"aiAgent":           "AI Agents",
+	"aiConfig":          "AI configurations",
+	"knowledgeBase":     "knowledge bases",
+	"knowledgeDocument": "knowledge documents",
+	"knowledgeFAQ":      "knowledge FAQs",
+	"skillDefinition":   "Skill definitions",
+	"mcp":               "MCP tools",
+}
+
+var builtinPermissionNameOverrides = map[string]string{
+	"user.assignRole":                 "Assign user roles",
+	"role.assignPermission":           "Assign role permissions",
+	"session.revoke":                  "Revoke sessions",
+	"conversation.send":               "Send conversation messages",
+	"conversation.linkCustomer":       "Link conversation customer",
+	"ticket.changeStatus":             "Change ticket status",
+	"ticket.progress":                 "Update ticket progress",
+	"agent.config":                    "Configure agent service rules",
+	"agentTeamSchedule.batchGenerate": "Batch generate agent team schedules",
+	"mcp.view":                        "View MCP debug information",
+	"mcp.call":                        "Call MCP tools",
 }
 
 type RoleSpec struct {
@@ -290,10 +390,10 @@ type RoleSpec struct {
 }
 
 var Roles = []RoleSpec{
-	{Name: "超级管理员", Code: RoleCodeSuperAdmin, SortNo: 1},
-	{Name: "管理员", Code: RoleCodeAdmin, SortNo: 2},
-	{Name: "客服组长", Code: RoleCodeCsTeamLeader, SortNo: 3},
-	{Name: "客服", Code: RoleCodeCsUser, SortNo: 4},
+	{Name: "Super Admin", Code: RoleCodeSuperAdmin, SortNo: 1},
+	{Name: "Admin", Code: RoleCodeAdmin, SortNo: 2},
+	{Name: "Support Team Lead", Code: RoleCodeCsTeamLeader, SortNo: 3},
+	{Name: "Support Agent", Code: RoleCodeCsUser, SortNo: 4},
 }
 
 var RolePermissions = map[string][]Permission{

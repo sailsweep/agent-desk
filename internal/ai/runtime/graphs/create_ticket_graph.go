@@ -89,7 +89,7 @@ func (g *CreateTicketGraph) Run(ctx context.Context, argumentsInJSON string) (st
 			Handled:     true,
 			Terminal:    true,
 			Action:      "ticket_created",
-			ReplyText:   fmt.Sprintf("工单已创建，工单号：%s，标题：%s。", strings.TrimSpace(item.TicketNo), strings.TrimSpace(item.Title)),
+			ReplyText:   fmt.Sprintf("Ticket created. Ticket no: %s. Title: %s.", strings.TrimSpace(item.TicketNo), strings.TrimSpace(item.Title)),
 			ShouldRetry: false,
 		}), nil
 	case ConfirmationDecisionCancel:
@@ -134,7 +134,7 @@ func (g *CreateTicketGraph) buildCreateRequest(argumentsInJSON string) (request.
 }
 
 func (g *CreateTicketGraph) buildConfirmationPrompt(req request.CreateTicketFromConversationRequest) string {
-	return fmt.Sprintf("我准备为你创建工单。\n标题：%s\n描述：%s\n请直接回复“确认”或“取消”。",
+	return fmt.Sprintf("I am ready to create a ticket for you.\nTitle: %s\nDescription: %s\nPlease reply with \"Confirm\" or \"Cancel\".",
 		strings.TrimSpace(req.Title), strings.TrimSpace(req.Description))
 }
 

@@ -20,7 +20,7 @@ var (
 
 func Bundle() *i18n.Bundle {
 	bundleOnce.Do(func() {
-		b := i18n.NewBundle(language.SimplifiedChinese)
+		b := i18n.NewBundle(language.AmericanEnglish)
 		b.RegisterUnmarshalFunc("toml", toml.Unmarshal)
 		for _, name := range []string{
 			"locales/active.zh-CN.toml",

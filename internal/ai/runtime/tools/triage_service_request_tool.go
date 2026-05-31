@@ -48,7 +48,7 @@ func (t *TriageServiceRequestTool) Build(ctx registry.Context) (einotool.BaseToo
 func (t *TriageServiceRequestTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
 	return &schema.ToolInfo{
 		Name: toolx.GraphTriageServiceRequest.Name,
-		Desc: "Graph Tool。用于综合分析当前对话，判断应该继续解答、整理工单草稿还是转人工；当判断为建单时，会一并返回结构化工单草稿建议。",
+		Desc: "Graph Tool. Analyzes the current conversation to decide whether to continue answering, prepare a ticket draft, or hand off to a human. When ticket creation is recommended, it returns a structured ticket draft suggestion.",
 		ParamsOneOf: schema.NewParamsOneOfByJSONSchema(&einojsonschema.Schema{
 			Version: einojsonschema.Version,
 			Type:    "object",
@@ -57,35 +57,35 @@ func (t *TriageServiceRequestTool) Info(ctx context.Context) (*schema.ToolInfo, 
 					Key: "goal",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "当前分析目标，例如判断是否需要升级、是否要建单或转人工。",
+						Description: "Analysis goal, such as whether to escalate, create a ticket, or hand off to a human.",
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "observedIssue",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "当前观察到的主要问题或争议点。",
+						Description: "Main issue or dispute observed in the conversation.",
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "needTicket",
 					Value: &einojsonschema.Schema{
 						Type:        "boolean",
-						Description: "是否重点评估建单必要性。",
+						Description: "Whether to focus on evaluating ticket creation.",
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "needHumanHandoff",
 					Value: &einojsonschema.Schema{
 						Type:        "boolean",
-						Description: "是否重点评估转人工必要性。",
+						Description: "Whether to focus on evaluating human handoff.",
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "additionalContext",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "补充上下文，例如你已发现的风险点或限制条件。",
+						Description: "Additional context, such as risk signals or constraints already identified.",
 					},
 				},
 			)),

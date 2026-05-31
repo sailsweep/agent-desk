@@ -52,7 +52,7 @@ func (t *CreateTicketGraphTool) Build(ctx registry.Context) (einotool.BaseTool, 
 func (t *CreateTicketGraphTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
 	return &schema.ToolInfo{
 		Name: toolx.GraphCreateTicketConfirm.Name,
-		Desc: "Graph Tool。用于封装建单参数整理、用户确认、真正创建工单和结果返回的确定性流程。仅在用户明确要求建单且标题、描述已整理清楚后调用。",
+		Desc: "Graph Tool. Handles ticket parameter preparation, user confirmation, actual ticket creation, and result return. Use only when the user explicitly asks to create a ticket and the title and description are clear.",
 		ParamsOneOf: schema.NewParamsOneOfByJSONSchema(&einojsonschema.Schema{
 			Version: einojsonschema.Version,
 			Type:    "object",
@@ -65,14 +65,14 @@ func (t *CreateTicketGraphTool) Info(ctx context.Context) (*schema.ToolInfo, err
 					Key: "title",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "工单标题，简洁概括问题。",
+						Description: "Ticket title. Concisely summarizes the issue.",
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "description",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "工单描述，清晰整理用户问题、现象和诉求。",
+						Description: "Ticket description. Clearly captures the user's issue, symptoms, and request.",
 					},
 				},
 			)),

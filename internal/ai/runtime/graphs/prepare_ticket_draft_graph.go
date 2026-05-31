@@ -78,11 +78,11 @@ func buildPrepareTicketDraftResult(conversation models.Conversation, messages []
 	result.Description = buildDraftDescription(conversation, messages, input)
 	if strings.TrimSpace(result.Title) == "" {
 		result.MissingFields = append(result.MissingFields, "title")
-		result.FollowUpQuestions = append(result.FollowUpQuestions, "请补充一个简洁的工单标题，明确概括用户遇到的问题。")
+		result.FollowUpQuestions = append(result.FollowUpQuestions, "Please provide a concise ticket title that clearly summarizes the issue.")
 	}
 	if !hasSufficientIssueContext(input, result.Description) {
 		result.MissingFields = append(result.MissingFields, "issue")
-		result.FollowUpQuestions = append(result.FollowUpQuestions, "请补充具体问题现象、报错信息或用户诉求，以便整理成工单。")
+		result.FollowUpQuestions = append(result.FollowUpQuestions, "Please provide the specific issue, error message, or request so I can prepare the ticket.")
 	}
 	result.Ready = result.Title != "" && result.Description != "" && len(result.MissingFields) == 0
 	return result
@@ -107,22 +107,22 @@ func buildDraftDescription(conversation models.Conversation, messages []models.M
 	}
 	parts := make([]string, 0, 6)
 	if input.Issue != "" {
-		parts = append(parts, "问题现象："+input.Issue)
+		parts = append(parts, "Issue: "+input.Issue)
 	}
 	if input.Impact != "" {
-		parts = append(parts, "影响范围："+input.Impact)
+		parts = append(parts, "Impact: "+input.Impact)
 	}
 	if input.ExpectedOutcome != "" {
-		parts = append(parts, "用户诉求："+input.ExpectedOutcome)
+		parts = append(parts, "Requested outcome: "+input.ExpectedOutcome)
 	}
 	if input.CurrentAttempt != "" {
-		parts = append(parts, "已尝试处理："+input.CurrentAttempt)
+		parts = append(parts, "Attempts so far: "+input.CurrentAttempt)
 	}
 	if strings.TrimSpace(conversation.LastMessageSummary) != "" {
-		parts = append(parts, "会话摘要："+strings.TrimSpace(conversation.LastMessageSummary))
+		parts = append(parts, "Conversation summary: "+strings.TrimSpace(conversation.LastMessageSummary))
 	}
 	if recent := buildRecentMessageDigest(messages); recent != "" {
-		parts = append(parts, "最近消息："+recent)
+		parts = append(parts, "Recent messages: "+recent)
 	}
 	return strings.TrimSpace(strings.Join(parts, "\n"))
 }
@@ -137,10 +137,10 @@ func hasSufficientIssueContext(input PrepareTicketDraftInput, description string
 func buildConversationFacts(conversation models.Conversation, messages []models.Message) []string {
 	facts := make([]string, 0, 4)
 	if strings.TrimSpace(conversation.LastMessageSummary) != "" {
-		facts = append(facts, "最近摘要："+strings.TrimSpace(conversation.LastMessageSummary))
+		facts = append(facts, "Recent summary: "+strings.TrimSpace(conversation.LastMessageSummary))
 	}
 	if digest := buildRecentMessageDigest(messages); digest != "" {
-		facts = append(facts, "最近消息："+digest)
+		facts = append(facts, "Recent messages: "+digest)
 	}
 	return facts
 }
@@ -163,13 +163,13 @@ func buildRecentMessageDigest(messages []models.Message) string {
 func messageSenderLabel(senderType enums.IMSenderType) string {
 	switch senderType {
 	case enums.IMSenderTypeCustomer:
-		return "用户"
+		return "Customer"
 	case enums.IMSenderTypeAgent:
-		return "客服"
+		return "Agent"
 	case enums.IMSenderTypeAI:
 		return "AI"
 	default:
-		return "消息"
+		return "Message"
 	}
 }
 

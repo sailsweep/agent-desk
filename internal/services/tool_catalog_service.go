@@ -34,7 +34,7 @@ type MCPToolCatalogItem struct {
 }
 
 func (s *toolCatalogService) ListMCPTools(ctx context.Context) ([]MCPToolCatalogItem, error) {
-	return s.ListMCPToolsWithLocale(ctx, i18nx.LocaleZhCN)
+	return s.ListMCPToolsWithLocale(ctx, i18nx.DefaultLocale)
 }
 
 func (s *toolCatalogService) ListMCPToolsWithLocale(ctx context.Context, locale string) ([]MCPToolCatalogItem, error) {

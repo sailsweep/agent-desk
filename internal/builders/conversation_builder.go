@@ -14,7 +14,7 @@ import (
 )
 
 func BuildConversation(item *models.Conversation) response.ConversationResponse {
-	return BuildConversationWithLocale(item, i18nx.LocaleZhCN)
+	return BuildConversationWithLocale(item, i18nx.DefaultLocale)
 }
 
 func BuildConversationWithLocale(item *models.Conversation, locale string) response.ConversationResponse {
@@ -114,7 +114,7 @@ func BuildParticipantResponses(conversationID int64) []response.ConversationPart
 }
 
 func BuildMessages(list []models.Message) []response.MessageResponse {
-	return BuildMessagesWithLocale(list, i18nx.LocaleZhCN)
+	return BuildMessagesWithLocale(list, i18nx.DefaultLocale)
 }
 
 func BuildMessagesWithLocale(list []models.Message, locale string) []response.MessageResponse {
@@ -132,7 +132,7 @@ func BuildMessagesWithLocale(list []models.Message, locale string) []response.Me
 }
 
 func BuildMessage(item *models.Message) response.MessageResponse {
-	return BuildMessageWithLocale(item, i18nx.LocaleZhCN)
+	return BuildMessageWithLocale(item, i18nx.DefaultLocale)
 }
 
 func BuildMessageWithLocale(item *models.Message, locale string) response.MessageResponse {
@@ -141,7 +141,7 @@ func BuildMessageWithLocale(item *models.Message, locale string) response.Messag
 }
 
 func BuildMessageWithReadStates(item *models.Message, agentReadState, customerReadState *models.ConversationReadState, aiSenderNames, userSenderNames map[int64]string, agentProfiles map[int64]*models.AgentProfile) response.MessageResponse {
-	return BuildMessageWithReadStatesAndLocale(item, agentReadState, customerReadState, aiSenderNames, userSenderNames, agentProfiles, i18nx.LocaleZhCN)
+	return BuildMessageWithReadStatesAndLocale(item, agentReadState, customerReadState, aiSenderNames, userSenderNames, agentProfiles, i18nx.DefaultLocale)
 }
 
 func BuildMessageWithReadStatesAndLocale(item *models.Message, agentReadState, customerReadState *models.ConversationReadState, aiSenderNames, userSenderNames map[int64]string, agentProfiles map[int64]*models.AgentProfile, locale string) response.MessageResponse {

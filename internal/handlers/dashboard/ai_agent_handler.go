@@ -161,7 +161,7 @@ func AIAgentPostUpdate_status(ctx *gin.Context) {
 }
 
 func buildAIAgentResponse(item *models.AIAgent) response.AIAgentResponse {
-	return buildAIAgentResponseWithLocale(item, i18nx.LocaleZhCN)
+	return buildAIAgentResponseWithLocale(item, i18nx.DefaultLocale)
 }
 
 func buildAIAgentResponseWithLocale(item *models.AIAgent, locale string) response.AIAgentResponse {

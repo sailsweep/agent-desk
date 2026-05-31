@@ -81,7 +81,7 @@ func TestTicketServiceCreateTicketSetsPendingStatusAndTicketNo(t *testing.T) {
 	if len(progresses) != 1 {
 		t.Fatalf("expected initial progress, got %d", len(progresses))
 	}
-	if progresses[0].Content != "创建工单" || progresses[0].AuthorID != operator.UserID {
+	if progresses[0].Content != "Created ticket" || progresses[0].AuthorID != operator.UserID {
 		t.Fatalf("unexpected initial progress: %+v", progresses[0])
 	}
 

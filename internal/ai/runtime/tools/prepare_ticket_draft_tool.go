@@ -48,7 +48,7 @@ func (t *PrepareTicketDraftTool) Build(ctx registry.Context) (einotool.BaseTool,
 func (t *PrepareTicketDraftTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
 	return &schema.ToolInfo{
 		Name: toolx.GraphPrepareTicketDraft.Name,
-		Desc: "Graph Tool。用于根据当前会话和已收集信息整理工单草稿，输出建议标题、建议描述、缺失字段和追问建议。适合在真正调用 create_ticket_with_confirmation 前先整理工单内容。",
+		Desc: "Graph Tool. Prepares a ticket draft from the current conversation and collected information. Use it before create_ticket_with_confirmation when the ticket content needs to be organized.",
 		ParamsOneOf: schema.NewParamsOneOfByJSONSchema(&einojsonschema.Schema{
 			Version: einojsonschema.Version,
 			Type:    "object",
@@ -57,35 +57,35 @@ func (t *PrepareTicketDraftTool) Info(ctx context.Context) (*schema.ToolInfo, er
 					Key: "title",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "已整理出的工单标题，可选。",
+						Description: "Prepared ticket title. Optional.",
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "description",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "已整理出的工单描述，可选。",
+						Description: "Prepared ticket description. Optional.",
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "issue",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "用户当前遇到的问题现象或报错信息。",
+						Description: "The issue or error message the user is experiencing.",
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "impact",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "问题影响范围，例如无法登录、无法下单、业务中断等。",
+						Description: "Impact scope, such as unable to sign in, unable to place an order, or business interruption.",
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "expectedOutcome",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "用户期望的处理结果或诉求。",
+						Description: "The user's expected outcome or request.",
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{

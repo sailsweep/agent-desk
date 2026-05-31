@@ -122,7 +122,7 @@ func (g *HandoffGraph) Run(ctx context.Context, argumentsInJSON string) (string,
 }
 
 func (g *HandoffGraph) buildReason(argumentsInJSON string) (string, error) {
-	reason := "用户需要转人工支持"
+	reason := "The user needs human support."
 	var args handoffGraphArgs
 	if strings.TrimSpace(argumentsInJSON) != "" {
 		if err := json.Unmarshal([]byte(argumentsInJSON), &args); err != nil {
@@ -136,7 +136,7 @@ func (g *HandoffGraph) buildReason(argumentsInJSON string) (string, error) {
 }
 
 func (g *HandoffGraph) buildConfirmationPrompt(reason string) string {
-	return fmt.Sprintf("我准备为你转接人工客服。\n原因：%s\n请直接回复“确认”或“取消”。", strings.TrimSpace(reason))
+	return fmt.Sprintf("I am ready to connect you to a human support agent.\nReason: %s\nPlease reply with \"Confirm\" or \"Cancel\".", strings.TrimSpace(reason))
 }
 
 func parseHandoffDecision(value string) ConfirmationDecision {

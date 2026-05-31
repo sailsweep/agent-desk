@@ -16,7 +16,7 @@ var (
 )
 
 func BuildNotification(item *models.Notification) *response.NotificationResponse {
-	return BuildNotificationWithLocale(item, i18nx.LocaleZhCN)
+	return BuildNotificationWithLocale(item, i18nx.DefaultLocale)
 }
 
 func BuildNotificationWithLocale(item *models.Notification, locale string) *response.NotificationResponse {
@@ -39,7 +39,7 @@ func BuildNotificationWithLocale(item *models.Notification, locale string) *resp
 }
 
 func BuildNotificationList(list []models.Notification) []response.NotificationResponse {
-	return BuildNotificationListWithLocale(list, i18nx.LocaleZhCN)
+	return BuildNotificationListWithLocale(list, i18nx.DefaultLocale)
 }
 
 func BuildNotificationListWithLocale(list []models.Notification, locale string) []response.NotificationResponse {

@@ -42,9 +42,9 @@ function getWidgetLocale() {
   try {
     const stored = window.localStorage?.getItem("cs_ai_agent_locale")
     const language = stored || document.documentElement.lang || window.navigator?.language || ""
-    return language.toLowerCase().startsWith("en") ? "en-US" : "zh-CN"
+    return language.toLowerCase().startsWith("zh") ? "zh-CN" : "en-US"
   } catch {
-    return "zh-CN"
+    return "en-US"
   }
 }
 

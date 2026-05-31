@@ -48,7 +48,7 @@ func (t *AnalyzeConversationTool) Build(ctx registry.Context) (einotool.BaseTool
 func (t *AnalyzeConversationTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
 	return &schema.ToolInfo{
 		Name: toolx.GraphAnalyzeConversation.Name,
-		Desc: "Graph Tool。用于整理当前对话摘要、识别投诉/资金/情绪等风险信号，并给出继续解答、建单或转人工的建议。",
+		Desc: "Graph Tool. Summarizes the current conversation, identifies complaint/payment/sentiment risk signals, and recommends whether to continue answering, create a ticket, or hand off to a human.",
 		ParamsOneOf: schema.NewParamsOneOfByJSONSchema(&einojsonschema.Schema{
 			Version: einojsonschema.Version,
 			Type:    "object",
@@ -57,42 +57,42 @@ func (t *AnalyzeConversationTool) Info(ctx context.Context) (*schema.ToolInfo, e
 					Key: "goal",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "当前分析目标，例如判断是否需要转人工、是否需要建单、是否需要做风险质检。",
+						Description: "Analysis goal, such as whether to hand off to a human, create a ticket, or perform risk review.",
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "observedIssue",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "当前观察到的主要问题或诉求。",
+						Description: "Main issue or request observed in the conversation.",
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "needTicket",
 					Value: &einojsonschema.Schema{
 						Type:        "boolean",
-						Description: "是否重点评估建单必要性。",
+						Description: "Whether to focus on evaluating ticket creation.",
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "needHumanHandoff",
 					Value: &einojsonschema.Schema{
 						Type:        "boolean",
-						Description: "是否重点评估转人工必要性。",
+						Description: "Whether to focus on evaluating human handoff.",
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "needQualityCheck",
 					Value: &einojsonschema.Schema{
 						Type:        "boolean",
-						Description: "是否重点做风险/质检分析。",
+						Description: "Whether to focus on risk or quality review.",
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "additionalContext",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "补充上下文，例如你已发现的争议点、投诉点或业务限制。",
+						Description: "Additional context, such as disputes, complaint points, or business constraints already identified.",
 					},
 				},
 			)),

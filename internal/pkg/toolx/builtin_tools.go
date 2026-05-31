@@ -58,87 +58,87 @@ var (
 		Code:          "graph/triage_service_request",
 		ServerCode:    "graph",
 		Name:          "triage_service_request",
-		Title:         "升级分流判断",
-		Description:   "Graph Tool。用于综合分析当前对话，判断应继续解答、整理工单草稿还是转人工，并在需要建单时一并整理工单草稿。",
+		Title:         "Triage service request",
+		Description:   "Graph Tool. Analyzes the current conversation to decide whether to continue answering, prepare a ticket draft, or hand off to a human. It also prepares a ticket draft when ticket creation is recommended.",
 		SourceType:    enums.ToolSourceTypeGraph,
 		RuntimeStatic: true,
 		Appendix: strings.TrimSpace(`
-当你需要判断“继续解答 / 建单 / 转人工”这类复杂升级路径时，优先先调用 triage_service_request 这个 Graph Tool，并遵守以下规则：
-1. 该工具会综合当前对话输出 recommendedAction，并在需要建单时附带 ticketDraft。
-2. 如果 recommendedAction=continue_answering，则优先继续澄清或解答，不要直接升级。
-3. 如果 recommendedAction=prepare_ticket，则优先使用 ticketDraft 或继续补充缺失字段，再调用 create_ticket_with_confirmation。
-4. 如果 recommendedAction=handoff_to_human，则确认理由充分后再调用 handoff_to_human。
-5. 当升级路径不明确时，优先使用该工具，而不是直接凭主 prompt 做复杂分流判断。
+When you need to decide between continuing the answer, creating a ticket, or handing off to a human, call triage_service_request first and follow these rules:
+1. The tool returns recommendedAction and includes ticketDraft when ticket creation is needed.
+2. If recommendedAction=continue_answering, continue clarifying or answering instead of escalating directly.
+3. If recommendedAction=prepare_ticket, use ticketDraft or collect missing fields before calling create_ticket_with_confirmation.
+4. If recommendedAction=handoff_to_human, confirm the reason is sufficient before calling handoff_to_human.
+5. When the escalation path is unclear, use this tool instead of making a complex routing decision from the main prompt alone.
 `),
 	}
 	GraphAnalyzeConversation = ToolSpec{
 		Code:          "graph/analyze_conversation",
 		ServerCode:    "graph",
 		Name:          "analyze_conversation",
-		Title:         "分析对话风险与摘要",
-		Description:   "Graph Tool。用于整理当前对话摘要、识别风险信号，并给出继续解答、建单或转人工的建议。",
+		Title:         "Analyze conversation risk and summary",
+		Description:   "Graph Tool. Summarizes the current conversation, identifies risk signals, and recommends whether to continue answering, create a ticket, or hand off to a human.",
 		SourceType:    enums.ToolSourceTypeGraph,
 		RuntimeStatic: true,
 		Appendix: strings.TrimSpace(`
-当对话可能涉及投诉升级、退款赔偿、明显负面情绪、是否要建单、是否要转人工等复杂判断时，优先调用 analyze_conversation 这个 Graph Tool，并遵守以下规则：
-1. 该工具用于输出结构化摘要、风险信号和下一步建议，不代表实际已经建单或转人工。
-2. 如果工具建议为 handoff_to_human，应先确认是否满足转人工条件，再考虑调用 handoff_to_human。
-3. 如果工具建议为 prepare_ticket，应优先调用 prepare_ticket_draft 或继续补充信息，而不是直接建单。
-4. 如果工具建议为 continue_answering，优先继续澄清和解答，不要过早升级动作。
+When the conversation may involve escalation, refunds, compensation, clear negative sentiment, ticket creation, or human handoff, call analyze_conversation first and follow these rules:
+1. This tool returns a structured summary, risk signals, and next-step recommendation. It does not create tickets or hand off to a human.
+2. If the tool recommends handoff_to_human, confirm the handoff conditions before calling handoff_to_human.
+3. If the tool recommends prepare_ticket, call prepare_ticket_draft or collect more information before creating a ticket.
+4. If the tool recommends continue_answering, continue clarifying and answering instead of escalating too early.
 `),
 	}
 	GraphPrepareTicketDraft = ToolSpec{
 		Code:          "graph/prepare_ticket_draft",
 		ServerCode:    "graph",
 		Name:          "prepare_ticket_draft",
-		Title:         "整理工单草稿",
-		Description:   "Graph Tool。用于根据当前会话和已收集信息整理工单草稿，输出建议标题、描述、缺失字段和追问建议。",
+		Title:         "Prepare ticket draft",
+		Description:   "Graph Tool. Prepares a ticket draft from the current conversation and collected information, including a suggested title, description, missing fields, and follow-up questions.",
 		SourceType:    enums.ToolSourceTypeGraph,
 		RuntimeStatic: true,
 		Appendix: strings.TrimSpace(`
-当用户已经表达了建单、投诉、报障、售后处理等诉求，但工单标题、描述或问题整理还比较散乱时，优先调用 prepare_ticket_draft 这个 Graph Tool，并遵守以下规则：
-1. 该工具用于整理工单草稿，会返回建议标题、建议描述、缺失字段和追问建议。
-2. 如果工具返回 ready=false，优先根据 missingFields 和 followUpQuestions 继续追问，不要直接创建工单。
-3. 如果工具返回 ready=true，再结合结果考虑调用 create_ticket_with_confirmation。
-4. 该工具用于“整理草稿”，不代表已经创建工单。
+When the user has asked to create a ticket, file a complaint, report an issue, or request after-sales handling, but the title or description is still unclear, call prepare_ticket_draft first and follow these rules:
+1. This tool prepares a ticket draft and returns a suggested title, suggested description, missing fields, and follow-up questions.
+2. If ready=false, ask follow-up questions based on missingFields and followUpQuestions instead of creating a ticket directly.
+3. If ready=true, use the result to consider calling create_ticket_with_confirmation.
+4. This tool only prepares a draft. It does not create a ticket.
 `),
 	}
 	GraphCreateTicketConfirm = ToolSpec{
 		Code:          "graph/create_ticket_with_confirmation",
 		ServerCode:    "graph",
 		Name:          "create_ticket_with_confirmation",
-		Title:         "创建工单确认流程",
-		Description:   "Graph Tool。用于封装建单参数整理、用户确认、真正建单和结果返回的确定性流程。",
+		Title:         "Create ticket confirmation flow",
+		Description:   "Graph Tool. Handles ticket parameter preparation, user confirmation, actual ticket creation, and result return.",
 		SourceType:    enums.ToolSourceTypeGraph,
 		DirectAccess:  true,
 		RuntimeStatic: true,
 		Aliases:       []string{"builtin/create_ticket_with_confirmation"},
 		Appendix: strings.TrimSpace(`
-你可以在确认信息充分后调用 create_ticket_with_confirmation 这个 Graph Tool 来创建工单，但必须遵守以下规则：
-1. 只有在用户明确表达希望提交工单、投诉、报障、售后处理等诉求时，才考虑调用该工具。
-2. 调用前你必须已经整理出清晰的工单标题和问题描述；如果信息还比较散乱，优先先调用 prepare_ticket_draft 或继续追问，不要过早调用。
-3. 一旦准备创建工单，必须调用 create_ticket_with_confirmation 工具，禁止直接口头宣称“已经创建工单”。
-4. 该 Graph Tool 会先向用户发起确认。用户确认后才会真正创建工单；用户取消则结束本次建单流程。
-5. 如果用户只是咨询、抱怨或泛泛表达不满，但没有明确要求建单，优先继续澄清，不要主动创建工单。
+You can call create_ticket_with_confirmation after enough information has been collected, but follow these rules:
+1. Only consider this tool when the user explicitly wants to submit a ticket, complaint, issue report, or after-sales request.
+2. Before calling it, prepare a clear ticket title and issue description. If the information is still scattered, call prepare_ticket_draft or ask follow-up questions first.
+3. Once you are ready to create a ticket, you must call create_ticket_with_confirmation. Do not simply claim in text that the ticket has been created.
+4. This Graph Tool asks the user for confirmation first. The ticket is created only after the user confirms; if the user cancels, the flow ends.
+5. If the user is only asking questions, complaining generally, or expressing dissatisfaction without explicitly requesting a ticket, continue clarifying instead of proactively creating one.
 `),
 	}
 	GraphHandoffConversation = ToolSpec{
 		Code:          "graph/handoff_to_human",
 		ServerCode:    "graph",
 		Name:          "handoff_to_human",
-		Title:         "转人工确认流程",
-		Description:   "Graph Tool。用于封装转人工原因整理、用户确认、真正转人工和结果返回的确定性流程。",
+		Title:         "Human handoff confirmation flow",
+		Description:   "Graph Tool. Handles handoff reason preparation, user confirmation, actual human handoff, and result return.",
 		SourceType:    enums.ToolSourceTypeGraph,
 		DirectAccess:  true,
 		RuntimeStatic: true,
 		Appendix: strings.TrimSpace(`
-你可以在确认需要人工介入后调用 handoff_to_human 这个 Graph Tool 来转人工，但必须遵守以下规则：
-1. 只有在用户明确要求人工客服，或你已经判断该问题必须由人工继续处理时，才调用该工具。
-2. 调用前先尽量整理清楚转人工原因；如果理由含糊，先追问或澄清，不要直接转人工。
-3. 一旦决定转人工，必须调用 handoff_to_human 工具，禁止只在回复里口头说“我帮你转人工了”。
-4. 该 Graph Tool 会先向用户发起确认。用户确认后才会真正转人工；用户取消则结束本次转人工流程。
-5. 如果问题仍可由当前对话继续解决，优先继续解答，不要过早转人工。
-6. 如果工具返回 terminal=true 且 shouldRetry=false，说明转人工流程已经结束，禁止重复调用该工具。
+You can call handoff_to_human after confirming that human help is needed, but follow these rules:
+1. Only call this tool when the user explicitly asks for a human agent or you have determined that the issue must be handled by a human.
+2. Before calling it, summarize the handoff reason clearly. If the reason is vague, ask a follow-up question first.
+3. Once you decide to hand off, you must call handoff_to_human. Do not simply say in text that you have connected the user to a human.
+4. This Graph Tool asks the user for confirmation first. The handoff happens only after the user confirms; if the user cancels, the flow ends.
+5. If the issue can still be solved in the current conversation, continue helping instead of escalating too early.
+6. If the tool returns terminal=true and shouldRetry=false, the handoff flow has ended. Do not call it repeatedly.
 `),
 	}
 	RegisteredToolSpecs = []ToolSpec{

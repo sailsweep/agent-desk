@@ -208,8 +208,8 @@ func (s *channelService) ListWxWorkKFAccounts() ([]response.WxWorkKFAccountRespo
 func (s *channelService) ParseWebChannelConfig(raw string) (*dto.WebChannelConfig, error) {
 	raw = strings.TrimSpace(raw)
 	cfg := &dto.WebChannelConfig{
-		Title:      "在线客服",
-		Subtitle:   "欢迎咨询",
+		Title:      "Support",
+		Subtitle:   "How can we help?",
 		ThemeColor: "#2563eb",
 		Position:   "right",
 		Width:      "380px",
@@ -221,7 +221,7 @@ func (s *channelService) ParseWebChannelConfig(raw string) (*dto.WebChannelConfi
 	}
 	cfg.Title = strings.TrimSpace(cfg.Title)
 	if cfg.Title == "" {
-		cfg.Title = "在线客服"
+		cfg.Title = "Support"
 	}
 	cfg.Subtitle = strings.TrimSpace(cfg.Subtitle)
 	cfg.ThemeColor = strings.TrimSpace(cfg.ThemeColor)
@@ -246,8 +246,8 @@ func (s *channelService) ParseWebChannelConfig(raw string) (*dto.WebChannelConfi
 func (s *channelService) ParseWechatMPChannelConfig(raw string) (*dto.WechatMPChannelConfig, error) {
 	raw = strings.TrimSpace(raw)
 	cfg := &dto.WechatMPChannelConfig{
-		Title:      "公众号客服",
-		Subtitle:   "欢迎咨询",
+		Title:      "Official Account Support",
+		Subtitle:   "How can we help?",
 		ThemeColor: "#2563eb",
 	}
 	if raw != "" {
@@ -257,7 +257,7 @@ func (s *channelService) ParseWechatMPChannelConfig(raw string) (*dto.WechatMPCh
 	}
 	cfg.Title = strings.TrimSpace(cfg.Title)
 	if cfg.Title == "" {
-		cfg.Title = "公众号客服"
+		cfg.Title = "Official Account Support"
 	}
 	cfg.Subtitle = strings.TrimSpace(cfg.Subtitle)
 	cfg.ThemeColor = strings.TrimSpace(cfg.ThemeColor)

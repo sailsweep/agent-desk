@@ -19,8 +19,8 @@ import (
 var ConversationHumanDispatchService = newConversationHumanDispatchService()
 
 const (
-	HandoffWaitingMessage  = "已为你转接人工客服，请稍候。"
-	HandoffOffHoursMessage = "当前暂不在人工客服服务时间内，你可以先继续描述问题，我会尽力协助；服务时间开始后也可以再次转人工。"
+	HandoffWaitingMessage  = "We are connecting you to a human support agent. Please wait."
+	HandoffOffHoursMessage = "Human support is currently outside service hours. You can keep describing the issue and I will do my best to help. You can also request a human agent again when service hours resume."
 )
 
 type HandoffDecisionType string

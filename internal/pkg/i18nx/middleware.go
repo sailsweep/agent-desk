@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	LocaleZhCN = "zh-CN"
-	LocaleEnUS = "en-US"
+	LocaleZhCN    = "zh-CN"
+	LocaleEnUS    = "en-US"
+	DefaultLocale = LocaleEnUS
 )
 
 var supportedLocales = map[string]string{
@@ -26,17 +27,17 @@ var supportedLocales = map[string]string{
 func NormalizeLocale(value string) string {
 	key := strings.ToLower(strings.TrimSpace(value))
 	if key == "" {
-		return LocaleZhCN
+		return DefaultLocale
 	}
 	if locale, ok := supportedLocales[key]; ok {
 		return locale
 	}
-	return LocaleZhCN
+	return DefaultLocale
 }
 
 func ResolveRequestLocale(req *http.Request) string {
 	if req == nil {
-		return LocaleZhCN
+		return DefaultLocale
 	}
 	if locale := normalizeSupportedLocale(req.Header.Get("X-Locale")); locale != "" {
 		return locale
@@ -47,7 +48,7 @@ func ResolveRequestLocale(req *http.Request) string {
 	if locale := normalizeSupportedLocale(req.URL.Query().Get("locale")); locale != "" {
 		return locale
 	}
-	return LocaleZhCN
+	return DefaultLocale
 }
 
 func Middleware() gin.HandlerFunc {

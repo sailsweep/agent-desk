@@ -37,11 +37,11 @@ func handleConversationAssignedNotify(ctx context.Context, event events.Conversa
 func conversationAssignedNotifyTitle(assignType string) string {
 	switch strings.TrimSpace(assignType) {
 	case events.ConversationAssignTypeTransfer:
-		return "会话转接提醒"
+		return "Conversation transferred"
 	case events.ConversationAssignTypeAutoAssign:
-		return "会话自动分配提醒"
+		return "Conversation auto-assigned"
 	default:
-		return "会话分配提醒"
+		return "Conversation assigned"
 	}
 }
 
@@ -49,21 +49,21 @@ func buildConversationAssignedNotifyBody(conversation *models.Conversation, assi
 	if conversation == nil {
 		return ""
 	}
-	reasonLabel := "分配原因"
+	reasonLabel := "Assignment reason"
 	if strings.TrimSpace(assignType) == events.ConversationAssignTypeTransfer {
-		reasonLabel = "转接原因"
+		reasonLabel = "Transfer reason"
 	}
 	lines := []string{
-		fmt.Sprintf("会话ID: #%d", conversation.ID),
-		fmt.Sprintf("会话摘要: %s", strs.DefaultIfBlank(services.ConversationService.BuildConversationSummary(conversation), "-")),
-		fmt.Sprintf("接入渠道: %s", resolveConversationChannelLabel(conversation)),
-		fmt.Sprintf("当前状态: %s", enums.GetIMConversationStatusLabel(conversation.Status)),
-		fmt.Sprintf("处理人: %s", resolveNotifyUserLabel(assigneeID)),
+		fmt.Sprintf("Conversation ID: #%d", conversation.ID),
+		fmt.Sprintf("Summary: %s", strs.DefaultIfBlank(services.ConversationService.BuildConversationSummary(conversation), "-")),
+		fmt.Sprintf("Channel: %s", resolveConversationChannelLabel(conversation)),
+		fmt.Sprintf("Status: %s", enums.GetIMConversationStatusLabel(conversation.Status)),
+		fmt.Sprintf("Assignee: %s", resolveNotifyUserLabel(assigneeID)),
 	}
 	if strings.TrimSpace(reason) != "" {
 		lines = append(lines, fmt.Sprintf("%s: %s", reasonLabel, strings.TrimSpace(reason)))
 	}
-	lines = append(lines, fmt.Sprintf("时间: %s", time.Now().Format("2006-01-02 15:04:05")))
+	lines = append(lines, fmt.Sprintf("Time: %s", time.Now().Format("2006-01-02 15:04:05")))
 	return strings.Join(lines, "\n")
 }
 

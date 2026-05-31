@@ -13,7 +13,7 @@ func T(ctx *gin.Context, messageID string, data map[string]any) string {
 			}
 		}
 	}
-	return TLocale(LocaleZhCN, messageID, data)
+	return TLocale(DefaultLocale, messageID, data)
 }
 
 func TLocale(locale string, messageID string, data map[string]any) string {
@@ -22,8 +22,8 @@ func TLocale(locale string, messageID string, data map[string]any) string {
 	if message != "" {
 		return message
 	}
-	if normalized != LocaleZhCN {
-		message = localize(LocaleZhCN, messageID, data)
+	if normalized != DefaultLocale {
+		message = localize(DefaultLocale, messageID, data)
 		if message != "" {
 			return message
 		}
@@ -32,7 +32,7 @@ func TLocale(locale string, messageID string, data map[string]any) string {
 }
 
 func localize(locale string, messageID string, data map[string]any) string {
-	localizer := i18n.NewLocalizer(Bundle(), locale, LocaleZhCN)
+	localizer := i18n.NewLocalizer(Bundle(), locale, DefaultLocale)
 	message, err := localizer.Localize(&i18n.LocalizeConfig{
 		MessageID:    messageID,
 		TemplateData: data,

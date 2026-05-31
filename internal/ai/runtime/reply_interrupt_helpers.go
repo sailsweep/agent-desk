@@ -39,7 +39,7 @@ func buildConversationInterrupt(conversation models.Conversation, message models
 
 func resolveInterruptPrompt(summary *applicationruntime.Summary) string {
 	if summary == nil || len(summary.Interrupts) == 0 {
-		return "请继续补充信息后再试。"
+		return "Please provide more information and try again."
 	}
 	if prompt := extractInterruptMessage(summary.Interrupts[0].InfoPreview); prompt != "" {
 		return prompt
@@ -47,7 +47,7 @@ func resolveInterruptPrompt(summary *applicationruntime.Summary) string {
 	if prompt := strings.TrimSpace(summary.Interrupts[0].InfoPreview); prompt != "" {
 		return prompt
 	}
-	return "请继续补充信息后再试。"
+	return "Please provide more information and try again."
 }
 
 func extractInterruptMessage(infoPreview string) string {
