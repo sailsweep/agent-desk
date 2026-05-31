@@ -6,9 +6,9 @@ import ts from "typescript";
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(currentDir, "..");
-const source = path.join(rootDir, "lib", "sdk", "cs-ai-agent-sdk.ts");
+const source = path.join(rootDir, "lib", "sdk", "agent-desk-sdk.ts");
 const targetDir = path.join(rootDir, "public", "sdk");
-const target = path.join(targetDir, "cs-ai-agent-sdk.min.js");
+const target = path.join(targetDir, "agent-desk-sdk.min.js");
 
 await mkdir(targetDir, { recursive: true });
 const sourceCode = await readFile(source, "utf8");

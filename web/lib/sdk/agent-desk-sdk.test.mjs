@@ -37,14 +37,14 @@ function createElement(tagName) {
 }
 
 async function loadSdk(config) {
-  const source = await readFile(new URL("./cs-ai-agent-sdk.ts", import.meta.url), "utf8")
+  const source = await readFile(new URL("./agent-desk-sdk.ts", import.meta.url), "utf8")
   const compiled = ts.transpileModule(source, {
     compilerOptions: {
       target: ts.ScriptTarget.ES2017,
       module: ts.ModuleKind.ESNext,
       importsNotUsedAsValues: ts.ImportsNotUsedAsValues.Remove,
     },
-    fileName: "cs-ai-agent-sdk.ts",
+    fileName: "agent-desk-sdk.ts",
   })
   const body = createElement("body")
   const sandbox = {
@@ -62,7 +62,7 @@ async function loadSdk(config) {
     document: {
       body,
       currentScript: {
-        src: "https://chat.example/sdk/cs-ai-agent-sdk.min.js",
+        src: "https://chat.example/sdk/agent-desk-sdk.min.js",
       },
       createElement,
       createElementNS: (_namespace, tagName) => createElement(tagName),

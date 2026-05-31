@@ -15,8 +15,8 @@ export type AuthSession = {
   roles: string[]
 }
 
-const SESSION_STORAGE_KEY = "cs-ai-agent-session"
-export const AUTH_SESSION_EXPIRED_EVENT = "cs-ai-agent-auth-expired"
+const SESSION_STORAGE_KEY = "agent-desk-session"
+export const AUTH_SESSION_EXPIRED_EVENT = "agent-desk-auth-expired"
 
 function hasWindow() {
   return typeof window !== "undefined"

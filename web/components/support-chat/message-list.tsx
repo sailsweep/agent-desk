@@ -219,7 +219,7 @@ export const SupportChatMessageList = forwardRef<SupportChatMessageListHandle, S
     return (
       <div
         ref={containerRef}
-        className="cs-ai-agent-scrollbar flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4"
+        className="agent-desk-scrollbar flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4"
       >
         <div ref={contentRef} className="flex flex-col gap-4">
           {hasMoreOlder && onLoadOlder ? (

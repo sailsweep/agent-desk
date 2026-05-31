@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from "react"
 import type { CSAgentConfig } from "@/lib/sdk/config-types"
 import { useI18n } from "@/i18n/provider"
 
-const STORAGE_KEY = "cs-ai-agent-web-widget-test-config"
+const STORAGE_KEY = "agent-desk-web-widget-test-config"
 const DEFAULT_JWT_TTL_MINUTES = "30"
 const INITIAL_CONFIG: CSAgentConfig = {
   channelId: "",
@@ -56,7 +56,7 @@ function removeMountedWidget() {
   window.CSAgentWidget?.destroy()
   document
     .querySelectorAll(
-      '[data-cs-ai-agent-widget="launcher"], [data-cs-ai-agent-widget="frame"], [data-cs-ai-agent-widget="script"]'
+      '[data-agent-desk-widget="launcher"], [data-agent-desk-widget="frame"], [data-agent-desk-widget="script"]'
     )
     .forEach((node) => node.remove())
 
@@ -72,7 +72,7 @@ function injectWidget(config: CSAgentConfig) {
 
   const script = document.createElement("script")
   script.async = true
-  script.src = `${window.location.origin}/sdk/cs-ai-agent-sdk.min.js`
+  script.src = `${window.location.origin}/sdk/agent-desk-sdk.min.js`
   script.dataset.csAgentWidget = "script"
   document.body.appendChild(script)
 }
@@ -187,8 +187,8 @@ export function SupportWidgetDemo() {
 
   const snippet = useMemo(() => {
     const scriptSrc = origin
-      ? `${origin}/sdk/cs-ai-agent-sdk.min.js`
-      : "/sdk/cs-ai-agent-sdk.min.js"
+      ? `${origin}/sdk/agent-desk-sdk.min.js`
+      : "/sdk/agent-desk-sdk.min.js"
 
     const configLines = [`    channelId: "${config.channelId || ""}"`]
     if (config.authMode === "jwt") {

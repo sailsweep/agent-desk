@@ -350,7 +350,7 @@ export function ChatPanel() {
   const messagesScroll = (
     <div
       ref={messagesContainerRef}
-      className="h-full min-h-0 flex-1 overflow-y-auto p-4 cs-ai-agent-scrollbar"
+      className="h-full min-h-0 flex-1 overflow-y-auto p-4 agent-desk-scrollbar"
     >
       <div ref={messagesContentRef} className="flex flex-col">
         {!loading && messages.length > 0 && messagesHasMore ? (

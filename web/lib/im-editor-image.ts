@@ -30,15 +30,15 @@ export const MessageImageExtension = Image.extend({
     return ({ node }) => {
       const wrapper = document.createElement("span")
       wrapper.className =
-        "cs-ai-agent-editor-image-wrap relative inline-block max-w-full align-middle"
+        "agent-desk-editor-image-wrap relative inline-block max-w-full align-middle"
 
       const image = document.createElement("img")
-      image.className = "cs-ai-agent-editor-image"
+      image.className = "agent-desk-editor-image"
       image.draggable = true
 
       const overlay = document.createElement("span")
       overlay.className =
-        "cs-ai-agent-editor-image-loading pointer-events-none absolute inset-0 hidden items-center justify-center rounded-lg bg-background/55 backdrop-blur-[1px]"
+        "agent-desk-editor-image-loading pointer-events-none absolute inset-0 hidden items-center justify-center rounded-lg bg-background/55 backdrop-blur-[1px]"
 
       const spinner = document.createElement("span")
       spinner.className =
@@ -115,10 +115,10 @@ export function markEditorImageUploadedByTitle(
   image.setAttribute("data-provider", uploaded.provider)
   image.setAttribute("data-storage-key", uploaded.storageKey)
   image.setAttribute("alt", uploaded.filename || image.getAttribute("alt") || "image")
-  image.classList.remove("cs-ai-agent-editor-image-uploading")
+  image.classList.remove("agent-desk-editor-image-uploading")
   image.removeAttribute("data-uploading")
   image.removeAttribute("title")
-  setImageUploading(image.closest(".cs-ai-agent-editor-image-wrap"), false)
+  setImageUploading(image.closest(".agent-desk-editor-image-wrap"), false)
 }
 
 export function setEditorImageUploadingByTitle(editor: Editor, title: string) {
@@ -126,9 +126,9 @@ export function setEditorImageUploadingByTitle(editor: Editor, title: string) {
   if (!image) {
     return
   }
-  image.classList.add("cs-ai-agent-editor-image-uploading")
+  image.classList.add("agent-desk-editor-image-uploading")
   image.setAttribute("data-uploading", "true")
-  setImageUploading(image.closest(".cs-ai-agent-editor-image-wrap"), true)
+  setImageUploading(image.closest(".agent-desk-editor-image-wrap"), true)
 }
 
 export function buildSendableEditorHTML(
@@ -223,8 +223,8 @@ function setImageUploading(wrapper: Element | null, uploading: boolean) {
   if (!(wrapper instanceof HTMLElement)) {
     return
   }
-  wrapper.classList.toggle("cs-ai-agent-editor-image-wrap-uploading", uploading)
-  const overlay = wrapper.querySelector<HTMLElement>(".cs-ai-agent-editor-image-loading")
+  wrapper.classList.toggle("agent-desk-editor-image-wrap-uploading", uploading)
+  const overlay = wrapper.querySelector<HTMLElement>(".agent-desk-editor-image-loading")
   if (overlay) {
     overlay.classList.toggle("hidden", !uploading)
     overlay.classList.toggle("flex", uploading)
