@@ -74,11 +74,11 @@
 docker compose up -d --build
 ```
 
-完整英文配置与排查说明见 [Docker Compose Quick Start](https://aiagent.huabei.pro/zh/docs/getting-started/docker-compose.html)。
+完整英文配置与排查说明见 [Docker Compose Quick Start](https://agent-desk.huabei.pro/zh/docs/getting-started/docker-compose.html)。
 
-如需在官网或产品中嵌入客服入口，见 [Web Widget Integration](https://aiagent.huabei.pro/zh/docs/integration/web-widget.html)。
+如需在官网或产品中嵌入客服入口，见 [Web Widget Integration](https://agent-desk.huabei.pro/zh/docs/integration/web-widget.html)。
 
-如需接入 OpenAI-compatible 模型供应商，见 [Model Provider Configuration](https://aiagent.huabei.pro/zh/docs/config/model-provider.html)。
+如需接入 OpenAI-compatible 模型供应商，见 [Model Provider Configuration](https://agent-desk.huabei.pro/zh/docs/config/model-provider.html)。
 
 Compose 默认会启动：
 
