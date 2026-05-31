@@ -80,8 +80,8 @@ ${content}
 
 ### 发布地址
 
-- Github: <https://github.com/huabeitech/cs-ai-agent/releases/tag/${tag}>
-- Gitee: <https://gitee.com/huabeitech/cs-ai-agent/releases/tag/${tag}>
+- Github: <https://github.com/huabeitech/agent-desk/releases/tag/${tag}>
+- Gitee: <https://gitee.com/huabeitech/agent-desk/releases/tag/${tag}>
 ```
 
 For the English file, keep the same links and heading level, but translate the section heading and content naturally:
@@ -95,8 +95,8 @@ ${content}
 
 ### Release Links
 
-- Github: <https://github.com/huabeitech/cs-ai-agent/releases/tag/${tag}>
-- Gitee: <https://gitee.com/huabeitech/cs-ai-agent/releases/tag/${tag}>
+- Github: <https://github.com/huabeitech/agent-desk/releases/tag/${tag}>
+- Gitee: <https://gitee.com/huabeitech/agent-desk/releases/tag/${tag}>
 ```
 
 Changelog writing rules:
@@ -159,32 +159,32 @@ Adjust the branch name if `HEAD` is not tracking the intended release branch.
 
 Pushing tags is not enough. The release is incomplete until both Release pages exist:
 
-- GitHub: `https://github.com/huabeitech/cs-ai-agent/releases/tag/${tag}`
-- Gitee: `https://gitee.com/huabeitech/cs-ai-agent/releases/tag/${tag}`
+- GitHub: `https://github.com/huabeitech/agent-desk/releases/tag/${tag}`
+- Gitee: `https://gitee.com/huabeitech/agent-desk/releases/tag/${tag}`
 
 Use the same concise release notes derived from the changelog. Prefer a bilingual body with Chinese first and English second.
 
 Required credentials:
 
-- GitHub: `GITHUB_TOKEN` or `GH_TOKEN` with access to `huabeitech/cs-ai-agent` and permission to create releases. For a fine-grained PAT, use an organization-allowed lifetime and grant the repository at least `Contents: Read and write` plus `Metadata: Read`.
-- Gitee: `GITEE_ACCESS_TOKEN` or `GITEE_TOKEN` with release write access to `huabeitech/cs-ai-agent`.
+- GitHub: `GITHUB_TOKEN` or `GH_TOKEN` with access to `huabeitech/agent-desk` and permission to create releases. For a fine-grained PAT, use an organization-allowed lifetime and grant the repository at least `Contents: Read and write` plus `Metadata: Read`.
+- Gitee: `GITEE_ACCESS_TOKEN` or `GITEE_TOKEN` with release write access to `huabeitech/agent-desk`.
 
 Never print tokens in command output or final responses. If the user pastes a token into the conversation, use it only for the requested release operation and recommend rotation after use.
 
 Build the release body from the new changelog entry, for example:
 
 ```bash
-mkdir -p /tmp/cs-ai-agent-release
+mkdir -p /tmp/agent-desk-release
 awk 'BEGIN{p=0} /^## v1\.2\.3 /{p=1; next} /^## v[0-9]/{if(p) exit} p{print}' \
-  docs/zh/docs/changelog.md | sed '/^### 发布地址/,$d' > /tmp/cs-ai-agent-release/v1.2.3-zh.md
+  docs/zh/docs/changelog.md | sed '/^### 发布地址/,$d' > /tmp/agent-desk-release/v1.2.3-zh.md
 awk 'BEGIN{p=0} /^## v1\.2\.3 /{p=1; next} /^## v[0-9]/{if(p) exit} p{print}' \
-  docs/en/docs/changelog.md | sed '/^### Release Links/,$d' > /tmp/cs-ai-agent-release/v1.2.3-en.md
+  docs/en/docs/changelog.md | sed '/^### Release Links/,$d' > /tmp/agent-desk-release/v1.2.3-en.md
 {
   printf '## 更新内容\n\n'
-  sed '1,/^### 更新内容$/d' /tmp/cs-ai-agent-release/v1.2.3-zh.md
+  sed '1,/^### 更新内容$/d' /tmp/agent-desk-release/v1.2.3-zh.md
   printf '\n## Updates\n\n'
-  sed '1,/^### Updates$/d' /tmp/cs-ai-agent-release/v1.2.3-en.md
-} > /tmp/cs-ai-agent-release/v1.2.3-release-body.md
+  sed '1,/^### Updates$/d' /tmp/agent-desk-release/v1.2.3-en.md
+} > /tmp/agent-desk-release/v1.2.3-release-body.md
 ```
 
 Create the GitHub Release:
@@ -192,12 +192,12 @@ Create the GitHub Release:
 ```bash
 token="${GITHUB_TOKEN:-$GH_TOKEN}"
 curl -sS -o /tmp/github_release_v1.2.3.json -w '%{http_code}' \
-  -X POST https://api.github.com/repos/huabeitech/cs-ai-agent/releases \
+  -X POST https://api.github.com/repos/huabeitech/agent-desk/releases \
   -H "Authorization: Bearer ${token}" \
   -H 'Accept: application/vnd.github+json' \
   -H 'X-GitHub-Api-Version: 2022-11-28' \
   -H 'Content-Type: application/json' \
-  -d @<(jq -n --rawfile body /tmp/cs-ai-agent-release/v1.2.3-release-body.md \
+  -d @<(jq -n --rawfile body /tmp/agent-desk-release/v1.2.3-release-body.md \
     '{tag_name:"v1.2.3", target_commitish:"main", name:"v1.2.3", body:$body, draft:false, prerelease:false}')
 ```
 
@@ -206,9 +206,9 @@ Create the Gitee Release:
 ```bash
 token="${GITEE_ACCESS_TOKEN:-$GITEE_TOKEN}"
 curl -sS -o /tmp/gitee_release_v1.2.3.json -w '%{http_code}' \
-  -X POST https://gitee.com/api/v5/repos/huabeitech/cs-ai-agent/releases \
+  -X POST https://gitee.com/api/v5/repos/huabeitech/agent-desk/releases \
   -H 'Content-Type: application/json' \
-  -d @<(jq -n --rawfile body /tmp/cs-ai-agent-release/v1.2.3-release-body.md --arg token "${token}" \
+  -d @<(jq -n --rawfile body /tmp/agent-desk-release/v1.2.3-release-body.md --arg token "${token}" \
     '{access_token:$token, tag_name:"v1.2.3", target_commitish:"main", name:"v1.2.3", body:$body, prerelease:false}')
 ```
 
@@ -218,8 +218,8 @@ If creation returns `422`/already exists, fetch the existing release and verify 
 
 - Confirm `git rev-parse v1.2.3^{tag}` succeeds.
 - Confirm `git ls-remote --tags github v1.2.3` and `git ls-remote --tags origin v1.2.3` show the new tag.
-- Confirm `curl -sS -o /tmp/github_release_verify.json -w '%{http_code}' https://api.github.com/repos/huabeitech/cs-ai-agent/releases/tags/v1.2.3` returns `200`.
-- Confirm `curl -sS -o /tmp/gitee_release_verify.json -w '%{http_code}' https://gitee.com/api/v5/repos/huabeitech/cs-ai-agent/releases/tags/v1.2.3` returns `200`.
+- Confirm `curl -sS -o /tmp/github_release_verify.json -w '%{http_code}' https://api.github.com/repos/huabeitech/agent-desk/releases/tags/v1.2.3` returns `200`.
+- Confirm `curl -sS -o /tmp/gitee_release_verify.json -w '%{http_code}' https://gitee.com/api/v5/repos/huabeitech/agent-desk/releases/tags/v1.2.3` returns `200`.
 - Confirm the `docs` submodule remote contains the changelog commit.
 - Confirm both parent and `docs` working trees are clean.
 - Summarize the previous tag used for comparison, the files updated, the commit hashes created, the remotes pushed, and the GitHub/Gitee Release URLs.

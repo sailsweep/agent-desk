@@ -82,7 +82,7 @@ To connect OpenAI-compatible model providers, see [Model Provider Configuration]
 
 Compose starts:
 
-- `cs-ai-agent`: application service on port `8083`
+- `agent-desk`: application service on port `8083`
 - `mysql`: MySQL 8.4 with the `mysql-data` volume
 - `qdrant`: vector database with the `qdrant-data` volume, ports `6333` / `6334`
 
@@ -272,12 +272,12 @@ If you only need to build the application image, prepare MySQL and Qdrant yourse
 ```bash
 docker build -t mlogclub/agent-desk .
 docker run --rm -p 8083:8083 \
-  -v $(pwd)/docker/cs-ai-agent.yaml:/app/config/config.yaml:ro \
-  -v cs-ai-agent-data:/app/data \
+  -v $(pwd)/docker/agent-desk.yaml:/app/config/config.yaml:ro \
+  -v agent-desk-data:/app/data \
   mlogclub/agent-desk
 ```
 
-Compose uses [docker/cs-ai-agent.yaml](docker/cs-ai-agent.yaml) as the in-container configuration. The application reaches `mysql` and `qdrant` through Docker service names.
+Compose uses [docker/agent-desk.yaml](docker/agent-desk.yaml) as the in-container configuration. The application reaches `mysql` and `qdrant` through Docker service names.
 
 ## Open-source Positioning
 

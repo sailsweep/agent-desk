@@ -82,7 +82,7 @@ docker compose up -d --build
 
 Compose 默认会启动：
 
-- `cs-ai-agent`：应用服务，端口 `8083`
+- `agent-desk`：应用服务，端口 `8083`
 - `mysql`：MySQL 8.4，数据卷 `mysql-data`
 - `qdrant`：向量数据库，数据卷 `qdrant-data`，端口 `6333` / `6334`
 
@@ -272,12 +272,12 @@ flowchart LR
 ```bash
 docker build -t mlogclub/agent-desk .
 docker run --rm -p 8083:8083 \
-  -v $(pwd)/docker/cs-ai-agent.yaml:/app/config/config.yaml:ro \
-  -v cs-ai-agent-data:/app/data \
+  -v $(pwd)/docker/agent-desk.yaml:/app/config/config.yaml:ro \
+  -v agent-desk-data:/app/data \
   mlogclub/agent-desk
 ```
 
-Compose 使用 [docker/cs-ai-agent.yaml](docker/cs-ai-agent.yaml) 作为容器内配置，应用会通过 Docker 内部服务名访问 `mysql` 和 `qdrant`。
+Compose 使用 [docker/agent-desk.yaml](docker/agent-desk.yaml) 作为容器内配置，应用会通过 Docker 内部服务名访问 `mysql` 和 `qdrant`。
 
 ## 开源定位
 
