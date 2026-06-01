@@ -1,21 +1,21 @@
 # AGENTS.md
 
-本文件定义本项目内 AI Agent 的强制开发规则。除非用户明确要求偏离，否则必须遵循。
+This file defines mandatory development rules for AI Agents in this project. Unless the user explicitly requests a deviation, these rules must be followed.
 
-## 1. 基本原则
+## 1. Basic Principles
 
-- 适用范围：仓库根目录及所有子目录
-- 优先级：用户明确指令 > 本文件 > 默认实现习惯
-- 若与用户要求冲突：先执行用户要求，并在变更说明中标注偏离点
+- Scope: the repository root and all subdirectories
+- Priority: explicit user instructions > this file > default implementation habits
+- If these rules conflict with the user's request: follow the user's request first, and note the deviation in the change summary
 
-## 2. 固定技术栈
+## 2. Fixed Technology Stack
 
-- 后端：`Golang` + `Gin` + `GORM` + `github.com/mlogclub/simple`
-- 数据库：同时兼容 `SQLite` 和 `MySQL`
-- 前端：`Next.js(App Router)` + `React` + `shadcn/ui` + `Tailwind CSS`
-- 前端包管理器：`pnpm`
+- Backend: `Golang` + `Gin` + `GORM` + `github.com/mlogclub/simple`
+- Database: must be compatible with both `SQLite` and `MySQL`
+- Frontend: `Next.js(App Router)` + `React` + `shadcn/ui` + `Tailwind CSS`
+- Frontend package manager: `pnpm`
 
-## 3. 目录约定
+## 3. Directory Conventions
 
 ```text
 .
@@ -47,151 +47,151 @@
 └── docs/
 ```
 
-## 4. 后端分层
+## 4. Backend Layering
 
-必须遵循单向依赖：`models -> repositories -> services -> handlers`
+The backend must follow one-way dependencies: `models -> repositories -> services -> handlers`
 
-- `models`：只定义实体和表映射
-- `repositories`：只封装数据访问
-- `services`：负责业务规则、事务编排、聚合逻辑
-- `handlers`：只做参数解析、权限校验、service 调用、响应封装
+- `models`: only define entities and table mappings
+- `repositories`: only encapsulate data access
+- `services`: handle business rules, transaction orchestration, and aggregation logic
+- `handlers`: only parse parameters, check permissions, call services, and wrap responses
 
-禁止：
+Forbidden:
 
-- handler 直接调用 repository
-- 直接将 GORM model 返回前端
-- 在 models/repositories 中写业务编排
+- Handlers directly calling repositories
+- Returning GORM models directly to the frontend
+- Writing business orchestration in models or repositories
 
-## 4.1 分层全链路（models -> repositories -> services -> handlers -> builders）
+## 4.1 Full Layer Flow (`models -> repositories -> services -> handlers -> builders`)
 
-本章是对“分层”规则的**可执行细化**：每一层只做该层应该做的事情，数据以 DTO 为中心流转，GORM 细节集中在 repository，事务边界集中在 service，返回组装集中在 builders/handler。
+This section is an executable refinement of the layering rules: each layer must do only what belongs to that layer. Data should flow around DTOs, GORM details should be concentrated in repositories, transaction boundaries should be concentrated in services, and response assembly should be concentrated in builders/handlers.
 
-### 4.1.1 依赖方向（必须）
+### 4.1.1 Dependency Direction (Required)
 
-只允许如下依赖（单向）：
+Only the following one-way dependencies are allowed:
 
-- `models` → 不依赖任何业务层
-- `repositories` → 依赖 `models`、基础库（`gorm`/`simple/sqls`）
-- `services` → 依赖 `repositories`、`models`、`enums/errorsx/utils`，负责事务与业务编排
-- `builders` → 依赖 `models`、`dto/response`（必要时可依赖少量 `services` 用于补充展示字段，但优先在 service 里聚合好）
-- `handlers` → 依赖 `services`、`builders`、`pkg/dto/request`、`pkg/httpx/params`、`pkg/httpx` 响应封装
+- `models` -> must not depend on any business layer
+- `repositories` -> may depend on `models` and base libraries (`gorm`/`simple/sqls`)
+- `services` -> may depend on `repositories`, `models`, and `enums/errorsx/utils`; responsible for transactions and business orchestration
+- `builders` -> may depend on `models` and `dto/response`; if necessary, may depend on a small number of `services` to supplement display fields, but aggregation in the service layer is preferred
+- `handlers` -> may depend on `services`, `builders`, `pkg/dto/request`, `pkg/httpx/params`, and `pkg/httpx` response wrappers
 
-禁止反向依赖：
+Reverse dependencies are forbidden:
 
-- `repositories` 不能依赖 `services/handlers/builders`
-- `models` 不能依赖 `repositories/services/handlers/builders`
-- `handlers` 不能依赖 `repositories`（必须通过 service）
+- `repositories` must not depend on `services/handlers/builders`
+- `models` must not depend on `repositories/services/handlers/builders`
+- `handlers` must not depend on `repositories` (they must go through services)
 
-### 4.1.2 数据形态与流转（推荐统一）
+### 4.1.2 Data Shape and Flow (Recommended Standard)
 
-一条典型 CRUD/业务动作的数据流：
+A typical CRUD/business action data flow:
 
-1. **handler** 读取参数（query/body/form/path），做权限校验，调用 **service**
-2. **service** 执行业务规则（校验、幂等、状态机、聚合），必要时开启事务，调用 **repository**
-3. **repository** 只做数据读写（CRUD + 查询），返回 `models` 或必要的聚合结构
-4. **builders** 将 `models`/聚合结果映射为 `response DTO`
-5. **handler** 返回 `httpx.WriteJSON(...)`
+1. The **handler** reads parameters (`query/body/form/path`), performs permission checks, and calls the **service**
+2. The **service** executes business rules (validation, idempotency, state machines, aggregation), starts a transaction when needed, and calls the **repository**
+3. The **repository** only performs data reads/writes (`CRUD + queries`) and returns `models` or necessary aggregate structures
+4. **builders** map `models`/aggregate results into `response DTO`
+5. The **handler** returns `httpx.WriteJSON(...)`
 
-强约束：
+Strong constraints:
 
-- **handler 入参使用 request DTO**
-- **handler 出参使用 response DTO**
-- **禁止直接返回 models 到前端**
+- **Handler inputs use request DTOs**
+- **Handler outputs use response DTOs**
+- **Models must not be returned directly to the frontend**
 
-### 4.1.3 各层“允许/禁止”清单
+### 4.1.3 Per-Layer Allow/Forbid Checklist
 
-#### models（实体层）
+#### models (Entity Layer)
 
-- **允许**
-  - 字段定义、表名、索引/约束标签、关联关系（GORM tags）
-  - 轻量常量/枚举字段类型（更推荐放 `internal/pkg/enums`）
-- **禁止**
-  - 业务方法（例如 `CanDispatch()` 这类规则判断应在 service）
-  - DB 访问、事务、复杂计算
+- **Allowed**
+  - Field definitions, table names, index/constraint tags, associations (GORM tags)
+  - Lightweight constants/enum field types (prefer `internal/pkg/enums`)
+- **Forbidden**
+  - Business methods (for example, rule checks such as `CanDispatch()` belong in services)
+  - DB access, transactions, complex calculations
 
-#### repositories（数据访问层）
+#### repositories (Data Access Layer)
 
-- **允许**
-  - CRUD：`Get/Take/Find/FindOne/FindPageBy.../Create/Update/Updates/UpdateColumn/Delete`
-  - 与查询相关的“可复用”方法：`FindByUserID`、`CountByStatus`、`FindActiveBy...`
-  - 只要是“数据访问细节”，都应在这里（SQL 条件、排序、分页、锁）
-- **禁止**
-  - 业务编排（跨表流程、状态流转、事件发布等）
-  - 权限判断、登录态判断
-  - 直接拼接返回 DTO（DTO 映射属于 builders/handler）
+- **Allowed**
+  - CRUD: `Get/Take/Find/FindOne/FindPageBy.../Create/Update/Updates/UpdateColumn/Delete`
+  - Reusable query-related methods: `FindByUserID`, `CountByStatus`, `FindActiveBy...`
+  - Anything that is a data-access detail belongs here (SQL conditions, sorting, pagination, locks)
+- **Forbidden**
+  - Business orchestration (cross-table workflows, state transitions, event publishing, etc.)
+  - Permission checks or login-state checks
+  - Directly assembling response DTOs (DTO mapping belongs in builders/handlers)
 
-Repository 最佳实践：
+Repository best practices:
 
-- **按主键读写优先提供统一方法**：`Get/Updates/Delete`，避免 service 层重复写 `id = ?`
-- **查询条件优先使用 `sqls.Cnd` / `sqls.NewCnd()`**
-- **repository 方法签名统一接收 `db *gorm.DB`**（支持 `sqls.DB()` 与 `ctx.Tx`）
+- **Prefer unified primary-key read/write methods**: `Get/Updates/Delete`, avoiding repeated `id = ?` logic in services
+- **Prefer query conditions through `sqls.Cnd` / `sqls.NewCnd()`**
+- **Repository method signatures should consistently accept `db *gorm.DB`** (supporting both `sqls.DB()` and `ctx.Tx`)
 
-#### services（业务层）
+#### services (Business Layer)
 
-- **允许**
-  - 业务规则：参数规范化、跨实体校验、状态机、幂等、并发语义
-  - 聚合：需要组合多个 repository 结果
-  - 事务编排：`sqls.WithTransaction(func(ctx *sqls.TxContext) error { ... })`
-  - 调用 builders 前的领域对象整理（如果 builders 只做映射更干净）
-- **禁止**
-  - handler 才该做的事情：参数解析/HTTP 细节/响应封装
-  - repository 才该做的事情：散落 GORM 查询（除非一次性复杂 SQL 且不值得抽）
+- **Allowed**
+  - Business rules: parameter normalization, cross-entity validation, state machines, idempotency, concurrency semantics
+  - Aggregation: combining results from multiple repositories when needed
+  - Transaction orchestration: `sqls.WithTransaction(func(ctx *sqls.TxContext) error { ... })`
+  - Domain-object preparation before calling builders (when builders stay cleaner as pure mappers)
+- **Forbidden**
+  - Handler responsibilities: parameter parsing, HTTP details, response wrapping
+  - Repository responsibilities: scattered GORM queries (unless it is a one-off complex SQL query that is not worth extracting)
 
-Service 最佳实践：
+Service best practices:
 
-- **事务只在“需要原子性”的地方开**，并确保事务内所有 DB 操作都走 `ctx.Tx`
-- **service 内调用 repository**，不要“既有 repo 又直接 GORM”混搭造成风格分裂
+- **Open transactions only where atomicity is required**, and ensure every DB operation inside the transaction uses `ctx.Tx`
+- **Call repositories from services**; do not mix repository usage with direct GORM calls in a way that splits style and ownership
 
-#### builders（输出构建层）
+#### builders (Output Construction Layer)
 
-定位：将 `models`（或 service 聚合结果）转换为 `response DTO`，避免 handler 写一堆映射样板代码。
+Purpose: convert `models` (or service aggregate results) into `response DTO`, avoiding repetitive mapping boilerplate in handlers.
 
-- **允许**
-  - `Model -> ResponseDTO` 的纯映射
-  - 时间格式化、枚举 label 填充（必要时）
-  - 批量构建：`BuildXxxList([]models.Xxx) []response.Xxx`
-- **禁止**
-  - DB 访问（builders 不应查询数据库）
-  - 权限判断、事务、复杂业务流程
+- **Allowed**
+  - Pure `Model -> ResponseDTO` mapping
+  - Time formatting and enum label filling when needed
+  - Batch builders: `BuildXxxList([]models.Xxx) []response.Xxx`
+- **Forbidden**
+  - DB access (builders should not query the database)
+  - Permission checks, transactions, complex business processes
 
-builders 推荐形式：
+Recommended builder form:
 
-- 位置：`internal/builders/*_builder.go`
-- 方法：`BuildXxx(item *models.Xxx) *response.Xxx` / `BuildXxxList(list []models.Xxx) []response.Xxx`
+- Location: `internal/builders/*_builder.go`
+- Methods: `BuildXxx(item *models.Xxx) *response.Xxx` / `BuildXxxList(list []models.Xxx) []response.Xxx`
 
-#### handlers（接口层）
+#### handlers (API Layer)
 
-- **允许**
-  - 参数解析：`params.ReadJSON/ReadForm/NewPagedSqlCnd/GetInt64...`
-  - 权限：`AuthService.GetAuthPrincipal/RequirePermission/HasPermission`
-  - 调 service，调 builders，包装 `httpx.WriteJSON`
-- **禁止**
-  - 直接调用 repository
-  - 直接返回 models
-  - 在 handler 内写业务编排（例如“先写 A 再写 B”）
+- **Allowed**
+  - Parameter parsing: `params.ReadJSON/ReadForm/NewPagedSqlCnd/GetInt64...`
+  - Permissions: `AuthService.GetAuthPrincipal/RequirePermission/HasPermission`
+  - Calling services, calling builders, and wrapping with `httpx.WriteJSON`
+- **Forbidden**
+  - Direct repository calls
+  - Directly returning models
+  - Writing business orchestration inside handlers (for example, "write A, then write B")
 
-### 4.1.4 “事务”最佳实践（替代模糊口号）
+### 4.1.4 Transaction Best Practices
 
-事务边界应由 service 决定，原则如下：
+Transaction boundaries should be decided by the service layer. Principles:
 
-- **必须开事务**（`sqls.WithTransaction`）
-  - 多条写 SQL（例如更新主表 + 写日志表/事件表/关系表）
-  - “读-改-写”且要求一致性（并发下不能错）
-  - 跨多个 repository 的写操作需要原子性
-- **不需要开事务**
-  - 只有一次写 SQL（单条 `Create/Updates/UpdateColumn/Delete`）
-  - 只有一次写 SQL + 纯计算/参数清洗
+- **A transaction is required** (`sqls.WithTransaction`) for:
+  - Multiple write SQL statements (for example, updating the main table and writing a log/event/relation table)
+  - Read-modify-write flows that require consistency (must not break under concurrency)
+  - Writes across multiple repositories that must be atomic
+- **A transaction is not required** for:
+  - A single write SQL statement (one `Create/Updates/UpdateColumn/Delete`)
+  - A single write SQL statement plus pure calculation/parameter cleanup
 
-事务内规则：
+Rules inside a transaction:
 
-- 在事务内，所有 DB 调用必须使用 `ctx.Tx`（repository 方法的 `db` 参数传 `ctx.Tx`）
-- 禁止事务内混用 `sqls.DB()`（会脱离事务）
+- Inside a transaction, all DB calls must use `ctx.Tx` (pass `ctx.Tx` as the repository method's `db` argument)
+- Do not mix in `sqls.DB()` inside a transaction (it escapes the transaction)
 
-### 4.1.5 一个“标准接口”的代码骨架（示例）
+### 4.1.5 Standard Endpoint Skeleton (Example)
 
 ```go
-// Handler: 参数/权限/响应
-func XxxPostUpdate(ctx *gin.Context) {
+// Handler: parameters/permissions/response
+func XxxUpdate(ctx *gin.Context) {
   operator, err := services.AuthService.RequirePermission(ctx, constants.PermissionXxxUpdate)
   if err != nil {
     httpx.WriteJSON(ctx, err)
@@ -211,13 +211,13 @@ func XxxPostUpdate(ctx *gin.Context) {
 ```
 
 ```go
-// Service: 业务规则 + 事务编排 + 调 repository
+// Service: business rules + transaction orchestration + repository calls
 func (s *xxxService) UpdateXxx(req request.UpdateXxxRequest, operator *dto.AuthPrincipal) error {
   current := repositories.XxxRepository.Get(sqls.DB(), req.ID)
   if current == nil {
-    return errorsx.InvalidParam("对象不存在")
+    return errorsx.InvalidParam("object does not exist")
   }
-  // 只有一次写 SQL：不需要事务
+  // Single write SQL statement: no transaction required
   return repositories.XxxRepository.Updates(sqls.DB(), req.ID, map[string]any{
     "name": strings.TrimSpace(req.Name),
     "update_user_id": operator.UserID,
@@ -240,267 +240,266 @@ func BuildXxx(item *models.Xxx) *response.Xxx {
 }
 ```
 
-## 5. simple 使用约定
+## 5. `simple` Usage Conventions
 
-- DB 初始化后必须执行：`sqls.SetDB(db)`
-- 查询条件优先使用：`sqls.Cnd`
-- 参数绑定优先使用：`internal/pkg/httpx/params`
-- HTTP 响应统一使用：`internal/pkg/httpx.WriteJSON`
-- 写操作事务边界按 **4.1.4 事务最佳实践** 执行（禁止“单条写 SQL 也默认开事务”的口号式规则）
+- Prefer `sqls.Cnd` for query conditions
+- Prefer `internal/pkg/httpx/params` for parameter binding
+- Use `internal/pkg/httpx.WriteJSON` for all HTTP responses
+- Write transaction boundaries must follow **4.1.4 Transaction Best Practices** (avoid slogan-style rules such as "always open a transaction even for a single write SQL statement")
 
-## 6. 数据库兼容规则
+## 6. Database Compatibility Rules
 
-- 字段类型使用兼容集合：`varchar`、`text`、`int`、`bigint`、`datetime`
-- 主键统一使用 `int64`
-- 避免数据库私有语法和方言特性
-- 时间存储和解析策略保持统一，MySQL 使用 `parseTime=True`
+- Use compatible field types: `varchar`, `text`, `int`, `bigint`, `datetime`
+- Primary keys must consistently use `int64`
+- Avoid database-private syntax and dialect-specific features
+- Keep time storage and parsing strategies consistent; MySQL must use `parseTime=True`
 
-## 7. 代码生成与 Migration
+## 7. Code Generation and Migration
 
-### 7.1 代码生成
+### 7.1 Code Generation
 
-- 入口：`cmd/generator/generator.go`
-- 命令：`make generator`
-- 生成库：`github.com/mlogclub/codegen`
-- 注册方式：`codegen.GetGenerateStruct(&models.XXX{})`
-- 生成文件建议放在 `generated` 目录，命名为 `*_gen.go`
-- 生成代码只负责基础 CRUD，业务逻辑必须写在手写 service/handler 中
+- Entry point: `cmd/generator/generator.go`
+- Command: `make generator`
+- Generation library: `github.com/mlogclub/codegen`
+- Registration method: `codegen.GetGenerateStruct(&models.XXX{})`
+- Generated files should be placed in the `generated` directory and named `*_gen.go`
+- Generated code is only responsible for basic CRUD; business logic must be written manually in services/handlers
 
-标准流程：
+Standard process:
 
-1. 定义或修改 model
-2. 在 generator 中注册
-3. 执行 `make generator`
-4. 在手写层补业务逻辑
-5. 执行测试与自检
+1. Define or modify the model
+2. Register it in the generator
+3. Run `make generator`
+4. Add business logic in the handwritten layers
+5. Run tests and self-checks
 
 ### 7.2 Migration
 
-- DDL 变更默认不走 `internal/migration/runner.go`
-- 表结构新增、修改、索引变更统一通过 `sqls.DB().AutoMigrate(models.Models...)`
-- `internal/migration/runner.go` 只用于 DML：初始化数据、回填、修复、重映射等
-- migration 必须幂等，且 `version` 单调递增
-- 执行顺序：先 `AutoMigrate`，再 `migration.Migrate(...)`
+- DDL changes do not go through `internal/migration/runner.go` by default
+- New tables, table changes, and index changes are handled uniformly through `sqls.DB().AutoMigrate(models.Models...)`
+- `internal/migration/runner.go` is only for DML: initial data, backfills, repairs, remapping, etc.
+- Migrations must be idempotent, and `version` must increase monotonically
+- Execution order: run `AutoMigrate` first, then `migration.Migrate(...)`
 
-## 8. 接口规范
+## 8. API Conventions
 
-### 8.1 DTO 与返回
+### 8.1 DTOs and Responses
 
-- DTO 分离：`request` / `response` 分开定义
-- JSON 字段统一使用 `camelCase`
-- 禁止透传底层 SQL 错误
-- 错误码分段：
-  - `1000-1999` 参数错误
-  - `2000-2999` 业务错误
-  - `3000-3999` 认证/权限错误
-  - `5000-5999` 系统错误
+- Separate DTOs: define `request` and `response` separately
+- JSON fields must consistently use `camelCase`
+- Do not leak underlying SQL errors directly
+- Error code ranges:
+  - `1000-1999` parameter errors
+  - `2000-2999` business errors
+  - `3000-3999` authentication/authorization errors
+  - `5000-5999` system errors
 
-### 8.2 路径分层
+### 8.2 Path Layers
 
-- `/api/dashboard/*`：业务后台接口
-- `/api/third/*`：第三方平台调用接口
-- `/api/*`：开放接口
+- `/api/dashboard/*`: business dashboard APIs
+- `/api/third/*`: third-party platform callback/call APIs
+- `/api/*`: open APIs
 
-禁止新增 `/api/v1` 这类版本前缀。
+Do not add version prefixes such as `/api/v1`.
 
-### 8.3 dashboard 接口风格
+### 8.3 Dashboard API Style
 
-- 资源路径优先平铺：如 `/api/dashboard/project`
-- 列表、创建、更新、删除优先使用 `/list`、`/create`、`/update`、`/delete`
-- 查询条件优先通过 `query` 或 `body` 传递
-- 除详情接口外，尽量不使用 path param
-- 详情接口允许 `GET /api/dashboard/project/{id}`
-- 从属资源优先通过 `projectId`、`episodeId` 等普通参数过滤，不鼓励深层嵌套路由
+- Prefer flat resource paths, such as `/api/dashboard/project`
+- Prefer `/list`, `/create`, `/update`, and `/delete` for list/create/update/delete
+- Prefer passing query conditions through `query` or `body`
+- Avoid path params except for detail endpoints
+- Detail endpoints may use `GET /api/dashboard/project/{id}`
+- Prefer filtering subordinate resources through ordinary parameters such as `projectId` and `episodeId`; deep nested routes are discouraged
 
-### 8.4 路由注册
+### 8.4 Route Registration
 
-- Gin 引擎统一在 `internal/bootstrap/server.go` 中创建，中间件也在这里按顺序注册
-- 路由按分组函数拆到 `internal/bootstrap/routes.go` 及 `internal/bootstrap/*_routes.go`
-- 业务后台统一通过 `dashboardGroup := app.Group("/api/dashboard", middleware.AuthMiddleware)` 注册
-- 开放接口按领域归档到 `/api/*` 分组，第三方回调归档到 `/api/third/*` 分组
-- 在分组内部通过 `group.GET/POST/PUT/DELETE/Any(...)` 显式挂载 handler
-- 不要为每个资源单独再创建一层顶级 `app.Group("/api/dashboard/xxx")`
-- 认证与鉴权中间件优先挂在 `/api/dashboard` 或 `/api/admin` 这一层
+- The Gin engine is created uniformly in `internal/bootstrap/server.go`, and middleware is also registered there in order
+- Routes should be split into grouping functions in `internal/bootstrap/routes.go` and `internal/bootstrap/*_routes.go`
+- Business dashboard routes are registered through `dashboardGroup := app.Group("/api/dashboard", middleware.AuthMiddleware)`
+- Open APIs should be organized under `/api/*` groups by domain, and third-party callbacks under `/api/third/*`
+- Inside groups, mount handlers explicitly through `group.GET/POST/PUT/DELETE/Any(...)`
+- Do not create a separate top-level `app.Group("/api/dashboard/xxx")` for each resource
+- Authentication and authorization middleware should preferably be mounted at the `/api/dashboard` or `/api/admin` layer
 
-### 8.5 Gin 显式路由规则
+### 8.5 Gin Explicit Route Rules
 
-本项目使用 Gin 显式路由，不使用框架自动路由。handler 方法名只用于代码组织，最终 URL 以 `internal/bootstrap/*_routes.go` 中注册的路径为准。
+This project uses explicit Gin routes and does not use framework automatic routing. Handler method names are only for code organization; final URLs are determined by the paths registered in `internal/bootstrap/*_routes.go`.
 
-- 路由挂载方式示例：
+- Route mounting example:
 
 ```go
 func registerDashboardQuickReplyRoutes(group *gin.RouterGroup) {
-  group.Any("/list", dashboard.QuickReplyAnyList)
   group.GET("/:id", dashboard.QuickReplyGetBy)
+  group.Any("/list", dashboard.QuickReplyList)
   group.POST("/create", dashboard.QuickReplyPostCreate)
   group.POST("/update", dashboard.QuickReplyPostUpdate)
   group.POST("/delete", dashboard.QuickReplyPostDelete)
 }
 ```
 
-- 在上面的注册下，资源基础路径由外层 `dashboardGroup.Group("/quick-reply")` 决定，最终完整路径为 `/api/dashboard/quick-reply/list`、`/api/dashboard/quick-reply/{id}` 等
-- handler 命名建议保留现有可读前缀：`XxxAnyList`、`XxxGetBy`、`XxxPostCreate`、`XxxPostUpdate`、`XxxPostDelete`
-- handler 命名不产生路由；新增接口前必须修改对应 `register...Routes` 函数
-- HTTP Method 必须由 Gin 注册方法决定：
-  - 列表查询：优先 `group.Any("/list", XxxAnyList)`，前端按 `GET /list` 使用
-  - 详情查询：优先 `group.GET("/:id", XxxGetBy)`
-  - 写接口：统一 `group.POST("/create|/update|/delete", XxxPost...)`
-  - 业务动作：统一显式路径，如 `group.POST("/send_message", ConversationPostSend_message)`
-- path param 只在详情或强路径语义场景使用；普通过滤条件继续使用 query/body
+- With the registration above, the resource base path is determined by the outer `dashboardGroup.Group("/quick-reply")`; the final full paths are `/api/dashboard/quick-reply/list`, `/api/dashboard/quick-reply/{id}`, etc.
+- Handler names should keep the existing readable prefixes: `XxxList`, `XxxGetBy`, `XxxPostCreate`, `XxxPostUpdate`, `XxxPostDelete`
+- Handler names do not create routes; before adding an endpoint, the corresponding `register...Routes` function must be modified
+- The HTTP method must be determined by the Gin registration method:
+  - List queries: prefer `group.Any("/list", XxxList)`, used by the frontend as `GET /list`
+  - Detail queries: prefer `group.GET("/:id", XxxGetBy)`
+  - Write APIs: consistently use `group.POST("/create|/update|/delete", XxxPost...)`
+  - Business actions: use explicit paths, such as `group.POST("/send_message", ConversationPostSend_message)`
+- Path params should be used only for detail endpoints or strong path-semantics scenarios; ordinary filters should continue using query/body
 
-当前项目常见正确映射示例：
+Common correct mappings in the current project:
 
 - `registerDashboardUserRoutes(dashboardGroup.Group("/user"))`
-  - `group.Any("/list", dashboard.UserAnyList)` -> `ANY /api/dashboard/user/list`
   - `group.GET("/:id", dashboard.UserGetBy)` -> `GET /api/dashboard/user/{id}`
+  - `group.Any("/list", dashboard.UserList)` -> `ANY /api/dashboard/user/list`
   - `group.POST("/create", dashboard.UserPostCreate)` -> `POST /api/dashboard/user/create`
   - `group.POST("/update", dashboard.UserPostUpdate)` -> `POST /api/dashboard/user/update`
   - `group.POST("/delete", dashboard.UserPostDelete)` -> `POST /api/dashboard/user/delete`
 - `registerDashboardConversationRoutes(dashboardGroup.Group("/conversation"))`
-  - `group.Any("/list", dashboard.ConversationAnyList)` -> `ANY /api/dashboard/conversation/list`
   - `group.GET("/:id", dashboard.ConversationGetBy)` -> `GET /api/dashboard/conversation/{id}`
-  - `group.Any("/message/list", dashboard.ConversationAnyMessage_list)` -> `ANY /api/dashboard/conversation/message/list`
+  - `group.Any("/list", dashboard.ConversationList)` -> `ANY /api/dashboard/conversation/list`
+  - `group.Any("/message/list", dashboard.ConversationMessage_list)` -> `ANY /api/dashboard/conversation/message/list`
   - `group.POST("/send_message", dashboard.ConversationPostSend_message)` -> `POST /api/dashboard/conversation/send_message`
 
-容易写错的点：
+Easy mistakes:
 
-- 不要以为新增 `XxxGetList` 方法会自动出现 `/list` 路由；必须在 routes 文件显式注册
-- 不要把详情接口注册成 `/detail`，当前约定详情为 `GET /:id`
-- 不要随意新增深层嵌套路由；从属资源优先通过 `projectId`、`conversationId` 等普通参数过滤
-- 如果接口契约要求下划线路径，直接在 Gin 路由里写下划线路径，例如 `group.POST("/send_message", ...)`
-- handler 新增方法前，先写出对应 Gin 路由注册，确认最终 URL 与前端约定一致再落代码
+- Do not assume adding an `XxxList` method automatically creates a `/list` route; it must be explicitly registered in the routes file
+- Do not register detail endpoints as `/detail`; the current convention is `GET /:id`
+- Do not casually add deeply nested routes; subordinate resources should preferably be filtered by ordinary parameters such as `projectId` and `conversationId`
+- If an API contract requires an underscore path, write the underscore path directly in the Gin route, for example `group.POST("/send_message", ...)`
+- Before adding a handler method, first write the corresponding Gin route registration and confirm that the final URL matches the frontend contract
 
-### 8.6 Handler 约定
+### 8.6 Handler Conventions
 
-- 每个资源一个 handler 文件，位置为 `internal/handlers/{api|dashboard|third}/*_handler.go`
-- handler 统一形式：`func XxxPostCreate(ctx *gin.Context)`
-- 方法命名建议：
-  - `XxxAnyList(ctx *gin.Context)`
+- One handler file per resource, located at `internal/handlers/{api|dashboard|third}/*_handler.go`
+- Handler functions should use the uniform form: `func XxxPostCreate(ctx *gin.Context)`
+- Recommended method names:
+  - `XxxList(ctx *gin.Context)`
   - `XxxGetBy(ctx *gin.Context)`
   - `XxxPostCreate(ctx *gin.Context)`
   - `XxxPostUpdate(ctx *gin.Context)`
   - `XxxPostDelete(ctx *gin.Context)`
-  - 业务动作可扩展 `XxxPostTest(ctx *gin.Context)`、`XxxPostGenerate(ctx *gin.Context)` 等
+  - Business actions may extend this pattern with names such as `XxxPostTest(ctx *gin.Context)` or `XxxPostGenerate(ctx *gin.Context)`
 
-- `AnyList` 分页列表要求：
-  - 使用 `params.NewPagedSqlCnd(...)`
-  - 每个筛选字段通过 `params.QueryFilter` 显式声明
-  - 默认排序优先 `.Desc("id")`；特殊排序需明确理由
-  - service 层优先使用 `FindPageByCnd(...)`
-  - handler 层做 DTO 映射，禁止直接返回 model 列表
+- Requirements for paginated `List` endpoints:
+  - Use `params.NewPagedSqlCnd(...)`
+  - Declare each filter field explicitly through `params.QueryFilter`
+  - Prefer default sorting with `.Desc("id")`; special sorting requires an explicit reason
+  - Prefer `FindPageByCnd(...)` in the service layer
+  - Perform DTO mapping in the handler layer; do not return model lists directly
 
-- 分页返回统一为：
+- Paginated responses must use:
 
 ```go
 httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
 ```
 
-- 分页 `data` 结构必须为：
+- Paginated `data` structure must be:
   - `data.results`
   - `data.page.page`
   - `data.page.limit`
   - `data.page.total`
 
-- 详情优先返回 `httpx.WriteJSON(ctx, dto)`
-- 删除优先返回 `httpx.WriteJSON(ctx, nil)`
-- JSON body 优先使用 `params.ReadJSON`
-- form 参数优先使用 `params.ReadForm`
-- 获取单个参数可以使用 `params.GetInt64`、`params.GetInt64Arr`、`params.Get` 等
-- 分页和 query 优先使用 `params.NewPagedSqlCnd`
-- 登录态用户通过 `services.AuthService.GetAuthPrincipal(ctx)` 或 `RequirePermission(ctx, ...)` 获取
-- 权限判断统一通过 `services.AuthService.HasPermission(...)` 或 `RequirePermission(...)`
-- 鉴权失败统一返回 `httpx.WriteJSON(ctx, err)`
-- `gorm.ErrRecordNotFound` 等错误应转换成明确业务提示
-- 后端数据返回时，将数据转换成Response DTO相关的逻辑可以放到 `internal/builders` 包下。
+- Detail endpoints should preferably return `httpx.WriteJSON(ctx, dto)`
+- Delete endpoints should preferably return `httpx.WriteJSON(ctx, nil)`
+- JSON bodies should preferably be read with `params.ReadJSON`
+- Form parameters should preferably be read with `params.ReadForm`
+- Single parameters may be retrieved with `params.GetInt64`, `params.GetInt64Arr`, `params.Get`, etc.
+- Pagination and query parameters should preferably use `params.NewPagedSqlCnd`
+- Authenticated users should be retrieved through `services.AuthService.GetAuthPrincipal(ctx)` or `RequirePermission(ctx, ...)`
+- Permission checks should consistently use `services.AuthService.HasPermission(...)` or `RequirePermission(...)`
+- Authentication/authorization failures should consistently return `httpx.WriteJSON(ctx, err)`
+- Errors such as `gorm.ErrRecordNotFound` should be converted into clear business messages
+- When returning backend data, logic that converts data into response DTOs may be placed under `internal/builders`
 
-### 8.7 枚举的定义
+### 8.7 Enum Definitions
 
-- 系统中的常量统一定义到 `/internal/pkg/enums` 包下
-- 模型的状态优先使用 `/internal/pkg/enums/enums.go` 中的 `Status`，只有不满足需求的时候在考虑新增状态枚举
-- 前后端共用枚举必须遵循文档 [docs/design/specs/backend-frontend-enum-ast-spec.md](docs/design/specs/backend-frontend-enum-ast-spec.md)
-- 前后端共用枚举只允许在后端定义，前端必须使用 `make enums` 生成结果，禁止手写重复业务枚举
+- System constants should be defined uniformly under `/internal/pkg/enums`
+- Model statuses should preferably use `Status` from `/internal/pkg/enums/enums.go`; only add a new status enum when it does not meet the requirement
+- Enums shared by backend and frontend must follow [docs/design/specs/backend-frontend-enum-ast-spec.md](docs/design/specs/backend-frontend-enum-ast-spec.md)
+- Shared backend/frontend enums may only be defined in the backend; the frontend must generate results with `make enums`, and handwritten duplicate business enums are forbidden
 
-## 9. Go 代码规范
+## 9. Go Code Standards
 
-- 日志统一使用标准库 `log/slog`
-- 新增日志禁止引入其他日志库
-- 日志字段优先使用结构化键值对
-- 新增 Go 代码统一使用 `any`，禁止新增 `interface{}`
-- 修改 Go 代码后必须执行 `gofmt`
+- Logs must consistently use the standard library `log/slog`
+- New logs must not introduce other logging libraries
+- Log fields should preferably use structured key-value pairs
+- New Go code must consistently use `any`; do not add new `interface{}`
+- Run `gofmt` after modifying Go code
 
-## 10. 前端规范
+## 10. Frontend Standards
 
-### 10.1 工程事实
+### 10.1 Project Facts
 
-- 前端目录：`web`
-- 框架：`Next.js 16` + App Router
-- 页面目录：`web/app/*`
-- 组件目录：`web/components/*`
-- shadcn/ui 基础组件目录：`web/components/ui/*`
-- 工具目录：`web/lib/*`、`web/hooks/*`
-- 别名：`@/*`
-- 样式入口：`web/app/globals.css`
-- shadcn 配置：`web/components.json`
+- Frontend directory: `web`
+- Framework: `Next.js 16` + App Router
+- Page directory: `web/app/*`
+- Component directory: `web/components/*`
+- shadcn/ui base component directory: `web/components/ui/*`
+- Utility directories: `web/lib/*`, `web/hooks/*`
+- Alias: `@/*`
+- Style entry: `web/app/globals.css`
+- shadcn config: `web/components.json`
 
-### 10.2 组件与页面
+### 10.2 Components and Pages
 
-- 基础组件优先使用 `shadcn/ui`
-- 已有 `shadcn/ui` 能覆盖的场景，禁止重复封装等价基础组件
-- 缺少 `dialog`、`textarea`、`select` 等基础组件且业务确实需要时，必须按规范安装，不要手写替代品
-- 不要修改 `web/components/ui/*`
-- 业务组件放在 `web/components/*` 或对应业务目录
-- API 调用统一封装在服务层，禁止页面里散落裸 `fetch`
-- 前端业务接口统一通过 `web/lib/api/*` 下的 service 方法发起，禁止在 `page.tsx`、业务组件、store 中直接对业务接口使用裸 `fetch`
-- `web/lib/api/client.ts` 是默认请求入口；新增业务 API 优先复用 `request()`，不要重复实现一套新的请求客户端
-- 后端返回为统一 `JsonResult` 时，前端必须统一处理 `success`、`errorCode`、`message`、`data`，禁止只按 HTTP status 判断成功失败
-- 业务代码中不要自行解析 `JsonResult.data`、拼装通用错误处理、手写鉴权刷新逻辑；这些逻辑必须收敛在公共请求封装内
-- 需要登录态的请求必须复用统一封装附带的认证头、`3000/3002` 刷新 token、登录失效清理能力，禁止在页面层各自处理
-- 仅在调用第三方外部服务、下载二进制流、SSE/流式响应、WebSocket 握手等统一封装暂不适配的场景下，才允许直接使用底层 `fetch`；使用时必须在代码中注明原因
+- Prefer base components from `shadcn/ui`
+- If an existing `shadcn/ui` component covers the use case, do not duplicate an equivalent base component
+- If missing base components such as `dialog`, `textarea`, or `select` are truly needed for business logic, install them according to the standard process instead of hand-writing substitutes
+- Do not modify `web/components/ui/*`
+- Business components should live in `web/components/*` or the corresponding business directory
+- API calls must be uniformly encapsulated in the service layer; do not scatter raw `fetch` calls in pages
+- Frontend business APIs must be called through service methods under `web/lib/api/*`; raw `fetch` must not be used directly in `page.tsx`, business components, or stores
+- `web/lib/api/client.ts` is the default request entry point; new business APIs should preferably reuse `request()` instead of implementing another request client
+- When the backend returns the unified `JsonResult`, the frontend must handle `success`, `errorCode`, `message`, and `data` consistently; success must not be determined only by HTTP status
+- Business code must not parse `JsonResult.data`, assemble generic error handling, or hand-write auth-refresh logic by itself; these concerns must be centralized in the common request wrapper
+- Requests that require login state must reuse the unified wrapper with auth headers, `3000/3002` token refresh, and login-expiration cleanup; do not handle these separately at the page layer
+- Direct use of low-level `fetch` is allowed only for third-party external services, binary downloads, SSE/streaming responses, WebSocket handshakes, or other cases not yet supported by the unified wrapper; such usage must include a code comment explaining the reason
 
-### 10.3 shadcn 使用流程
+### 10.3 shadcn Usage Process
 
-- 先确认 `web/components.json` 已存在；存在时禁止再次 `init`
-- 命令统一在 `web` 目录执行
-- 安装依赖统一使用 `pnpm`
-- 新增基础组件优先使用：
+- First confirm that `web/components.json` exists; if it exists, do not run `init` again
+- Commands must be run from the `web` directory
+- Dependencies must be installed with `pnpm`
+- Prefer adding new base components with:
   - `cd web && pnpm dlx shadcn@latest add button`
   - `cd web && pnpm dlx shadcn@latest add button dialog form table`
 
-### 10.4 Next.js 约定
+### 10.4 Next.js Conventions
 
-- 优先使用 App Router
-- 需要客户端状态或副作用时显式加 `"use client"`
-- 页面与布局遵循 `layout.tsx`、`page.tsx` 约定
-- 检查优先复用现有 scripts：`dev`、`build`、`start`、`lint`、`format`、`typecheck`
+- Prefer App Router
+- Add `"use client"` explicitly when client state or side effects are required
+- Pages and layouts should follow the `layout.tsx` and `page.tsx` conventions
+- Checks should preferably reuse existing scripts: `dev`, `build`, `start`, `lint`, `format`, `typecheck`
 
-### 10.5 枚举管理
+### 10.5 Enum Management
 
-- 前端所有枚举统一定义在 `web/lib/enums.ts` 文件中
-- 枚举统一由后端定义，前端枚举使用 `make enums` 指令生成
+- All frontend enums should be defined uniformly in `web/lib/enums.ts`
+- Enums are defined by the backend; frontend enums are generated with `make enums`
 
-### 10.6 后台列表与表单基线
+### 10.6 Dashboard List and Form Baseline
 
-- 后台类 CRUD 页面优先参考：`docs/design/specs/frontend-list-form-best-practice.md`
-- 基线案例：`web/app/dashboard/quick-replies`
-- 默认采用“`page.tsx` 管列表与状态，`_components/edit.tsx` 管弹窗表单”的两层结构
-- 表单默认采用：`react-hook-form` + `zod` + `web/components/ui/field.tsx`
-- API 调用统一留在页面层或服务层，表单组件不直接请求接口
-- 新增或修改后台列表/表单页面后，AI Agent 必须先自查是否符合该文档约定，再执行 `cd web && pnpm typecheck`
+- Dashboard CRUD pages should preferably follow: `docs/design/specs/frontend-list-form-best-practice.md`
+- Baseline example: `web/app/dashboard/quick-replies`
+- Default to a two-layer structure: `page.tsx` manages the list and state, `_components/edit.tsx` manages the dialog form
+- Forms should default to: `react-hook-form` + `zod` + `web/components/ui/field.tsx`
+- API calls should stay in the page layer or service layer; form components should not call APIs directly
+- After adding or modifying dashboard list/form pages, the AI Agent must first self-check compliance with that document, then run `cd web && pnpm typecheck`
 
-### 10.7 前端其他规范
+### 10.7 Other Frontend Standards
 
-- 所有前端展示时间统一格式化为 `yyyy-MM-dd HH:mm:ss` 推荐统一使用 `web/lib/utils.ts` 中的 `formatDateTime` 方法
-- 下拉框组件不要使用shadcn的select组件，而是使用shadcn的combobox组件。项目级别使用combobox封装了一个下拉框组件 `web/components/option-combobox.tsx`，尽量通用。
-- 如果是组件中使用到的数据，尽量组件中自己去加载，不要在外面加载之后传到组件中。要保证组件的独立性。
+- All frontend display times must be formatted as `yyyy-MM-dd HH:mm:ss`; preferably use `formatDateTime` from `web/lib/utils.ts`
+- Dropdown components should not use the shadcn `select` component; use the shadcn `combobox` component instead. The project has a general dropdown wrapper at `web/components/option-combobox.tsx`; use it where possible.
+- If data is used inside a component, the component should load it itself as much as possible instead of receiving it from outside. Preserve component independence.
 
-## 11. 提交前检查清单
+## 11. Pre-Commit Checklist
 
-每次修改后至少确认：
+After each change, at minimum confirm:
 
-1. 没有跨层调用或反向依赖
-2. 写操作有明确事务边界
-3. 返回仍符合统一 JsonResult 结构
-4. 兼容 SQLite 与 MySQL
-5. 补充了必要测试，至少覆盖 service 核心路径
-6. Go 改动已执行 `gofmt`
-7. 前端改动至少通过 `pnpm lint` 或 `pnpm typecheck`（在 `web` 目录）
+1. There are no cross-layer calls or reverse dependencies
+2. Write operations have clear transaction boundaries
+3. Responses still follow the unified `JsonResult` structure
+4. Compatibility with both SQLite and MySQL is preserved
+5. Necessary tests were added, at least covering core service paths
+6. `gofmt` was run for Go changes
+7. Frontend changes passed at least `pnpm lint` or `pnpm typecheck` from the `web` directory
