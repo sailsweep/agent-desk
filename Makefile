@@ -127,4 +127,4 @@ migration:
 	@$(GO) run ./cmd/migration
 
 testdata:
-	@$(GO) run ./cmd/testdata
+	@$(GO) run ./cmd/testdata -lang $(or $(TESTDATA_LANG),zh)

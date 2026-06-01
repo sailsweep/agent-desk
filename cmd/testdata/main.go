@@ -7,6 +7,7 @@ import (
 	"agent-desk/cmd/testdata/channel"
 	"agent-desk/cmd/testdata/kb"
 	"agent-desk/cmd/testdata/quickreply"
+	"agent-desk/cmd/testdata/seedlang"
 	"agent-desk/cmd/testdata/skill"
 	"agent-desk/cmd/testdata/tag"
 	"agent-desk/internal/bootstrap"
@@ -32,7 +33,13 @@ func main() {
 func run() error {
 	configPath := flag.String("config", "config/config.yaml", "path to config file")
 	autoConfirm := flag.Bool("yes", false, "skip confirmation prompt")
+	langValue := flag.String("lang", string(seedlang.Chinese), "testdata language: zh or en")
 	flag.Parse()
+
+	lang, err := seedlang.Parse(*langValue)
+	if err != nil {
+		return err
+	}
 
 	if err := confirmDestructiveAction(*autoConfirm); err != nil {
 		return err
@@ -71,7 +78,7 @@ func run() error {
 		slog.Int("created", aiConfigResult.Created),
 		slog.Int("updated", aiConfigResult.Updated))
 
-	kbResult, err := kb.Init()
+	kbResult, err := kb.Init(lang)
 	if err != nil {
 		return fmt.Errorf("init knowledge base failed: %w", err)
 	}
@@ -81,13 +88,13 @@ func run() error {
 		slog.Int("updatedFAQs", kbResult.UpdatedFAQs),
 	)
 
-	skillResult, err := skill.Init()
+	skillResult, err := skill.Init(lang)
 	if err != nil {
 		return fmt.Errorf("init skill failed: %w", err)
 	}
 	slog.Info("skill init success", slog.Int("created", skillResult.Created), slog.Int("updated", skillResult.Updated))
 
-	agentTeamResult, err := agentteam.Init()
+	agentTeamResult, err := agentteam.Init(lang)
 	if err != nil {
 		return fmt.Errorf("init agent team failed: %w", err)
 	}
@@ -97,24 +104,24 @@ func run() error {
 		slog.Int("updatesApplied", agentTeamResult.UpdatesApplied),
 	)
 
-	aiAgentResult, err := aiagent.Init()
+	aiAgentResult, err := aiagent.Init(lang)
 	if err != nil {
 		return fmt.Errorf("init ai agent failed: %w", err)
 	}
 	slog.Info("ai agent init success", slog.Int("created", aiAgentResult.Created), slog.Int("updated", aiAgentResult.Updated))
 
-	channelResult, err := channel.Init()
+	channelResult, err := channel.Init(lang)
 	if err != nil {
 		return fmt.Errorf("init channel failed: %w", err)
 	}
 	slog.Info("channel init success", slog.Int("created", channelResult.Created), slog.Int("updated", channelResult.Updated))
 
-	if err := tag.Init(); err != nil {
+	if err := tag.Init(lang); err != nil {
 		slog.Error("init tag failed", "error", err)
 	}
 	slog.Info("tag init success")
 
-	if err := quickreply.Init(); err != nil {
+	if err := quickreply.Init(lang); err != nil {
 		return fmt.Errorf("init quick reply failed: %w", err)
 	}
 	slog.Info("quick reply init success")

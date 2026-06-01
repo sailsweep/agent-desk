@@ -1,6 +1,7 @@
 package channel
 
 import (
+	"agent-desk/cmd/testdata/seedlang"
 	"agent-desk/internal/models"
 	"agent-desk/internal/pkg/dto"
 	"agent-desk/internal/pkg/enums"
@@ -20,7 +21,7 @@ type InitResult struct {
 
 // Init 初始化 Channel 测试数据。
 // 依赖于 AI Agent 已初始化。
-func Init() (*InitResult, error) {
+func Init(lang seedlang.Language) (*InitResult, error) {
 	result := &InitResult{}
 
 	aiAgentID, err := getDefaultAIAgentID()
@@ -31,7 +32,7 @@ func Init() (*InitResult, error) {
 		return result, fmt.Errorf("no default ai agent found, please init ai agent first")
 	}
 
-	seedItems := buildSeedItems(aiAgentID)
+	seedItems := buildSeedItems(lang, aiAgentID)
 	for _, item := range seedItems {
 		itemCopy := item
 		if err := sqls.WithTransaction(func(ctx *sqls.TxContext) error {
@@ -56,8 +57,35 @@ func Init() (*InitResult, error) {
 	return result, nil
 }
 
-func buildSeedItems(aiAgentID int64) []models.Channel {
+func buildSeedItems(lang seedlang.Language, aiAgentID int64) []models.Channel {
 	now := time.Now()
+	if lang == seedlang.English {
+		return []models.Channel{
+			{
+				Name:        "Website Support",
+				ChannelType: enums.ChannelTypeWeb,
+				ChannelID:   strs.UUID(),
+				AIAgentID:   aiAgentID,
+				ConfigJSON: jsons.ToJsonStr(dto.WebChannelConfig{
+					Title:      "Online Support",
+					Subtitle:   "Powered by AgentDesk",
+					ThemeColor: "#2563eb",
+					Position:   "right",
+					Width:      "780px",
+				}),
+				Status: enums.StatusOk,
+				Remark: "Local testdata seed",
+				AuditFields: models.AuditFields{
+					CreatedAt:      now,
+					CreateUserID:   0,
+					CreateUserName: "System",
+					UpdatedAt:      now,
+					UpdateUserID:   0,
+					UpdateUserName: "System",
+				},
+			},
+		}
+	}
 	return []models.Channel{
 		{
 			Name:        "官网客服",

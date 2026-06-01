@@ -1,6 +1,7 @@
 package quickreply
 
 import (
+	"agent-desk/cmd/testdata/seedlang"
 	"agent-desk/internal/models"
 	"agent-desk/internal/pkg/enums"
 	"agent-desk/internal/repositories"
@@ -9,15 +10,146 @@ import (
 	"github.com/mlogclub/simple/sqls"
 )
 
-func Init() error {
-	seed := []struct {
-		id        int64
-		groupName string
-		title     string
-		content   string
-		status    enums.Status
-		sortNo    int
-	}{
+func Init(lang seedlang.Language) error {
+	seed := seedItems(lang)
+	return sqls.WithTransaction(func(ctx *sqls.TxContext) error {
+		now := time.Now()
+		for _, row := range seed {
+			existing := repositories.QuickReplyRepository.Get(ctx.Tx, row.id)
+			if existing == nil {
+				item := &models.QuickReply{
+					ID:        row.id,
+					GroupName: row.groupName,
+					Title:     row.title,
+					Content:   row.content,
+					Status:    row.status,
+					SortNo:    row.sortNo,
+					AuditFields: models.AuditFields{
+						CreatedAt:      now,
+						CreateUserID:   0,
+						CreateUserName: "system",
+						UpdatedAt:      now,
+						UpdateUserID:   0,
+						UpdateUserName: "system",
+					},
+				}
+				if err := repositories.QuickReplyRepository.Create(ctx.Tx, item); err != nil {
+					return err
+				}
+				continue
+			}
+			if err := repositories.QuickReplyRepository.Updates(ctx.Tx, row.id, map[string]any{
+				"group_name":       row.groupName,
+				"title":            row.title,
+				"content":          row.content,
+				"status":           row.status,
+				"sort_no":          row.sortNo,
+				"updated_at":       now,
+				"update_user_id":   0,
+				"update_user_name": "system",
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+type seedItem struct {
+	id        int64
+	groupName string
+	title     string
+	content   string
+	status    enums.Status
+	sortNo    int
+}
+
+func seedItems(lang seedlang.Language) []seedItem {
+	if lang == seedlang.English {
+		return []seedItem{
+			{
+				id:        1,
+				groupName: "New Visitor Reception",
+				title:     "First contact greeting",
+				content:   "Hello, welcome to AgentDesk support. I am the consultant assisting you today. Tell me what product, pricing, or integration option you want to learn about, and I will help you assess it quickly.",
+				status:    enums.StatusOk,
+				sortNo:    100,
+			},
+			{
+				id:        2,
+				groupName: "Product Inquiry",
+				title:     "Product capability overview",
+				content:   "We currently support AI Q&A, knowledge base retrieval, human handoff, tag management, quick replies, and agent workspace administration. If you already have a business scenario, I can break down a solution for that scenario.",
+				status:    enums.StatusOk,
+				sortNo:    95,
+			},
+			{
+				id:        3,
+				groupName: "Product Inquiry",
+				title:     "Deployment options",
+				content:   "The system supports both private deployment and cloud deployment. If you have strong data compliance requirements, evaluate private deployment first. If you want to launch quickly, start with the cloud version.",
+				status:    enums.StatusOk,
+				sortNo:    90,
+			},
+			{
+				id:        4,
+				groupName: "Quotation Follow-up",
+				title:     "Information before quotation",
+				content:   "To prepare an accurate quote, please share the expected number of agent seats, average daily conversation volume, whether a knowledge base is needed, and whether private deployment is required. I will organize the information and follow up quickly.",
+				status:    enums.StatusOk,
+				sortNo:    85,
+			},
+			{
+				id:        5,
+				groupName: "Quotation Follow-up",
+				title:     "Quotation sent reminder",
+				content:   "Hello, the solution and quotation have been sent to you. Please review them when convenient. If you want me to walk through feature boundaries, implementation timeline, and delivery approach, I can arrange that directly.",
+				status:    enums.StatusOk,
+				sortNo:    80,
+			},
+			{
+				id:        6,
+				groupName: "Implementation",
+				title:     "Confirm details before troubleshooting",
+				content:   "Got it. I will help troubleshoot first. Please add the time the issue started, affected scope, exact error screenshot, and whether any configuration was changed recently. This will help us locate the cause faster.",
+				status:    enums.StatusOk,
+				sortNo:    75,
+			},
+			{
+				id:        7,
+				groupName: "Implementation",
+				title:     "Configuration effective time",
+				content:   "The configuration has been updated and usually takes effect within 1 to 3 minutes. Please refresh the page and run another test. If anything is still abnormal, I will continue following up.",
+				status:    enums.StatusOk,
+				sortNo:    70,
+			},
+			{
+				id:        8,
+				groupName: "After-sales Support",
+				title:     "Issue escalation notice",
+				content:   "I have recorded this issue and escalated it to the technical team. The current priority is marked as high. We expect to provide the first conclusion today, and I will update you as soon as there is progress.",
+				status:    enums.StatusOk,
+				sortNo:    65,
+			},
+			{
+				id:        9,
+				groupName: "After-sales Support",
+				title:     "Version update notice template",
+				content:   "Hello, a version update is scheduled for Thursday evening. It mainly includes knowledge retrieval optimization and workspace experience improvements. There may be brief fluctuations during the update, and we will prepare rollback plans in advance.",
+				status:    enums.StatusOk,
+				sortNo:    60,
+			},
+			{
+				id:        10,
+				groupName: "Customer Follow-up",
+				title:     "Trial period follow-up",
+				content:   "Hello, I would like to check your trial experience over the past few days. Which features are used most often? Have you encountered anything hard to understand, complex to configure, or unstable in effect?",
+				status:    enums.StatusOk,
+				sortNo:    55,
+			},
+		}
+	}
+	return []seedItem{
 		{
 			id:        1,
 			groupName: "新客接待",
@@ -99,46 +231,4 @@ func Init() error {
 			sortNo:    55,
 		},
 	}
-
-	return sqls.WithTransaction(func(ctx *sqls.TxContext) error {
-		now := time.Now()
-		for _, row := range seed {
-			existing := repositories.QuickReplyRepository.Get(ctx.Tx, row.id)
-			if existing == nil {
-				item := &models.QuickReply{
-					ID:        row.id,
-					GroupName: row.groupName,
-					Title:     row.title,
-					Content:   row.content,
-					Status:    row.status,
-					SortNo:    row.sortNo,
-					AuditFields: models.AuditFields{
-						CreatedAt:      now,
-						CreateUserID:   0,
-						CreateUserName: "system",
-						UpdatedAt:      now,
-						UpdateUserID:   0,
-						UpdateUserName: "system",
-					},
-				}
-				if err := repositories.QuickReplyRepository.Create(ctx.Tx, item); err != nil {
-					return err
-				}
-				continue
-			}
-			if err := repositories.QuickReplyRepository.Updates(ctx.Tx, row.id, map[string]any{
-				"group_name":       row.groupName,
-				"title":            row.title,
-				"content":          row.content,
-				"status":           row.status,
-				"sort_no":          row.sortNo,
-				"updated_at":       now,
-				"update_user_id":   0,
-				"update_user_name": "system",
-			}); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
 }

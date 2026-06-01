@@ -1,6 +1,7 @@
 package skill
 
 import (
+	"agent-desk/cmd/testdata/seedlang"
 	"agent-desk/internal/models"
 	"agent-desk/internal/pkg/enums"
 	"agent-desk/internal/repositories"
@@ -17,9 +18,9 @@ type InitResult struct {
 	Updated int
 }
 
-func Init() (*InitResult, error) {
+func Init(lang seedlang.Language) (*InitResult, error) {
 	result := &InitResult{}
-	seedItems := buildSeedItems()
+	seedItems := buildSeedItems(lang)
 	for _, item := range seedItems {
 		itemCopy := item
 		if err := sqls.WithTransaction(func(ctx *sqls.TxContext) error {
@@ -43,8 +44,60 @@ func Init() (*InitResult, error) {
 	return result, nil
 }
 
-func buildSeedItems() []models.SkillDefinition {
+func buildSeedItems(lang seedlang.Language) []models.SkillDefinition {
 	now := time.Now()
+	if lang == seedlang.English {
+		return []models.SkillDefinition{
+			{
+				Code:        AfterSalesEscalationSkillCode,
+				Name:        "After-sales Escalation",
+				Description: "Handles incidents, complaints, after-sales follow-up, ticket creation, and human handoff requests. Match only when the user clearly needs after-sales intervention or escalation; do not match ordinary greetings, product introductions, or general inquiries.",
+				Instruction: `You are the dedicated "After-sales Escalation" skill responsible for customer support requests that require escalation.
+
+Scope:
+1. Handle only these scenarios: incidents, complaints, unresolved issues, explicit ticket creation requests, explicit human handoff requests, or after-sales follow-up.
+2. If the user is only asking a general question, discussing product usage, greeting, or chatting casually, state that the current request is outside this skill's scope and avoid misclassifying it as an escalation.
+
+Rules:
+1. First determine whether the user has clearly requested escalation. If not, ask concise follow-up questions in English, such as order number, product name, issue symptoms, actions already tried, and desired handling method.
+2. If the user explicitly asks to create or submit a ticket, prioritize the ticket flow and do not switch to human handoff on your own.
+3. If the user complains, reports an incident, or asks for after-sales follow-up but the information is scattered, first call graph/prepare_ticket_draft to organize a ticket draft, then ask for missing fields.
+4. Only call graph/create_ticket_with_confirmation when the user explicitly wants to submit a ticket, complaint, or incident report and the title and description are clear enough.
+5. Only call graph/handoff_to_human when the user explicitly requests a human agent, or when you determine that a human must continue and the request is not suitable for direct ticket creation.
+6. If the user mentions both "ticket" and "human agent", clarify the priority. If the user clearly says "create a ticket", assist with ticket creation first unless they explicitly ask again for immediate human handoff.
+7. Never claim in text that a ticket has been created or a human handoff has happened. Those actions must be performed through the corresponding tools.
+8. If there is not enough information for ticket creation or handoff, ask for clarification before taking an escalation action.
+
+Response requirements:
+1. Use English throughout. Keep the tone professional, concise, and like a real support agent.
+2. Focus on issue diagnosis and escalation handling. Do not output unrelated self-introductions.
+3. When entering a confirmation flow, clearly tell the user you will help submit or transfer the request and wait for the confirmation result.`,
+				Examples: `[
+  "My device went offline today and restarting did not help. Please create a ticket.",
+  "I confirm that I want to create a ticket, not transfer to a human agent.",
+  "This issue has not been resolved for three days. I want to file a complaint.",
+  "Please transfer me to a human agent. You cannot solve this.",
+  "When will after-sales support contact me? No one has followed up on this failure.",
+  "Help me report an incident. The product model is AX300 and it cannot connect to the network.",
+  "I need after-sales support. This issue keeps happening."
+]`,
+				ToolWhitelist: `[
+  "graph/create_ticket_with_confirmation",
+  "graph/handoff_to_human"
+]`,
+				Status: enums.StatusOk,
+				Remark: "after-sales escalation skill",
+				AuditFields: models.AuditFields{
+					CreatedAt:      now,
+					CreateUserID:   0,
+					CreateUserName: "System",
+					UpdatedAt:      now,
+					UpdateUserID:   0,
+					UpdateUserName: "System",
+				},
+			},
+		}
+	}
 	return []models.SkillDefinition{
 		{
 			Code:        AfterSalesEscalationSkillCode,

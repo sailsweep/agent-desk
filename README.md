@@ -206,7 +206,8 @@ make check          # run Go tests, frontend typecheck, and lint
 make generator      # run code generation
 make enums          # generate frontend enums
 make migration      # run migrations
-make testdata       # initialize demo/test data
+make testdata       # initialize Chinese demo/test data
+make testdata TESTDATA_LANG=en  # initialize English demo/test data
 ```
 
 ## AI Agent Workflow

@@ -1,6 +1,7 @@
 package aiagent
 
 import (
+	"agent-desk/cmd/testdata/seedlang"
 	"agent-desk/cmd/testdata/skill"
 	"agent-desk/internal/models"
 	"agent-desk/internal/pkg/enums"
@@ -19,7 +20,7 @@ type InitResult struct {
 
 // Init 初始化 AI Agent 测试数据
 // 依赖于 AI Config 和 Knowledge Base 已初始化
-func Init() (*InitResult, error) {
+func Init(lang seedlang.Language) (*InitResult, error) {
 	result := &InitResult{}
 
 	aiConfigID, err := getDefaultAIConfigID()
@@ -41,7 +42,7 @@ func Init() (*InitResult, error) {
 		return result, fmt.Errorf("get default skill ids failed: %w", err)
 	}
 
-	seedItems := buildSeedItems(aiConfigID, knowledgeIDs, defaultTeamIDs, defaultSkillIDs)
+	seedItems := buildSeedItems(lang, aiConfigID, knowledgeIDs, defaultTeamIDs, defaultSkillIDs)
 	for _, item := range seedItems {
 		itemCopy := item
 		if err := sqls.WithTransaction(func(ctx *sqls.TxContext) error {
@@ -68,8 +69,42 @@ func Init() (*InitResult, error) {
 	return result, nil
 }
 
-func buildSeedItems(aiConfigID int64, knowledgeIDs []int64, defaultTeamIDs string, defaultSkillIDs string) []models.AIAgent {
+func buildSeedItems(lang seedlang.Language, aiConfigID int64, knowledgeIDs []int64, defaultTeamIDs string, defaultSkillIDs string) []models.AIAgent {
 	now := time.Now()
+	if lang == seedlang.English {
+		return []models.AIAgent{
+			{
+				Name:        "Test AI Support Agent",
+				Description: "Local test AI support agent",
+				Status:      enums.StatusOk,
+				AIConfigID:  aiConfigID,
+				ServiceMode: enums.IMConversationServiceModeAIFirst,
+				SystemPrompt: `You are working in a customer support system with explicit engineering constraints.
+During execution, strictly follow the injected Agent rules and skill rules.
+If tool allowlist restrictions exist, call only the currently allowed tools. Ask follow-up questions when information is insufficient; do not fabricate facts or skip required confirmations.
+Do not promise processing times, completion times, callbacks, or contact times unless they have been confirmed by system context, tool results, human confirmation, or knowledge base facts.
+Do not make commitments on behalf of the human team, technical team, or after-sales team unless the current context contains explicit tool results, human confirmation, or knowledge base facts.
+When the user only says that they have sent materials, an email, screenshots, or attachments, only acknowledge the current message or suggest waiting for human confirmation. Do not invent internal handling processes, SLAs, or follow-up arrangements.`,
+				WelcomeMessage:      "Hello, how can I help you?",
+				ReplyTimeoutSeconds: 180,
+				TeamIDs:             defaultTeamIDs,
+				HandoffMode:         enums.AIAgentHandoffModeWaitPool,
+				FallbackMode:        enums.AIAgentFallbackModeSuggestRetry,
+				FallbackMessage:     "I could not find enough accurate information yet. Please add more details and I will keep checking.",
+				KnowledgeIDs:        utils.JoinInt64s(knowledgeIDs),
+				SkillIDs:            defaultSkillIDs,
+				SortNo:              10,
+				AuditFields: models.AuditFields{
+					CreatedAt:      now,
+					CreateUserID:   0,
+					CreateUserName: "System",
+					UpdatedAt:      now,
+					UpdateUserID:   0,
+					UpdateUserName: "System",
+				},
+			},
+		}
+	}
 	return []models.AIAgent{
 		{
 			Name:        "测试AI客服",

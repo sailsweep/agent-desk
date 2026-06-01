@@ -206,7 +206,8 @@ make check          # 运行 Go 测试、前端 typecheck 和 lint
 make generator      # 执行代码生成
 make enums          # 生成前端枚举
 make migration      # 执行 migration
-make testdata       # 初始化演示/测试数据
+make testdata       # 初始化中文演示/测试数据
+make testdata TESTDATA_LANG=en  # 初始化英文演示/测试数据
 ```
 
 ## AI Agent 工作流

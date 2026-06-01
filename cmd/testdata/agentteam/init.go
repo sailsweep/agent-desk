@@ -1,6 +1,7 @@
 package agentteam
 
 import (
+	"agent-desk/cmd/testdata/seedlang"
 	"agent-desk/internal/models"
 	"agent-desk/internal/pkg/constants"
 	"agent-desk/internal/pkg/enums"
@@ -25,7 +26,7 @@ type InitResult struct {
 // 2. 客服A 用户
 // 3. 客服B 用户
 // 4. 为客服A和客服B创建客服档案，关联到该客服组
-func Init() (*InitResult, error) {
+func Init(lang seedlang.Language) (*InitResult, error) {
 	result := &InitResult{}
 
 	// 获取管理员用户
@@ -39,7 +40,7 @@ func Init() (*InitResult, error) {
 	}
 
 	err := sqls.WithTransaction(func(ctx *sqls.TxContext) error {
-		return initTeamAndUsers(ctx, adminUser, result)
+		return initTeamAndUsers(ctx, adminUser, result, lang)
 	})
 	if err != nil {
 		return result, fmt.Errorf("init team and users failed: %w", err)
@@ -48,8 +49,8 @@ func Init() (*InitResult, error) {
 	return result, nil
 }
 
-func initTeamAndUsers(ctx *sqls.TxContext, leaderUser *models.User, result *InitResult) error {
-	teamName := "默认客服组"
+func initTeamAndUsers(ctx *sqls.TxContext, leaderUser *models.User, result *InitResult, lang seedlang.Language) error {
+	teamName := localizedTeamName(lang)
 	now := time.Now()
 
 	team := repositories.AgentTeamRepository.Take(ctx.Tx, "name = ?", teamName)
@@ -83,28 +84,7 @@ func initTeamAndUsers(ctx *sqls.TxContext, leaderUser *models.User, result *Init
 		result.TeamCreated = true
 	}
 
-	agentUsers := []struct {
-		username string
-		nickname string
-		code     string
-	}{
-		{
-			username: leaderUser.Username,
-			nickname: "客服组长",
-			code:     "AGENT_LEADER_A",
-		},
-		{
-			username: "agent_a",
-			nickname: "客服A",
-			code:     "AGENT_A",
-		},
-		{
-			username: "agent_b",
-			nickname: "客服B",
-			code:     "AGENT_B",
-		},
-	}
-
+	agentUsers := localizedAgentUsers(lang, leaderUser.Username)
 	for _, agentUser := range agentUsers {
 		userID, userCreated, err := createOrGetUser(ctx, agentUser.username, agentUser.nickname)
 		if err != nil {
@@ -127,6 +107,58 @@ func initTeamAndUsers(ctx *sqls.TxContext, leaderUser *models.User, result *Init
 	}
 
 	return nil
+}
+
+type agentUserSeed struct {
+	username string
+	nickname string
+	code     string
+}
+
+func localizedTeamName(lang seedlang.Language) string {
+	if lang == seedlang.English {
+		return "Default Support Team"
+	}
+	return "默认客服组"
+}
+
+func localizedAgentUsers(lang seedlang.Language, leaderUsername string) []agentUserSeed {
+	if lang == seedlang.English {
+		return []agentUserSeed{
+			{
+				username: leaderUsername,
+				nickname: "Support Lead",
+				code:     "AGENT_LEADER_A",
+			},
+			{
+				username: "agent_a",
+				nickname: "Agent A",
+				code:     "AGENT_A",
+			},
+			{
+				username: "agent_b",
+				nickname: "Agent B",
+				code:     "AGENT_B",
+			},
+		}
+	}
+	return []agentUserSeed{
+		{
+			username: leaderUsername,
+			nickname: "客服组长",
+			code:     "AGENT_LEADER_A",
+		},
+		{
+			username: "agent_a",
+			nickname: "客服A",
+			code:     "AGENT_A",
+		},
+		{
+			username: "agent_b",
+			nickname: "客服B",
+			code:     "AGENT_B",
+		},
+	}
 }
 
 func createOrGetUser(ctx *sqls.TxContext, username, nickname string) (int64, bool, error) {
