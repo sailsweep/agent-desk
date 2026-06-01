@@ -1,8 +1,8 @@
 server:
   port: 8083
   cors:
-    # 浏览器跨域白名单。生产环境必须改为实际前端/嵌入站点域名，例如 https://support.example.com。
-    # 留空表示不允许跨域请求，只支持同源或非浏览器调用。
+    # Browser CORS allowlist. In production, replace this with the actual frontend or embedded-site domains, such as https://support.example.com.
+    # Leave it empty to reject cross-origin browser requests. Same-origin and non-browser calls are still supported.
     allowedOrigins:
       - http://127.0.0.1:8083
       - http://localhost:8083
@@ -26,26 +26,39 @@ auth:
   credentialLockMinute: 15
 
 customerSession:
-  # 客服会话 token 签名密钥。必须使用独立高强度随机字符串，不要复用渠道 userTokenSecret。
+  # Signing secret for customer service session tokens. Use a separate, high-entropy random string; do not reuse the channel userTokenSecret.
   secret: ""
-  # 客服会话 token 默认有效期，单位分钟。
+  # Default lifetime for customer service session tokens, in minutes.
   ttlMinutes: 120
-  # token 剩余有效期小于该值时自动续期，单位分钟。
+  # Automatically refresh the token when its remaining lifetime falls below this value, in minutes.
   refreshThresholdMinutes: 30
 
 storage:
+  # Default file storage provider used for uploads. Supported values: local, oss.
+  # Empty value is treated as local by the backend.
   default: local
+  # Maximum size of a single uploaded file, in MB. Values <= 0 fall back to the backend default.
   maxUploadSizeMB: 20
   local:
+    # Files are written under this directory, relative to the process working directory unless an absolute path is used.
     root: data/storage
+    # Public URL prefix used when returning local file URLs. The server must expose this path as static files.
+    # Example: storage key "images/a.png" becomes "/storage/images/a.png".
     baseUrl: /storage
   oss:
+    # Aliyun OSS endpoint. Both "oss-cn-hangzhou.aliyuncs.com" and "https://oss-cn-hangzhou.aliyuncs.com" are accepted.
     endpoint: ""
+    # OSS bucket name.
     bucket: ""
+    # OSS access credentials. Keep the secret out of committed environment-specific config.
     accessKeyId: ""
     accessKeySecret: ""
+    # Optional public CDN/custom domain prefix for object URLs, for example https://files.example.com.
+    # If empty, public buckets use the default bucket endpoint URL; private buckets use signed URLs.
     baseUrl: ""
+    # Set to true for private buckets. Private buckets return temporary signed URLs for reads.
     private: false
+    # Expiration for generated OSS signed GET URLs, in seconds. Values <= 0 fall back to 600.
     signedUrlExpireSeconds: 600
 
 vectorDB:
@@ -65,15 +78,15 @@ mcp:
       headers: {}
 
 oidc:
-  # 是否启用 OIDC 登录；本系统作为 OIDC Client。
+  # Whether to enable OIDC login. This system acts as the OIDC client.
   enabled: false
-  # OIDC Provider issuer，例如 https://idp.example.com/realms/demo。
+  # OIDC provider issuer, for example https://idp.example.com/realms/demo.
   issuer: ""
   clientId: ""
   clientSecret: ""
-  # 必须与 OIDC Provider 后台登记的 redirect_uri 完全一致。
+  # Must exactly match the redirect_uri registered with the OIDC provider.
   redirectUrl: "http://127.0.0.1:8083/api/auth/oidc_callback"
-  # OIDC 登录 state 签名密钥；留空时退回使用 clientSecret。
+  # Signing secret for the OIDC login state. If left empty, clientSecret is used as the fallback.
   stateSecret: ""
   scopes:
     - openid
@@ -81,46 +94,46 @@ oidc:
     - email
 
 wxWork:
-  # 是否启用企业微信能力。
-  # false 时不会初始化企业微信 SDK，登录、客服回调、应用通知都不可用。
+  # Whether to enable WeCom features.
+  # When set to false, the WeCom SDK is not initialized, and login, customer service callbacks, and app notifications are unavailable.
   enabled: false
-  # 企业微信公司 ID。
-  # 例如：wwxxxxxxxxxxxxxxxx，来自企业微信管理后台。
+  # WeCom corporate ID.
+  # Example: wwxxxxxxxxxxxxxxxx, from the WeCom admin console.
   corpId: 
-  # 企业微信应用 Secret。
-  # 用于后端换取 access_token 和用户身份，必须保密。
+  # WeCom app secret.
+  # Used by the backend to obtain access tokens and user identities. Keep it confidential.
   corpSecret: ""
-  # 企业微信自建应用 AgentID。
-  # 网页授权 scope=snsapi_privateinfo 时会使用该字段。
+  # AgentID of the WeCom custom app.
+  # Used for web authorization when scope=snsapi_privateinfo.
   agentId: 
-  # 企业微信网页授权回调地址。
-  # 必须是完整 URL，且应指向后端接口：
-  # 例如：http://127.0.0.1:8083/api/auth/wxwork_callback
-  # 线上环境应填写可被企业微信访问的正式域名，并确保域名已在企业微信后台配置。
+  # WeCom web authorization callback URL.
+  # Must be a full URL pointing to the backend endpoint:
+  # Example: http://127.0.0.1:8083/api/auth/wxwork_callback
+  # In production, use an official domain that WeCom can access, and make sure the domain is configured in the WeCom admin console.
   oauthRedirect: ""
-  # 企业微信登录 state 签名密钥。
-  # 用于防篡改、防重放校验，建议填写独立随机字符串。
-  # 若留空，代码会退回使用 corpSecret，但不建议这样做。
+  # Signing secret for the WeCom login state.
+  # Used for tamper protection and replay protection. A separate random string is recommended.
+  # If left empty, the code falls back to corpSecret, but this is not recommended.
   stateSecret: ""
-  # 企业微信回调解密私钥。
-  # 当前登录流程未使用，保留给消息回调等场景。
+  # Private key for decrypting WeCom callbacks.
+  # Not used by the current login flow. Reserved for message callbacks and similar scenarios.
   rsaPrivateKey: ""
-  # 企业微信回调 Token。
-  # 当前登录流程未使用，保留给消息回调等场景。
+  # WeCom callback token.
+  # Not used by the current login flow. Reserved for message callbacks and similar scenarios.
   token: ""
-  # 企业微信消息加解密 EncodingAESKey。
-  # 当前登录流程未使用，保留给消息回调等场景。
+  # WeCom message encryption/decryption EncodingAESKey.
+  # Not used by the current login flow. Reserved for message callbacks and similar scenarios.
   encodingAESKey: ""
 
   notify:
-    # 是否启用企业微信应用消息通知。
+    # Whether to enable WeCom app message notifications.
     enabled: false
-    # 默认接收通知的系统用户ID列表；如业务目标用户已绑定企业微信身份，会优先发给目标用户。
-    # 系统用户ID会通过企业微信身份绑定映射为企业微信成员ID后发送。
+    # Default list of system user IDs to receive notifications. If the target business user has a bound WeCom identity, that user is preferred.
+    # System user IDs are mapped to WeCom member IDs through identity bindings before messages are sent.
     toUsers: []
-    # 是否发送保密消息。
+    # Whether to send confidential messages.
     safe: false
-    # 是否开启重复消息检查。
+    # Whether to enable duplicate message checks.
     enableDuplicateCheck: true
-    # 重复消息检查时间窗口，单位秒。
+    # Duplicate message check window, in seconds.
     duplicateCheckInterval: 1800
