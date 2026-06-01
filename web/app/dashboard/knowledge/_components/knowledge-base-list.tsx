@@ -449,7 +449,7 @@ export function KnowledgeBaseList({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="relative flex-1">
+            <div className="relative min-w-0 flex-1">
               <SearchIcon className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={keywordInput}
@@ -459,14 +459,16 @@ export function KnowledgeBaseList({
                 className="h-8 pl-8 text-xs"
               />
             </div>
-            <OptionCombobox
-              value={statusFilterInput}
-              onChange={handleStatusFilterChange}
-              options={statusOptions}
-              placeholder={t("knowledge.allStatus")}
-              searchPlaceholder={t("knowledge.searchBase")}
-              emptyText={t("knowledge.emptyBases")}
-            />
+            <div className="w-24 shrink-0">
+              <OptionCombobox
+                value={statusFilterInput}
+                onChange={handleStatusFilterChange}
+                options={statusOptions}
+                placeholder={t("knowledge.allStatus")}
+                searchPlaceholder={t("knowledge.searchStatus")}
+                emptyText={t("knowledge.emptyStatus")}
+              />
+            </div>
           </div>
         </div>
         <ScrollArea className="flex-1">
