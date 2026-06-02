@@ -152,6 +152,7 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
   const [moving, setMoving] = useState(false);
   const [bulkMoveOpen, setBulkMoveOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [moveTargetIds, setMoveTargetIds] = useState<number[]>([]);
   const [contextMenuDocumentId, setContextMenuDocumentId] = useState<number | null>(null);
   const [selectedDirectoryId, setSelectedDirectoryId] = useState<number | null>(null);
   const [actionLoadingMap, setActionLoadingMap] = useState<Record<number, { rebuildIndex: boolean; delete: boolean }>>({});
@@ -272,6 +273,11 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
     setSelectedIds(checked ? currentPageIds : []);
   }
 
+  function openMoveDialog(ids: number[]) {
+    setMoveTargetIds(ids);
+    setBulkMoveOpen(true);
+  }
+
   const openCreateDialog = useCallback(() => {
     setEditingItem(null);
     setDialogOpen(true);
@@ -373,7 +379,8 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
   }
 
   async function handleBatchMove(directoryId: number) {
-    if (!knowledgeBaseId || selectedIds.length === 0) {
+    const ids = moveTargetIds.length > 0 ? moveTargetIds : selectedIds;
+    if (!knowledgeBaseId || ids.length === 0) {
       return;
     }
     setMoving(true);
@@ -381,10 +388,11 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
       await batchMoveKnowledgeDocuments({
         knowledgeBaseId,
         directoryId,
-        ids: selectedIds,
+        ids,
       });
-      toast.success(t("knowledge.batchMoved", { count: selectedIds.length }));
+      toast.success(t("knowledge.batchMoved", { count: ids.length }));
       setBulkMoveOpen(false);
+      setMoveTargetIds([]);
       setSelectedIds([]);
       await loadData();
     } catch (error) {
@@ -540,6 +548,10 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
                               <PencilIcon className="mr-2 size-3.5" />
                               {t("knowledge.edit")}
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openMoveDialog([item.id])}>
+                              <FolderInputIcon className="mr-2 size-3.5" />
+                              {t("knowledge.move")}
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => void handleBuildIndex(item)}>
                               <WrenchIcon className="mr-2 size-3.5" />
                               {actionLoadingMap[item.id]?.rebuildIndex ? t("knowledge.running") : t("knowledge.rebuildIndex")}
@@ -560,6 +572,10 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
                     <ContextMenuItem onClick={() => openEditDialog(item)}>
                       <PencilIcon className="mr-2 size-3.5" />
                       {t("knowledge.edit")}
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => openMoveDialog([item.id])}>
+                      <FolderInputIcon className="mr-2 size-3.5" />
+                      {t("knowledge.move")}
                     </ContextMenuItem>
                     <ContextMenuItem onClick={() => void handleBuildIndex(item)} disabled={actionLoadingMap[item.id]?.rebuildIndex}>
                       <WrenchIcon className="mr-2 size-3.5" />
@@ -626,6 +642,10 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
                             <PencilIcon className="mr-2 size-3.5" />
                             {t("knowledge.edit")}
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openMoveDialog([item.id])}>
+                            <FolderInputIcon className="mr-2 size-3.5" />
+                            {t("knowledge.move")}
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => void handleBuildIndex(item)}>
                             <WrenchIcon className="mr-2 size-3.5" />
                             {actionLoadingMap[item.id]?.rebuildIndex ? t("knowledge.running") : t("knowledge.rebuildIndex")}
@@ -645,6 +665,10 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
                     <ContextMenuItem onClick={() => openEditDialog(item)}>
                       <PencilIcon className="mr-2 size-3.5" />
                       {t("knowledge.edit")}
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => openMoveDialog([item.id])}>
+                      <FolderInputIcon className="mr-2 size-3.5" />
+                      {t("knowledge.move")}
                     </ContextMenuItem>
                     <ContextMenuItem onClick={() => void handleBuildIndex(item)} disabled={actionLoadingMap[item.id]?.rebuildIndex}>
                       <WrenchIcon className="mr-2 size-3.5" />
@@ -680,7 +704,7 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
                   variant="outline"
                   size="sm"
                   className="h-7"
-                  onClick={() => setBulkMoveOpen(true)}
+                  onClick={() => openMoveDialog(selectedIds)}
                   disabled={saving || moving}
                 >
                   <FolderInputIcon className="size-3.5" />
@@ -737,8 +761,13 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
         open={bulkMoveOpen}
         knowledgeBaseId={knowledgeBaseId}
         moving={moving}
-        selectedCount={selectedIds.length}
-        onOpenChange={setBulkMoveOpen}
+        selectedCount={moveTargetIds.length || selectedIds.length}
+        onOpenChange={(open) => {
+          setBulkMoveOpen(open);
+          if (!open) {
+            setMoveTargetIds([]);
+          }
+        }}
         onSubmit={(directoryId) => void handleBatchMove(directoryId)}
       />
     </>

@@ -141,6 +141,7 @@ export function FAQList({
   const [moving, setMoving] = useState(false);
   const [bulkMoveOpen, setBulkMoveOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [moveTargetIds, setMoveTargetIds] = useState<number[]>([]);
   const [contextMenuFAQId, setContextMenuFAQId] = useState<number | null>(null);
   const [importing, setImporting] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -252,6 +253,11 @@ export function FAQList({
     setSelectedIds(checked ? currentPageIds : []);
   }
 
+  function openMoveDialog(ids: number[]) {
+    setMoveTargetIds(ids);
+    setBulkMoveOpen(true);
+  }
+
   function openEditDialog(item: KnowledgeFAQ) {
     setEditingItem(item);
     setDialogOpen(true);
@@ -330,7 +336,8 @@ export function FAQList({
   }
 
   async function handleBatchMove(directoryId: number) {
-    if (!knowledgeBaseId || selectedIds.length === 0) {
+    const ids = moveTargetIds.length > 0 ? moveTargetIds : selectedIds;
+    if (!knowledgeBaseId || ids.length === 0) {
       return;
     }
     setMoving(true);
@@ -338,10 +345,11 @@ export function FAQList({
       await batchMoveKnowledgeFAQs({
         knowledgeBaseId,
         directoryId,
-        ids: selectedIds,
+        ids,
       });
-      toast.success(t("knowledge.batchMoved", { count: selectedIds.length }));
+      toast.success(t("knowledge.batchMoved", { count: ids.length }));
       setBulkMoveOpen(false);
+      setMoveTargetIds([]);
       setSelectedIds([]);
       await loadData();
     } catch (error) {
@@ -471,6 +479,10 @@ export function FAQList({
                               <PencilIcon className="mr-2 size-3.5" />
                               {t("knowledge.edit")}
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openMoveDialog([item.id])}>
+                              <FolderInputIcon className="mr-2 size-3.5" />
+                              {t("knowledge.move")}
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => void handleBuildIndex(item)}>
                               <WrenchIcon className="mr-2 size-3.5" />
                               {actionLoadingMap[item.id]?.rebuildIndex ? t("knowledge.running") : t("knowledge.rebuildIndex")}
@@ -490,6 +502,10 @@ export function FAQList({
                       <ContextMenuItem onClick={() => openEditDialog(item)}>
                         <PencilIcon className="mr-2 size-3.5" />
                         {t("knowledge.edit")}
+                      </ContextMenuItem>
+                      <ContextMenuItem onClick={() => openMoveDialog([item.id])}>
+                        <FolderInputIcon className="mr-2 size-3.5" />
+                        {t("knowledge.move")}
                       </ContextMenuItem>
                       <ContextMenuItem onClick={() => void handleBuildIndex(item)} disabled={actionLoadingMap[item.id]?.rebuildIndex}>
                         <WrenchIcon className="mr-2 size-3.5" />
@@ -524,7 +540,7 @@ export function FAQList({
                     variant="outline"
                     size="sm"
                     className="h-7"
-                    onClick={() => setBulkMoveOpen(true)}
+                    onClick={() => openMoveDialog(selectedIds)}
                     disabled={saving || moving}
                   >
                     <FolderInputIcon className="size-3.5" />
@@ -593,8 +609,13 @@ export function FAQList({
         open={bulkMoveOpen}
         knowledgeBaseId={knowledgeBaseId}
         moving={moving}
-        selectedCount={selectedIds.length}
-        onOpenChange={setBulkMoveOpen}
+        selectedCount={moveTargetIds.length || selectedIds.length}
+        onOpenChange={(open) => {
+          setBulkMoveOpen(open);
+          if (!open) {
+            setMoveTargetIds([]);
+          }
+        }}
         onSubmit={(directoryId) => void handleBatchMove(directoryId)}
       />
     </>
