@@ -167,18 +167,13 @@ func (s *knowledgeDocumentService) UpdateKnowledgeDocument(req request.UpdateKno
 }
 
 func (s *knowledgeDocumentService) DeleteKnowledgeDocument(id int64) error {
-	chunks := repositories.KnowledgeChunkRepository.FindByDocumentID(sqls.DB(), id)
-	if err := sqls.WithTransaction(func(ctx *sqls.TxContext) error {
-		_ = repositories.KnowledgeDocumentRepository.Updates(ctx.Tx, id, map[string]any{
-			"status":     enums.StatusDeleted,
-			"updated_at": time.Now(),
-		})
-		ctx.Tx.Delete(&models.KnowledgeChunk{}, "document_id = ?", id)
-		return nil
+	if err := repositories.KnowledgeDocumentRepository.Updates(sqls.DB(), id, map[string]any{
+		"status":     enums.StatusDeleted,
+		"updated_at": time.Now(),
 	}); err != nil {
 		return err
 	}
-	return rag.Index.RemoveDocumentIndexByChunks(context.Background(), id, chunks)
+	return rag.Index.RemoveDocumentIndex(context.Background(), id)
 }
 
 func (s *knowledgeDocumentService) buildKnowledgeDocumentModel(req request.CreateKnowledgeDocumentRequest) (*models.KnowledgeDocument, error) {
