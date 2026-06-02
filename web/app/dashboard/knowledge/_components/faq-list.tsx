@@ -1,16 +1,37 @@
 "use client";
 
-import { WrenchIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import {
+  MoreHorizontalIcon,
+  PencilIcon,
+  SearchIcon,
+  Trash2Icon,
+  WrenchIcon,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { toast } from "sonner";
 
 import {
-  DashboardCrudPage,
-  type DashboardCrudActionState,
-  type DashboardCrudColumn,
-  type DashboardCrudFilter,
-} from "@/components/dashboard/crud";
+  useDashboardPagedList,
+  type DashboardPagedListFilter,
+} from "@/components/dashboard/list";
+import { ListPagination } from "@/components/list-pagination";
+import { OptionCombobox } from "@/components/option-combobox";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Tooltip,
   TooltipContent,
@@ -38,8 +59,11 @@ type FAQListProps = {
   onActionStateChange?: (state: FAQListActionState) => void;
 };
 
-export type FAQListActionState = DashboardCrudActionState & {
+export type FAQListActionState = {
+  onRefresh: () => void;
+  onCreate: () => void;
   onImport: () => void;
+  loading: boolean;
   importing: boolean;
 };
 
@@ -48,31 +72,16 @@ type TFunction = (key: string, values?: Record<string, string | number>) => stri
 function getIndexStatusOptions(t: TFunction) {
   return [
     { value: "all", label: t("knowledge.allIndexStatus") },
-    {
-      value: KnowledgeDocumentIndexStatus.Pending,
-      label: t("knowledge.indexPending"),
-    },
-    {
-      value: KnowledgeDocumentIndexStatus.Indexed,
-      label: t("knowledge.indexIndexed"),
-    },
-    {
-      value: KnowledgeDocumentIndexStatus.Failed,
-      label: t("knowledge.indexFailed"),
-    },
+    { value: KnowledgeDocumentIndexStatus.Pending, label: t("knowledge.indexPending") },
+    { value: KnowledgeDocumentIndexStatus.Indexed, label: t("knowledge.indexIndexed") },
+    { value: KnowledgeDocumentIndexStatus.Failed, label: t("knowledge.indexFailed") },
   ];
 }
 
 function getIndexStatusLabel(status: string, t: TFunction) {
-  if (status === KnowledgeDocumentIndexStatus.Pending) {
-    return t("knowledge.indexPending");
-  }
-  if (status === KnowledgeDocumentIndexStatus.Indexed) {
-    return t("knowledge.indexIndexed");
-  }
-  if (status === KnowledgeDocumentIndexStatus.Failed) {
-    return t("knowledge.indexFailed");
-  }
+  if (status === KnowledgeDocumentIndexStatus.Pending) return t("knowledge.indexPending");
+  if (status === KnowledgeDocumentIndexStatus.Indexed) return t("knowledge.indexIndexed");
+  if (status === KnowledgeDocumentIndexStatus.Failed) return t("knowledge.indexFailed");
   return status || "-";
 }
 
@@ -120,87 +129,151 @@ export function FAQList({
   onActionStateChange,
 }: FAQListProps) {
   const t = useI18n();
+  const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedDirectoryId, setSelectedDirectoryId] = useState<number | null>(null);
-  const [crudActionState, setCrudActionState] =
-    useState<DashboardCrudActionState | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<KnowledgeFAQ | null>(null);
+  const [actionLoadingMap, setActionLoadingMap] = useState<Record<number, { rebuildIndex: boolean; delete: boolean }>>({});
   const indexStatusOptions = useMemo(() => getIndexStatusOptions(t), [t]);
 
   useEffect(() => {
     setSelectedDirectoryId(null);
   }, [knowledgeBaseId]);
 
+  const filters = useMemo<DashboardPagedListFilter[]>(() => [
+    {
+      name: "question",
+      defaultValue: "",
+      trim: true,
+    },
+    {
+      name: "indexStatus",
+      defaultValue: "all",
+      allValue: "all",
+    },
+  ], []);
+
+  const fetchList = useCallback(async (query: Record<string, string | number | undefined>) => {
+    return fetchKnowledgeFAQs({
+      knowledgeBaseId: knowledgeBaseId ?? 0,
+      directoryId: selectedDirectoryId === null ? undefined : selectedDirectoryId,
+      question: typeof query.question === "string" ? query.question : undefined,
+      indexStatus: typeof query.indexStatus === "string" ? query.indexStatus : undefined,
+      page: typeof query.page === "number" ? query.page : Number(query.page ?? 1),
+      limit: typeof query.limit === "number" ? query.limit : Number(query.limit ?? 20),
+    });
+  }, [knowledgeBaseId, selectedDirectoryId]);
+
+  const {
+    draftFilters,
+    setDraftFilter,
+    applyFilter,
+    applyFilters,
+    loading,
+    result: faqs,
+    loadData,
+    handlePageChange,
+    handleLimitChange,
+  } = useDashboardPagedList<KnowledgeFAQ>({
+    filters,
+    fetchList,
+    enabled: Boolean(knowledgeBaseId),
+    reloadKey: `${knowledgeBaseId ?? 0}-${selectedDirectoryId ?? "all"}`,
+    loadFailed: t("knowledge.loadFAQFailed"),
+  });
+
+  const openCreateDialog = useCallback(() => {
+    setEditingItem(null);
+    setDialogOpen(true);
+  }, []);
+
   useEffect(() => {
-    if (!crudActionState) {
-      return;
-    }
     onActionStateChange?.({
-      ...crudActionState,
+      onRefresh: () => void loadData(),
+      onCreate: openCreateDialog,
       onImport: () => setImportDialogOpen(true),
+      loading,
       importing,
     });
-  }, [crudActionState, importing, onActionStateChange]);
+  }, [loadData, loading, importing, onActionStateChange, openCreateDialog]);
 
-  const filters = useMemo<DashboardCrudFilter[]>(
-    () => [
-      {
-        name: "question",
-        label: t("knowledge.searchFAQ"),
-        placeholder: t("knowledge.searchFAQ"),
-        defaultValue: "",
-        trim: true,
-        className: "max-w-md flex-1",
-      },
-      {
-        name: "indexStatus",
-        label: t("knowledge.allIndexStatus"),
-        type: "select",
-        defaultValue: "all",
-        allValue: "all",
-        options: indexStatusOptions,
-        className: "w-full sm:w-48",
-      },
-    ],
-    [indexStatusOptions, t],
-  );
+  function handleIndexStatusFilterChange(value: string | null) {
+    applyFilter("indexStatus", value ?? "all");
+  }
 
-  const columns = useMemo<DashboardCrudColumn<KnowledgeFAQ>[]>(
-    () => [
-      {
-        key: "question",
-        label: t("knowledge.question"),
-        className: "max-w-sm",
-        render: (item) => (
-          <>
-            <div className="font-medium">{item.question}</div>
-            <div className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-              {item.answer}
-            </div>
-          </>
-        ),
-      },
-      {
-        key: "indexStatus",
-        label: t("knowledge.indexStatus"),
-        render: (item) => renderIndexStatusBadge(item, t),
-      },
-      {
-        key: "similarQuestions",
-        label: t("knowledge.similarQuestions"),
-        render: (item) =>
-          Array.isArray(item.similarQuestions)
-            ? item.similarQuestions.length
-            : 0,
-      },
-      {
-        key: "updatedAt",
-        label: t("knowledge.updatedAt"),
-        render: (item) => formatDateTime(item.updatedAt),
-      },
-    ],
-    [t],
-  );
+  function handleFilterKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter") {
+      return;
+    }
+    event.preventDefault();
+    applyFilters();
+  }
+
+  function openEditDialog(item: KnowledgeFAQ) {
+    setEditingItem(item);
+    setDialogOpen(true);
+  }
+
+  function handleDialogOpenChange(open: boolean) {
+    if (saving) {
+      return;
+    }
+    if (!open) {
+      setEditingItem(null);
+    }
+    setDialogOpen(open);
+  }
+
+  async function handleSubmit(payload: CreateKnowledgeFAQPayload) {
+    if (saving) {
+      return;
+    }
+    setSaving(true);
+    try {
+      if (editingItem) {
+        await updateKnowledgeFAQ({ id: editingItem.id, ...payload });
+        toast.success(t("knowledge.faqSaved"));
+      } else {
+        await createKnowledgeFAQ(payload);
+        toast.success(t("knowledge.faqSaved"));
+      }
+      setDialogOpen(false);
+      setEditingItem(null);
+      await loadData();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("knowledge.faqSaveFailed"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(item: KnowledgeFAQ) {
+    setActionLoadingMap((prev) => ({ ...prev, [item.id]: { ...prev[item.id], delete: true } }));
+    try {
+      await deleteKnowledgeFAQ(item.id);
+      toast.success(t("knowledge.faqDeleted"));
+      await loadData();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("knowledge.faqDeleteFailed"));
+    } finally {
+      setActionLoadingMap((prev) => ({ ...prev, [item.id]: { ...prev[item.id], delete: false } }));
+    }
+  }
+
+  async function handleBuildIndex(item: KnowledgeFAQ) {
+    setActionLoadingMap((prev) => ({ ...prev, [item.id]: { ...prev[item.id], rebuildIndex: true } }));
+    try {
+      await buildKnowledgeFAQIndex(item.id);
+      toast.success(t("knowledge.faqIndexRebuilt"));
+      await loadData();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("knowledge.faqIndexRebuildFailed"));
+    } finally {
+      setActionLoadingMap((prev) => ({ ...prev, [item.id]: { ...prev[item.id], rebuildIndex: false } }));
+    }
+  }
 
   if (!knowledgeBaseId) {
     return (
@@ -217,96 +290,129 @@ export function FAQList({
           knowledgeBaseId={knowledgeBaseId}
           selectedDirectoryId={selectedDirectoryId}
           onSelectDirectory={setSelectedDirectoryId}
-          onChanged={() => crudActionState?.onRefresh()}
+          onChanged={() => void loadData()}
         />
-        <div className="min-w-0 flex-1 p-4">
-        <DashboardCrudPage<KnowledgeFAQ, CreateKnowledgeFAQPayload>
-          key={`${knowledgeBaseId}-${selectedDirectoryId ?? "all"}`}
-          layout="fragment"
-          showToolbarActions={false}
-          filters={filters}
-          columns={columns}
-          fetchList={(query) =>
-            fetchKnowledgeFAQs({
-              knowledgeBaseId,
-              directoryId:
-                selectedDirectoryId === null ? undefined : selectedDirectoryId,
-              question:
-                typeof query.question === "string" ? query.question : undefined,
-              indexStatus:
-                typeof query.indexStatus === "string"
-                  ? query.indexStatus
-                  : undefined,
-              page: Number(query.page),
-              limit: Number(query.limit),
-            })
-          }
-          getItemId={(item) => item.id}
-          createItem={createKnowledgeFAQ}
-          updateItem={(item, payload) =>
-            updateKnowledgeFAQ({ id: item.id, ...payload })
-          }
-          deleteItem={(item) => deleteKnowledgeFAQ(item.id)}
-          rowActions={[
-            {
-              key: "rebuild-index",
-              icon: <WrenchIcon />,
-              label: t("knowledge.rebuildIndex"),
-              run: async ({ item, reload }) => {
-                try {
-                  await buildKnowledgeFAQIndex(item.id);
-                  toast.success(t("knowledge.faqIndexRebuilt"));
-                  await reload();
-                } catch (error) {
-                  toast.error(
-                    error instanceof Error
-                      ? error.message
-                      : t("knowledge.faqIndexRebuildFailed"),
-                  );
-                }
-              },
-            },
-          ]}
-          renderEditDialog={({
-            open,
-            saving,
-            itemId,
-            onOpenChange,
-            onSubmit,
-          }) => (
-            <FAQEditDialog
-              open={open}
-              saving={saving}
-              itemId={itemId}
-              knowledgeBaseId={knowledgeBaseId}
-              initialDirectoryId={selectedDirectoryId ?? 0}
-              onOpenChange={onOpenChange}
-              onSubmit={onSubmit}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex flex-col gap-2 border-b bg-background px-6 py-2">
+            <div className="flex min-w-0 gap-2">
+              <div className="relative min-w-0 flex-1">
+                <SearchIcon className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={String(draftFilters.question ?? "")}
+                  onChange={(event) => setDraftFilter("question", event.target.value)}
+                  onKeyDown={handleFilterKeyDown}
+                  placeholder={t("knowledge.searchFAQ")}
+                  className="h-8 pl-8 text-xs"
+                />
+              </div>
+              <div className="w-32 shrink-0">
+                <OptionCombobox
+                  value={String(draftFilters.indexStatus ?? "all")}
+                  onChange={handleIndexStatusFilterChange}
+                  options={indexStatusOptions}
+                  placeholder={t("knowledge.allIndexStatus")}
+                  searchPlaceholder={t("knowledge.searchStatus")}
+                  emptyText={t("knowledge.emptyStatus")}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="min-h-0 flex-1">
+            <ScrollArea className="h-full">
+              <div className="p-2 space-y-0.5">
+                {faqs.results.map((item) => (
+                  <ContextMenu key={item.id}>
+                    <ContextMenuTrigger className="w-full">
+                      <div className="flex items-center gap-3 bg-background p-2 transition-colors hover:bg-accent w-full">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <div className="truncate text-sm font-medium">{item.question}</div>
+                            {renderIndexStatusBadge(item, t)}
+                          </div>
+                          <div className="mt-1 line-clamp-1 text-xs text-muted-foreground">
+                            {item.answer}
+                          </div>
+                        </div>
+                        <div className="hidden shrink-0 text-xs text-muted-foreground sm:block">
+                          {formatDateTime(item.updatedAt)}
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={<Button variant="ghost" size="icon" className="size-6" />}
+                            aria-label={t("knowledge.moreActions", { name: item.question })}
+                          >
+                            <MoreHorizontalIcon className="size-3.5" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-32 min-w-32">
+                            <DropdownMenuItem onClick={() => openEditDialog(item)}>
+                              <PencilIcon className="mr-2 size-3.5" />
+                              {t("knowledge.edit")}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => void handleBuildIndex(item)}>
+                              <WrenchIcon className="mr-2 size-3.5" />
+                              {actionLoadingMap[item.id]?.rebuildIndex ? t("knowledge.running") : t("knowledge.rebuildIndex")}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => void handleDelete(item)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2Icon className="mr-2 size-3.5" />
+                              {actionLoadingMap[item.id]?.delete ? t("knowledge.deleting") : t("knowledge.delete")}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent className="w-40">
+                      <ContextMenuItem onClick={() => openEditDialog(item)}>
+                        <PencilIcon className="mr-2 size-3.5" />
+                        {t("knowledge.edit")}
+                      </ContextMenuItem>
+                      <ContextMenuItem onClick={() => void handleBuildIndex(item)} disabled={actionLoadingMap[item.id]?.rebuildIndex}>
+                        <WrenchIcon className="mr-2 size-3.5" />
+                        {actionLoadingMap[item.id]?.rebuildIndex ? t("knowledge.running") : t("knowledge.rebuildIndex")}
+                      </ContextMenuItem>
+                      <ContextMenuItem
+                        onClick={() => void handleDelete(item)}
+                        variant="destructive"
+                        disabled={actionLoadingMap[item.id]?.delete}
+                      >
+                        <Trash2Icon className="mr-2 size-3.5" />
+                        {actionLoadingMap[item.id]?.delete ? t("knowledge.deleting") : t("knowledge.delete")}
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                ))}
+                {!loading && faqs.results.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-muted-foreground">
+                    {t("knowledge.emptyFAQ")}
+                  </div>
+                ) : null}
+              </div>
+            </ScrollArea>
+          </div>
+          <div className="border-t px-6 py-3">
+            <ListPagination
+              page={faqs.page.page}
+              limit={faqs.page.limit}
+              total={faqs.page.total}
+              loading={loading}
+              onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
             />
-          )}
-          onActionStateChange={setCrudActionState}
-          labels={{
-            refresh: t("knowledge.refreshFAQ"),
-            create: t("knowledge.newFAQ"),
-            query: t("knowledge.query"),
-            loading: t("knowledge.loadingFAQ"),
-            empty: t("knowledge.emptyFAQ"),
-            actions: t("knowledge.actions"),
-            edit: t("knowledge.edit"),
-            delete: t("knowledge.delete"),
-            processing: t("knowledge.deleting"),
-            moreActions: (item) =>
-              t("knowledge.moreActions", { name: item.question }),
-            loadFailed: t("knowledge.loadFAQFailed"),
-            saveFailed: t("knowledge.faqSaveFailed"),
-            deleteFailed: t("knowledge.faqDeleteFailed"),
-            created: () => t("knowledge.faqSaved"),
-            updated: () => t("knowledge.faqSaved"),
-            deleted: () => t("knowledge.faqDeleted"),
-          }}
-        />
+          </div>
         </div>
       </div>
+
+      <FAQEditDialog
+        open={dialogOpen}
+        saving={saving}
+        itemId={editingItem?.id ?? null}
+        knowledgeBaseId={knowledgeBaseId}
+        initialDirectoryId={selectedDirectoryId ?? 0}
+        onOpenChange={handleDialogOpenChange}
+        onSubmit={handleSubmit}
+      />
 
       <FAQImportDialog
         open={importDialogOpen}
@@ -315,7 +421,7 @@ export function FAQList({
         onOpenChange={setImportDialogOpen}
         onImportingChange={setImporting}
         onImported={async () => {
-          crudActionState?.onRefresh();
+          await loadData();
         }}
       />
     </>
