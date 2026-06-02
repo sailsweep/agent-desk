@@ -12,7 +12,7 @@ import {
   Trash2Icon,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useState, type PointerEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { toast } from "sonner";
 
 import { OptionCombobox } from "@/components/option-combobox";
@@ -89,6 +89,8 @@ export function KnowledgeDirectoryPanel({
   onChanged,
 }: KnowledgeDirectoryPanelProps) {
   const t = useI18n();
+  const directoryNameInputRef = useRef<HTMLInputElement>(null);
+  const directoryNameFocusTimerRef = useRef<number | null>(null);
   const [panelWidth, setPanelWidth] = useState(() => {
     if (typeof window === "undefined") {
       return DIRECTORY_PANEL_DEFAULT_WIDTH;
@@ -139,6 +141,28 @@ export function KnowledgeDirectoryPanel({
   useEffect(() => {
     localStorage.setItem(DIRECTORY_PANEL_WIDTH_STORAGE_KEY, String(panelWidth));
   }, [panelWidth]);
+
+  useEffect(() => {
+    if (!dialog.open) {
+      return;
+    }
+    const frame = requestAnimationFrame(() => {
+      directoryNameFocusTimerRef.current = window.setTimeout(() => {
+        const input =
+          directoryNameInputRef.current ??
+          document.querySelector<HTMLInputElement>("[data-knowledge-directory-name-input='true']");
+        input?.focus({ preventScroll: true });
+        input?.select();
+      }, 80);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      if (directoryNameFocusTimerRef.current !== null) {
+        window.clearTimeout(directoryNameFocusTimerRef.current);
+        directoryNameFocusTimerRef.current = null;
+      }
+    };
+  }, [dialog.open]);
 
   function handleResizePointerDown(event: PointerEvent<HTMLDivElement>) {
     event.preventDefault();
@@ -348,6 +372,9 @@ export function KnowledgeDirectoryPanel({
             <FieldLabel>{t("knowledge.directoryName")}</FieldLabel>
             <FieldContent>
               <Input
+                ref={directoryNameInputRef}
+                autoFocus
+                data-knowledge-directory-name-input="true"
                 value={dialog.name}
                 onChange={(event) =>
                   setDialog((current) => ({ ...current, name: event.target.value }))
