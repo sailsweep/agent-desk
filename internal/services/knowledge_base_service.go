@@ -137,10 +137,6 @@ func (s *knowledgeBaseService) DeleteKnowledgeBase(id int64) error {
 		return errorsx.Forbidden(fmt.Sprintf("知识库已被 %d 个 AI Agent 引用，请先解除绑定", len(referencingAgents)))
 	}
 
-	if err := rag.Index.RemoveKnowledgeBaseIndex(context.Background(), id); err != nil {
-		return err
-	}
-
 	if err := sqls.WithTransaction(func(ctx *sqls.TxContext) error {
 		if err := repositories.KnowledgeDocumentRepository.DeleteByKnowledgeBaseID(ctx.Tx, id); err != nil {
 			return err
@@ -153,7 +149,7 @@ func (s *knowledgeBaseService) DeleteKnowledgeBase(id int64) error {
 		return err
 	}
 
-	return nil
+	return rag.Index.RemoveKnowledgeBaseIndex(context.Background(), id)
 }
 
 func (s *knowledgeBaseService) UpdateSort(ids []int64) error {

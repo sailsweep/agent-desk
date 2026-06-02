@@ -12,8 +12,6 @@ import (
 	"agent-desk/internal/pkg/enums"
 
 	"agent-desk/internal/ai"
-
-	"github.com/mlogclub/simple/common/strs"
 )
 
 func (s *index) buildDocumentChunkRequest(document models.KnowledgeDocument, knowledgeBase models.KnowledgeBase) *ragchunk.ChunkRequest {
@@ -43,16 +41,6 @@ func (s *index) buildDocumentChunks(ctx context.Context, document models.Knowled
 		return nil, fmt.Errorf("no chunks generated from document")
 	}
 	return chunks, nil
-}
-
-func (s *index) collectExistingVectorIDs(chunks []models.KnowledgeChunk) []string {
-	ret := make([]string, 0, len(chunks))
-	for _, chunk := range chunks {
-		if strs.IsNotBlank(chunk.VectorID) {
-			ret = append(ret, chunk.VectorID)
-		}
-	}
-	return ret
 }
 
 func (s *index) prepareDocumentVectors(ctx context.Context, knowledgeBase models.KnowledgeBase, document models.KnowledgeDocument, chunks []ragchunk.ChunkResult) ([]vectordb.Vector, []models.KnowledgeChunk, int, error) {

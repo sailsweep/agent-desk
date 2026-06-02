@@ -157,7 +157,7 @@ func (s *index) RemoveKnowledgeBaseIndex(ctx context.Context, knowledgeBaseID in
 		return nil
 	}
 	if err := s.deleteChunkVectors(ctx, s.collectChunkVectorIDs(chunks)); err != nil {
-		return fmt.Errorf("failed to delete vectors for knowledge base %d: %w", knowledgeBaseID, err)
+		slog.Error("Failed to delete knowledge base vectors", "knowledge_base_id", knowledgeBaseID, "error", err)
 	}
 	if err := repositories.KnowledgeChunkRepository.DeleteByKnowledgeBaseID(sqls.DB(), knowledgeBaseID); err != nil {
 		return fmt.Errorf("failed to delete chunks for knowledge base %d: %w", knowledgeBaseID, err)
@@ -326,6 +326,6 @@ func joinSimilarQuestions(items []string) string {
 }
 
 func (s *index) resetKnowledgeBaseIndexStorage(ctx context.Context, knowledgeBaseID int64) error {
-	chunks := repositories.KnowledgeChunkRepository.Find(sqls.DB(), sqls.NewCnd().Eq("knowledge_base_id", knowledgeBaseID))
+	chunks := repositories.KnowledgeChunkRepository.FindByKnowledgeBaseID(sqls.DB(), knowledgeBaseID)
 	return s.cleanupKnowledgeBaseChunks(ctx, knowledgeBaseID, chunks)
 }

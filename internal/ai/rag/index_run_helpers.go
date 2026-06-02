@@ -3,13 +3,13 @@ package rag
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"agent-desk/internal/ai"
 	"agent-desk/internal/ai/rag/vectordb"
 	"agent-desk/internal/models"
 	"agent-desk/internal/repositories"
 
-	"github.com/mlogclub/simple/common/strs"
 	"github.com/mlogclub/simple/sqls"
 )
 
@@ -29,7 +29,6 @@ func (s *index) runDocumentIndex(ctx context.Context, document models.KnowledgeD
 		return nil, 0, fmt.Errorf("failed to get embedding model: %w", err)
 	}
 
-	existingVectorIDs := s.collectExistingVectorIDs(existingChunks)
 	vectors, chunkModels, dimension, err := s.prepareDocumentVectors(ctx, knowledgeBase, document, chunks)
 	if err != nil {
 		return nil, 0, err
@@ -37,16 +36,16 @@ func (s *index) runDocumentIndex(ctx context.Context, document models.KnowledgeD
 	if err := s.ensureCollection(ctx, provider, collectionName, dimension); err != nil {
 		return nil, 0, err
 	}
-	if len(existingVectorIDs) > 0 {
-		if err := provider.DeleteVectors(ctx, collectionName, existingVectorIDs); err != nil {
-			return nil, 0, fmt.Errorf("failed to delete old vectors: %w", err)
-		}
-	}
 	if err := provider.UpsertVectors(ctx, collectionName, vectors); err != nil {
 		return nil, 0, fmt.Errorf("failed to upsert vectors: %w", err)
 	}
 	if err := s.replaceDocumentChunks(document.ID, chunkModels); err != nil {
 		return nil, 0, fmt.Errorf("failed to save chunks: %w", err)
+	}
+	if staleVectorIDs := s.collectStaleVectorIDs(existingChunks, vectors); len(staleVectorIDs) > 0 {
+		if err := provider.DeleteVectors(ctx, collectionName, staleVectorIDs); err != nil {
+			slog.Error("Failed to delete stale document vectors", "document_id", document.ID, "error", err)
+		}
 	}
 	return vectors, len(chunks), nil
 }
@@ -75,22 +74,37 @@ func (s *index) runFAQIndex(ctx context.Context, faq models.KnowledgeFAQ, knowle
 		return err
 	}
 
-	existingVectorIDs := make([]string, 0, len(existingChunks))
-	for _, chunk := range existingChunks {
-		if strs.IsNotBlank(chunk.VectorID) {
-			existingVectorIDs = append(existingVectorIDs, chunk.VectorID)
-		}
-	}
-	if len(existingVectorIDs) > 0 {
-		if err := provider.DeleteVectors(ctx, collectionName, existingVectorIDs); err != nil {
-			return fmt.Errorf("failed to delete old vectors: %w", err)
-		}
-	}
 	if err := provider.UpsertVectors(ctx, collectionName, []vectordb.Vector{vector}); err != nil {
 		return fmt.Errorf("failed to upsert vectors: %w", err)
 	}
 	if err := s.replaceFAQChunk(faq.ID, &chunkModel); err != nil {
 		return fmt.Errorf("failed to save faq chunk: %w", err)
 	}
+	if staleVectorIDs := s.collectStaleVectorIDs(existingChunks, []vectordb.Vector{vector}); len(staleVectorIDs) > 0 {
+		if err := provider.DeleteVectors(ctx, collectionName, staleVectorIDs); err != nil {
+			slog.Error("Failed to delete stale faq vectors", "faq_id", faq.ID, "error", err)
+		}
+	}
 	return nil
+}
+
+func (s *index) collectStaleVectorIDs(existingChunks []models.KnowledgeChunk, currentVectors []vectordb.Vector) []string {
+	currentVectorIDs := make(map[string]struct{}, len(currentVectors))
+	for _, vector := range currentVectors {
+		if vector.ID == "" {
+			continue
+		}
+		currentVectorIDs[vector.ID] = struct{}{}
+	}
+	staleVectorIDs := make([]string, 0, len(existingChunks))
+	for _, chunk := range existingChunks {
+		if chunk.VectorID == "" {
+			continue
+		}
+		if _, ok := currentVectorIDs[chunk.VectorID]; ok {
+			continue
+		}
+		staleVectorIDs = append(staleVectorIDs, chunk.VectorID)
+	}
+	return staleVectorIDs
 }
