@@ -119,15 +119,11 @@ func (s *index) IndexFAQByID(ctx context.Context, faqID int64) error {
 }
 
 func (s *index) RemoveDocumentIndex(ctx context.Context, documentID int64) error {
-	chunks := repositories.KnowledgeChunkRepository.Find(sqls.DB(), sqls.NewCnd().Eq("document_id", documentID))
-	return s.removeDocumentIndexByChunks(ctx, documentID, chunks)
+	chunks := repositories.KnowledgeChunkRepository.FindByDocumentID(sqls.DB(), documentID)
+	return s.RemoveDocumentIndexByChunks(ctx, documentID, chunks)
 }
 
-func (s *index) RemoveDocumentIndexByChunkModels(ctx context.Context, documentID int64, chunks []models.KnowledgeChunk) error {
-	return s.removeDocumentIndexByChunks(ctx, documentID, chunks)
-}
-
-func (s *index) removeDocumentIndexByChunks(ctx context.Context, documentID int64, chunks []models.KnowledgeChunk) error {
+func (s *index) RemoveDocumentIndexByChunks(ctx context.Context, documentID int64, chunks []models.KnowledgeChunk) error {
 	if len(chunks) == 0 {
 		return nil
 	}

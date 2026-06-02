@@ -178,7 +178,7 @@ func (s *knowledgeDocumentService) DeleteKnowledgeDocument(id int64) error {
 	}); err != nil {
 		return err
 	}
-	return rag.Index.RemoveDocumentIndexByChunkModels(context.Background(), id, chunks)
+	return rag.Index.RemoveDocumentIndexByChunks(context.Background(), id, chunks)
 }
 
 func (s *knowledgeDocumentService) buildKnowledgeDocumentModel(req request.CreateKnowledgeDocumentRequest) (*models.KnowledgeDocument, error) {
