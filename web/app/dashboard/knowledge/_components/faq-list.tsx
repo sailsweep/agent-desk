@@ -315,6 +315,16 @@ export function FAQList({
                   emptyText={t("knowledge.emptyStatus")}
                 />
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 shrink-0"
+                onClick={applyFilters}
+                disabled={loading}
+              >
+                <SearchIcon className="size-3.5" />
+                {t("knowledge.query")}
+              </Button>
             </div>
           </div>
           <div className="min-h-0 flex-1">
