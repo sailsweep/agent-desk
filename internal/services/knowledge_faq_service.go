@@ -105,15 +105,10 @@ func (s *knowledgeFAQService) DeleteKnowledgeFAQ(id int64) error {
 	if current == nil {
 		return errorsx.InvalidParam("FAQ不存在")
 	}
-	chunks := repositories.KnowledgeChunkRepository.FindByFaqID(sqls.DB(), id)
-	if err := sqls.WithTransaction(func(ctx *sqls.TxContext) error {
-		ctx.Tx.Delete(&models.KnowledgeFAQ{}, "id = ?", id)
-		ctx.Tx.Delete(&models.KnowledgeChunk{}, "faq_id = ?", id)
-		return nil
-	}); err != nil {
+	if err := repositories.KnowledgeFAQRepository.Delete(sqls.DB(), id); err != nil {
 		return err
 	}
-	return rag.Index.RemoveFAQIndexByChunkModels(context.Background(), id, chunks)
+	return rag.Index.RemoveFAQIndex(context.Background(), id)
 }
 
 func (s *knowledgeFAQService) buildKnowledgeFAQModel(req request.CreateKnowledgeFAQRequest) (*models.KnowledgeFAQ, error) {

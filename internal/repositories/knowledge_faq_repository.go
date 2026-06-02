@@ -54,8 +54,8 @@ func (r *knowledgeFAQRepository) Updates(db *gorm.DB, id int64, columns map[stri
 	return db.Model(&models.KnowledgeFAQ{}).Where("id = ?", id).Updates(columns).Error
 }
 
-func (r *knowledgeFAQRepository) Delete(db *gorm.DB, id int64) {
-	db.Delete(&models.KnowledgeFAQ{}, "id = ?", id)
+func (r *knowledgeFAQRepository) Delete(db *gorm.DB, id int64) error {
+	return db.Delete(&models.KnowledgeFAQ{}, "id = ?", id).Error
 }
 
 func (r *knowledgeFAQRepository) DeleteByKnowledgeBaseID(db *gorm.DB, knowledgeBaseID int64) error {

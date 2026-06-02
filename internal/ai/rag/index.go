@@ -138,11 +138,17 @@ func (s *index) RemoveDocumentIndex(ctx context.Context, documentID int64) error
 
 func (s *index) RemoveFAQIndex(ctx context.Context, faqID int64) error {
 	chunks := repositories.KnowledgeChunkRepository.FindByFaqID(sqls.DB(), faqID)
-	return s.removeFAQIndexByChunks(ctx, faqID, chunks)
-}
-
-func (s *index) RemoveFAQIndexByChunkModels(ctx context.Context, faqID int64, chunks []models.KnowledgeChunk) error {
-	return s.removeFAQIndexByChunks(ctx, faqID, chunks)
+	if len(chunks) == 0 {
+		return nil
+	}
+	if err := s.deleteChunkVectors(ctx, s.collectChunkVectorIDs(chunks)); err != nil {
+		slog.Error("Failed to delete faq vectors", "error", err)
+	}
+	if err := repositories.KnowledgeChunkRepository.DeleteByFaqID(sqls.DB(), faqID); err != nil {
+		return fmt.Errorf("failed to delete faq chunks: %w", err)
+	}
+	slog.Info("FAQ index removed", "faq_id", faqID, "chunks_removed", len(chunks))
+	return nil
 }
 
 func (s *index) RemoveKnowledgeBaseIndexByChunkModels(ctx context.Context, knowledgeBaseID int64, chunks []models.KnowledgeChunk) error {
@@ -156,20 +162,6 @@ func (s *index) RemoveKnowledgeBaseIndexByChunkModels(ctx context.Context, knowl
 		return fmt.Errorf("failed to delete chunks for knowledge base %d: %w", knowledgeBaseID, err)
 	}
 	slog.Info("Knowledge base index removed", "knowledge_base_id", knowledgeBaseID, "chunks_removed", len(chunks))
-	return nil
-}
-
-func (s *index) removeFAQIndexByChunks(ctx context.Context, faqID int64, chunks []models.KnowledgeChunk) error {
-	if len(chunks) == 0 {
-		return nil
-	}
-	if err := s.deleteChunkVectors(ctx, s.collectChunkVectorIDs(chunks)); err != nil {
-		slog.Error("Failed to delete faq vectors", "error", err)
-	}
-	if err := repositories.KnowledgeChunkRepository.DeleteByFaqID(sqls.DB(), faqID); err != nil {
-		return fmt.Errorf("failed to delete faq chunks: %w", err)
-	}
-	slog.Info("FAQ index removed", "faq_id", faqID, "chunks_removed", len(chunks))
 	return nil
 }
 
