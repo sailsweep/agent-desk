@@ -454,9 +454,10 @@ export function FAQList({
                     <ContextMenuTrigger className="w-full">
                       <div
                         className={cn(
-                          "flex items-center gap-3 bg-background p-2 transition-colors hover:bg-accent w-full",
+                          "flex items-center gap-3 bg-background p-2 transition-colors hover:bg-accent w-full cursor-pointer",
                           contextMenuFAQId === item.id && "bg-accent text-accent-foreground",
                         )}
+                        onClick={() => openDetailDialog(item)}
                       >
                         <Checkbox
                           checked={selectedIds.includes(item.id)}
@@ -478,6 +479,7 @@ export function FAQList({
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger
+                            onClick={(event) => event.stopPropagation()}
                             render={<Button variant="ghost" size="icon" className="size-6" />}
                             aria-label={t("knowledge.moreActions", { name: item.question })}
                           >

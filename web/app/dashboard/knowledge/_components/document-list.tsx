@@ -509,9 +509,10 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
                   <ContextMenuTrigger className="w-full">
                     <div
                       className={cn(
-                        "bg-background p-3 transition-colors hover:bg-accent w-full",
+                        "bg-background p-3 transition-colors hover:bg-accent w-full cursor-pointer",
                         contextMenuDocumentId === item.id && "bg-accent text-accent-foreground",
                       )}
+                      onClick={() => openDetailDialog(item)}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex min-w-0 flex-1 items-start gap-2">
@@ -541,6 +542,7 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger
+                            onClick={(event) => event.stopPropagation()}
                             render={
                               <Button
                                 variant="ghost"
@@ -616,9 +618,10 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
                   <ContextMenuTrigger className="w-full">
                     <div
                       className={cn(
-                        "flex items-center gap-3 bg-background p-2 transition-colors hover:bg-accent w-full",
+                        "flex items-center gap-3 bg-background p-2 transition-colors hover:bg-accent w-full cursor-pointer",
                         contextMenuDocumentId === item.id && "bg-accent text-accent-foreground",
                       )}
+                      onClick={() => openDetailDialog(item)}
                     >
                       <Checkbox
                         checked={selectedIds.includes(item.id)}
@@ -643,6 +646,7 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger
+                          onClick={(event) => event.stopPropagation()}
                           render={
                             <Button
                               variant="ghost"
