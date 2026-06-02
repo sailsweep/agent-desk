@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"agent-desk/internal/models"
+	"agent-desk/internal/pkg/enums"
 
 	"agent-desk/internal/pkg/httpx/params"
 
@@ -103,6 +104,10 @@ func (r *knowledgeDocumentRepository) Delete(db *gorm.DB, id int64) {
 	db.Delete(&models.KnowledgeDocument{}, "id = ?", id)
 }
 
+func (r *knowledgeDocumentRepository) DeleteByKnowledgeBaseID(db *gorm.DB, knowledgeBaseID int64) error {
+	return db.Delete(&models.KnowledgeDocument{}, "knowledge_base_id = ?", knowledgeBaseID).Error
+}
+
 func (r *knowledgeDocumentRepository) FindByIDs(db *gorm.DB, ids []int64) (list []models.KnowledgeDocument) {
 	if len(ids) == 0 {
 		return nil
@@ -113,6 +118,6 @@ func (r *knowledgeDocumentRepository) FindByIDs(db *gorm.DB, ids []int64) (list 
 
 func (r *knowledgeDocumentRepository) CountByKnowledgeBaseID(db *gorm.DB, knowledgeBaseID int64) int64 {
 	var count int64
-	db.Model(&models.KnowledgeDocument{}).Where("knowledge_base_id = ?", knowledgeBaseID).Count(&count)
+	db.Model(&models.KnowledgeDocument{}).Where("knowledge_base_id = ? AND status <> ?", knowledgeBaseID, enums.StatusDeleted).Count(&count)
 	return count
 }

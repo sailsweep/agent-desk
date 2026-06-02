@@ -96,12 +96,16 @@ func (r *knowledgeChunkRepository) Delete(db *gorm.DB, id int64) {
 	db.Delete(&models.KnowledgeChunk{}, "id = ?", id)
 }
 
-func (r *knowledgeChunkRepository) DeleteByDocumentID(db *gorm.DB, documentID int64) {
-	db.Delete(&models.KnowledgeChunk{}, "document_id = ?", documentID)
+func (r *knowledgeChunkRepository) DeleteByDocumentID(db *gorm.DB, documentID int64) error {
+	return db.Delete(&models.KnowledgeChunk{}, "document_id = ?", documentID).Error
 }
 
-func (r *knowledgeChunkRepository) DeleteByFaqID(db *gorm.DB, faqID int64) {
-	db.Delete(&models.KnowledgeChunk{}, "faq_id = ?", faqID)
+func (r *knowledgeChunkRepository) DeleteByFaqID(db *gorm.DB, faqID int64) error {
+	return db.Delete(&models.KnowledgeChunk{}, "faq_id = ?", faqID).Error
+}
+
+func (r *knowledgeChunkRepository) DeleteByKnowledgeBaseID(db *gorm.DB, knowledgeBaseID int64) error {
+	return db.Delete(&models.KnowledgeChunk{}, "knowledge_base_id = ?", knowledgeBaseID).Error
 }
 
 func (r *knowledgeChunkRepository) FindByDocumentID(db *gorm.DB, documentID int64) (list []models.KnowledgeChunk) {

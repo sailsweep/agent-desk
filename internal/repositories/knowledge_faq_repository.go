@@ -58,6 +58,10 @@ func (r *knowledgeFAQRepository) Delete(db *gorm.DB, id int64) {
 	db.Delete(&models.KnowledgeFAQ{}, "id = ?", id)
 }
 
+func (r *knowledgeFAQRepository) DeleteByKnowledgeBaseID(db *gorm.DB, knowledgeBaseID int64) error {
+	return db.Delete(&models.KnowledgeFAQ{}, "knowledge_base_id = ?", knowledgeBaseID).Error
+}
+
 func (r *knowledgeFAQRepository) FindByIDs(db *gorm.DB, ids []int64) (list []models.KnowledgeFAQ) {
 	if len(ids) == 0 {
 		return nil
@@ -81,6 +85,6 @@ func (r *knowledgeFAQRepository) FindByKnowledgeBaseIDAndQuestions(db *gorm.DB, 
 
 func (r *knowledgeFAQRepository) CountByKnowledgeBaseID(db *gorm.DB, knowledgeBaseID int64) int64 {
 	var count int64
-	db.Model(&models.KnowledgeFAQ{}).Where("knowledge_base_id = ?", knowledgeBaseID).Count(&count)
+	db.Model(&models.KnowledgeFAQ{}).Where("knowledge_base_id = ? AND status <> ?", knowledgeBaseID, enums.StatusDeleted).Count(&count)
 	return count
 }

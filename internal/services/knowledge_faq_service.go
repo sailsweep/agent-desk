@@ -113,7 +113,7 @@ func (s *knowledgeFAQService) DeleteKnowledgeFAQ(id int64) error {
 	}); err != nil {
 		return err
 	}
-	return rag.Index.RemoveFAQIndexByChunkModels(context.Background(), current.KnowledgeBaseID, id, chunks)
+	return rag.Index.RemoveFAQIndexByChunkModels(context.Background(), id, chunks)
 }
 
 func (s *knowledgeFAQService) buildKnowledgeFAQModel(req request.CreateKnowledgeFAQRequest) (*models.KnowledgeFAQ, error) {

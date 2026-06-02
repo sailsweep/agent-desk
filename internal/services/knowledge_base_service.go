@@ -1,8 +1,11 @@
 package services
 
 import (
+	"context"
+	"fmt"
 	"time"
 
+	"agent-desk/internal/ai/rag"
 	"agent-desk/internal/models"
 	"agent-desk/internal/pkg/dto"
 	"agent-desk/internal/pkg/dto/request"
@@ -125,16 +128,32 @@ func (s *knowledgeBaseService) DeleteKnowledgeBase(id int64) error {
 	if current == nil {
 		return errorsx.InvalidParam("知识库不存在")
 	}
-	docCount := repositories.KnowledgeDocumentRepository.CountByKnowledgeBaseID(sqls.DB(), id)
-	if docCount > 0 {
-		return errorsx.InvalidParam("知识库下存在文档，无法删除")
+
+	referencingAgents := repositories.AIAgentRepository.FindByKnowledgeBaseID(sqls.DB(), id)
+	if len(referencingAgents) > 0 {
+		if len(referencingAgents) == 1 {
+			return errorsx.Forbidden(fmt.Sprintf("知识库已被 AI Agent「%s」引用，请先解除绑定", referencingAgents[0].Name))
+		}
+		return errorsx.Forbidden(fmt.Sprintf("知识库已被 %d 个 AI Agent 引用，请先解除绑定", len(referencingAgents)))
 	}
-	faqCount := repositories.KnowledgeFAQRepository.CountByKnowledgeBaseID(sqls.DB(), id)
-	if faqCount > 0 {
-		return errorsx.InvalidParam("知识库下存在FAQ，无法删除")
+
+	chunks := repositories.KnowledgeChunkRepository.Find(sqls.DB(), sqls.NewCnd().Eq("knowledge_base_id", id))
+	if err := sqls.WithTransaction(func(ctx *sqls.TxContext) error {
+		if err := repositories.KnowledgeChunkRepository.DeleteByKnowledgeBaseID(ctx.Tx, id); err != nil {
+			return err
+		}
+		if err := repositories.KnowledgeDocumentRepository.DeleteByKnowledgeBaseID(ctx.Tx, id); err != nil {
+			return err
+		}
+		if err := repositories.KnowledgeFAQRepository.DeleteByKnowledgeBaseID(ctx.Tx, id); err != nil {
+			return err
+		}
+		return ctx.Tx.Delete(&models.KnowledgeBase{}, "id = ?", id).Error
+	}); err != nil {
+		return err
 	}
-	repositories.KnowledgeBaseRepository.Delete(sqls.DB(), id)
-	return nil
+
+	return rag.Index.RemoveKnowledgeBaseIndexByChunkModels(context.Background(), id, chunks)
 }
 
 func (s *knowledgeBaseService) UpdateSort(ids []int64) error {

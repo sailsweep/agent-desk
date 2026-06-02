@@ -45,7 +45,7 @@ func (s *index) buildDocumentChunks(ctx context.Context, document models.Knowled
 	return chunks, nil
 }
 
-func collectExistingVectorIDs(chunks []models.KnowledgeChunk) []string {
+func (s *index) collectExistingVectorIDs(chunks []models.KnowledgeChunk) []string {
 	ret := make([]string, 0, len(chunks))
 	for _, chunk := range chunks {
 		if strs.IsNotBlank(chunk.VectorID) {

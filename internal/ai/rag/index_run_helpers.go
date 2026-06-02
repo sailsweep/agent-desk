@@ -29,7 +29,7 @@ func (s *index) runDocumentIndex(ctx context.Context, document models.KnowledgeD
 		return nil, 0, fmt.Errorf("failed to get embedding model: %w", err)
 	}
 
-	existingVectorIDs := collectExistingVectorIDs(existingChunks)
+	existingVectorIDs := s.collectExistingVectorIDs(existingChunks)
 	vectors, chunkModels, dimension, err := s.prepareDocumentVectors(ctx, knowledgeBase, document, chunks)
 	if err != nil {
 		return nil, 0, err

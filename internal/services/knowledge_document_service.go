@@ -155,7 +155,7 @@ func (s *knowledgeDocumentService) UpdateKnowledgeDocument(req request.UpdateKno
 	}
 
 	if oldKnowledgeBaseID != item.KnowledgeBaseID {
-		if err := rag.Index.RemoveDocumentIndexFromKnowledgeBase(context.Background(), oldKnowledgeBaseID, req.ID); err != nil {
+		if err := rag.Index.RemoveDocumentIndex(context.Background(), req.ID); err != nil {
 			slog.Error("failed to remove old document index after knowledge base change", "document_id", req.ID, "knowledge_base_id", oldKnowledgeBaseID, "error", err)
 		}
 	}
@@ -167,10 +167,6 @@ func (s *knowledgeDocumentService) UpdateKnowledgeDocument(req request.UpdateKno
 }
 
 func (s *knowledgeDocumentService) DeleteKnowledgeDocument(id int64) error {
-	current := s.Get(id)
-	if current == nil {
-		return errorsx.InvalidParam("文档不存在")
-	}
 	chunks := repositories.KnowledgeChunkRepository.FindByDocumentID(sqls.DB(), id)
 	if err := sqls.WithTransaction(func(ctx *sqls.TxContext) error {
 		_ = repositories.KnowledgeDocumentRepository.Updates(ctx.Tx, id, map[string]any{
@@ -182,7 +178,7 @@ func (s *knowledgeDocumentService) DeleteKnowledgeDocument(id int64) error {
 	}); err != nil {
 		return err
 	}
-	return rag.Index.RemoveDocumentIndexByChunkModels(context.Background(), current.KnowledgeBaseID, id, chunks)
+	return rag.Index.RemoveDocumentIndexByChunkModels(context.Background(), id, chunks)
 }
 
 func (s *knowledgeDocumentService) buildKnowledgeDocumentModel(req request.CreateKnowledgeDocumentRequest) (*models.KnowledgeDocument, error) {

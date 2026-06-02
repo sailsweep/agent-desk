@@ -7,12 +7,13 @@ import (
 
 	"agent-desk/internal/ai/rag/vectordb"
 	"agent-desk/internal/models"
+	"agent-desk/internal/repositories"
 
 	"github.com/mlogclub/simple/common/strs"
 	"github.com/mlogclub/simple/sqls"
 )
 
-func collectChunkVectorIDs(chunks []models.KnowledgeChunk) []string {
+func (s *index) collectChunkVectorIDs(chunks []models.KnowledgeChunk) []string {
 	vectorIDs := make([]string, 0, len(chunks))
 	for _, chunk := range chunks {
 		if strs.IsNotBlank(chunk.VectorID) {
@@ -33,18 +34,12 @@ func (s *index) deleteChunkVectors(ctx context.Context, vectorIDs []string) erro
 	return provider.DeleteVectors(ctx, s.getCollectionName(), vectorIDs)
 }
 
-func deleteChunksByCondition(column string, value int64) error {
-	return sqls.WithTransaction(func(ctx *sqls.TxContext) error {
-		return ctx.Tx.Where(column+" = ?", value).Delete(&models.KnowledgeChunk{}).Error
-	})
-}
-
 func (s *index) cleanupKnowledgeBaseChunks(ctx context.Context, knowledgeBaseID int64, chunks []models.KnowledgeChunk) error {
-	vectorIDs := collectChunkVectorIDs(chunks)
+	vectorIDs := s.collectChunkVectorIDs(chunks)
 	if err := s.deleteChunkVectors(ctx, vectorIDs); err != nil {
 		return fmt.Errorf("failed to delete vectors for knowledge base %d before rebuild: %w", knowledgeBaseID, err)
 	}
-	if err := deleteChunksByCondition("knowledge_base_id", knowledgeBaseID); err != nil {
+	if err := repositories.KnowledgeChunkRepository.DeleteByKnowledgeBaseID(sqls.DB(), knowledgeBaseID); err != nil {
 		return fmt.Errorf("failed to clear chunks before rebuild: %w", err)
 	}
 	slog.Info("Knowledge base index storage reset",
