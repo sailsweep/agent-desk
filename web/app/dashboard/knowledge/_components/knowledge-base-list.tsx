@@ -82,7 +82,9 @@ function getStatusOptions(t: TFunction) {
 type SortableKnowledgeBaseCardProps = {
   item: KnowledgeBase;
   isSelected: boolean;
+  isContextMenuOpen: boolean;
   disabled: boolean;
+  onContextMenuOpenChange: (open: boolean) => void;
   onSelect: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -95,7 +97,9 @@ type SortableKnowledgeBaseCardProps = {
 function SortableKnowledgeBaseCard({
   item,
   isSelected,
+  isContextMenuOpen,
   disabled,
+  onContextMenuOpenChange,
   onSelect,
   onEdit,
   onDelete,
@@ -122,13 +126,13 @@ function SortableKnowledgeBaseCard({
   };
 
   return (
-    <ContextMenu>
+    <ContextMenu onOpenChange={onContextMenuOpenChange}>
       <ContextMenuTrigger
         ref={setNodeRef}
         style={style}
         className={cn(
           "group flex items-center gap-1 rounded mx-2 px-2 py-1.5 text-sm transition-colors hover:bg-accent cursor-pointer",
-          isSelected && "bg-accent text-accent-foreground",
+          (isSelected || isContextMenuOpen) && "bg-accent text-accent-foreground",
           isDragging && "bg-muted/60 shadow-sm opacity-80",
         )}
         onClick={onSelect}
@@ -248,6 +252,7 @@ export function KnowledgeBaseList({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
+  const [contextMenuKnowledgeBaseId, setContextMenuKnowledgeBaseId] = useState<number | null>(null);
   const statusOptions = useMemo(() => getStatusOptions(t), [t]);
 
   const sensors = useSensors(
@@ -487,7 +492,11 @@ export function KnowledgeBaseList({
                     key={item.id}
                     item={item}
                     isSelected={selectedKnowledgeBaseId === item.id}
+                    isContextMenuOpen={contextMenuKnowledgeBaseId === item.id}
                     disabled={loading || sorting}
+                    onContextMenuOpenChange={(open) =>
+                      setContextMenuKnowledgeBaseId(open ? item.id : null)
+                    }
                     onSelect={() => onSelectKnowledgeBase(item)}
                     onEdit={() => openEditDialog(item)}
                     onDelete={() => void handleDelete(item)}

@@ -152,6 +152,7 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
   const [moving, setMoving] = useState(false);
   const [bulkMoveOpen, setBulkMoveOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [contextMenuDocumentId, setContextMenuDocumentId] = useState<number | null>(null);
   const [selectedDirectoryId, setSelectedDirectoryId] = useState<number | null>(null);
   const [actionLoadingMap, setActionLoadingMap] = useState<Record<number, { rebuildIndex: boolean; delete: boolean }>>({});
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -484,10 +485,16 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
             ) : null}
             {documents.results.map((item) => (
               viewMode === "grid" ? (
-                <ContextMenu key={item.id}>
+                <ContextMenu
+                  key={item.id}
+                  onOpenChange={(open) => setContextMenuDocumentId(open ? item.id : null)}
+                >
                   <ContextMenuTrigger className="w-full">
                     <div
-                      className="bg-background p-3 transition-colors hover:bg-accent w-full"
+                      className={cn(
+                        "bg-background p-3 transition-colors hover:bg-accent w-full",
+                        contextMenuDocumentId === item.id && "bg-accent text-accent-foreground",
+                      )}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex min-w-0 flex-1 items-start gap-2">
@@ -569,10 +576,16 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
                   </ContextMenuContent>
                 </ContextMenu>
               ) : (
-                <ContextMenu key={item.id}>
+                <ContextMenu
+                  key={item.id}
+                  onOpenChange={(open) => setContextMenuDocumentId(open ? item.id : null)}
+                >
                   <ContextMenuTrigger className="w-full">
                     <div
-                      className="flex items-center gap-3 bg-background p-2 transition-colors hover:bg-accent w-full"
+                      className={cn(
+                        "flex items-center gap-3 bg-background p-2 transition-colors hover:bg-accent w-full",
+                        contextMenuDocumentId === item.id && "bg-accent text-accent-foreground",
+                      )}
                     >
                       <Checkbox
                         checked={selectedIds.includes(item.id)}

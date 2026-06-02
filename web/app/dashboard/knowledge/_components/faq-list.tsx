@@ -55,7 +55,7 @@ import {
 } from "@/lib/api/admin";
 import { KnowledgeDocumentIndexStatus } from "@/lib/generated/enums";
 import { useI18n } from "@/i18n/provider";
-import { formatDateTime } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import { FAQEditDialog } from "./faq-edit";
 import { FAQImportDialog } from "./faq-import-dialog";
 import { KnowledgeBulkMoveDialog } from "./knowledge-bulk-move-dialog";
@@ -141,6 +141,7 @@ export function FAQList({
   const [moving, setMoving] = useState(false);
   const [bulkMoveOpen, setBulkMoveOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [contextMenuFAQId, setContextMenuFAQId] = useState<number | null>(null);
   const [importing, setImporting] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedDirectoryId, setSelectedDirectoryId] = useState<number | null>(null);
@@ -429,9 +430,17 @@ export function FAQList({
                   </label>
                 ) : null}
                 {faqs.results.map((item) => (
-                  <ContextMenu key={item.id}>
+                  <ContextMenu
+                    key={item.id}
+                    onOpenChange={(open) => setContextMenuFAQId(open ? item.id : null)}
+                  >
                     <ContextMenuTrigger className="w-full">
-                      <div className="flex items-center gap-3 bg-background p-2 transition-colors hover:bg-accent w-full">
+                      <div
+                        className={cn(
+                          "flex items-center gap-3 bg-background p-2 transition-colors hover:bg-accent w-full",
+                          contextMenuFAQId === item.id && "bg-accent text-accent-foreground",
+                        )}
+                      >
                         <Checkbox
                           checked={selectedIds.includes(item.id)}
                           onClick={(event) => event.stopPropagation()}
