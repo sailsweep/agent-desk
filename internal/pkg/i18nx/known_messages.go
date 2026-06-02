@@ -6,7 +6,19 @@ import (
 	"strings"
 )
 
-var maxScheduleBatchMessagePattern = regexp.MustCompile(`^单次最多生成 ([0-9]+) 条排班$`)
+var (
+	maxScheduleBatchMessagePattern          = regexp.MustCompile(`^单次最多生成 ([0-9]+) 条排班$`)
+	knowledgeBaseReferencedByAgentPattern   = regexp.MustCompile(`^知识库已被 AI Agent「(.+)」引用，请先解除绑定$`)
+	knowledgeBaseReferencedByAgentsPattern  = regexp.MustCompile(`^知识库已被 ([0-9]+) 个 AI Agent 引用，请先解除绑定$`)
+	agentTeamScheduleConflictPattern        = regexp.MustCompile(`^该客服组在 (.+) 至 (.+) 已存在排班$`)
+	knowledgeFAQImportDuplicatePattern      = regexp.MustCompile(`^同一文件中标准问题重复，首次出现于第([0-9]+)行$`)
+	requiredParamMessagePattern             = regexp.MustCompile(`^参数：(.+)不能为空$`)
+	mcpListToolsMessagePattern              = regexp.MustCompile(`^列出 MCP 工具失败: (.+)$`)
+	mcpCallToolMessagePattern               = regexp.MustCompile(`^调用 MCP 工具失败: (.+)$`)
+	mcpConnectServerMessagePattern          = regexp.MustCompile(`^连接 MCP Server 失败: (.+)$`)
+	wxworkUnsupportedOutboundPattern        = regexp.MustCompile(`^不支持的企业微信下行消息类型: (.+)$`)
+	wxworkUnsupportedCurrentOutboundPattern = regexp.MustCompile(`^当前暂不支持企业微信下行消息类型: (.+)$`)
+)
 
 var knownMessages = map[string]map[string]string{
 	LocaleEnUS: {
@@ -217,6 +229,17 @@ var knownMessages = map[string]map[string]string{
 		"企业微信消息ID不能为空":                                      "WeCom message ID is required.",
 		"企业微信渠道配置不合法":                                       "Invalid WeCom channel configuration.",
 		"企业微信渠道配置缺少 openKfId":                               "WeCom channel configuration is missing openKfId.",
+		"企业微信登录状态无效":                                        "WeCom sign-in state is invalid.",
+		"企业微信登录回调地址未配置":                                     "WeCom sign-in callback URL is not configured.",
+		"企业微信 AgentID 未配置":                                  "WeCom AgentID is not configured.",
+		"微信授权 code 不能为空":                                    "WeChat authorization code is required.",
+		"当前登录身份不是企业内部成员":                                    "The current sign-in identity is not an internal enterprise member.",
+		"企业微信返回的消息ID为空":                                     "WeCom returned an empty message ID.",
+		"企业微信返回的图片 media_id 为空":                             "WeCom returned an empty image media_id.",
+		"图片消息缺少 assetId":                                    "Image message is missing assetId.",
+		"平台消息不存在":                                           "Platform message not found.",
+		"文本消息内容为空":                                          "Text message content is empty.",
+		"HTML 消息内容为空":                                       "HTML message content is empty.",
 		"企业微信用户ID已被系统用户名占用":                                 "This WeCom user ID is already used as a system username.",
 		"企业微信用户ID获取失败":                                      "Failed to get the WeCom user ID.",
 		"企业微信用户信息不存在":                                       "WeCom user information not found.",
@@ -260,6 +283,8 @@ var knownMessages = map[string]map[string]string{
 		"接入渠道不存在":                                           "Channel not found.",
 		"接收人不能为空":                                           "Recipient is required.",
 		"文档知识库不能使用FAQ分块策略":                                  "Document knowledge bases cannot use the FAQ chunking strategy.",
+		"目标工具未被当前会话授权":                                      "The target tool is not authorized for the current conversation.",
+		"tool_search 只支持调用 MCP toolCode":                    "tool_search only supports calling MCP toolCode.",
 		"时间格式错误":                                            "Invalid time format.",
 		"星期必须在 1 到 7 之间":                                    "Weekday must be between 1 and 7.",
 		"服务模式不合法":                                           "Invalid service mode.",
@@ -287,6 +312,39 @@ var knownMessages = map[string]map[string]string{
 		"知识库不能为空":                                           "Knowledge base is required.",
 		"知识库未启用":                                            "Knowledge base is not enabled.",
 		"知识库类型不支持":                                          "Unsupported knowledge base type.",
+		"目录名称不能为空":                                          "Directory name is required.",
+		"目录不存在":                                             "Directory not found.",
+		"目录不能移动到其他知识库":                                      "Directories cannot be moved to another knowledge base.",
+		"存在子目录的目录不能移动到二级目录":                                 "A directory with subdirectories cannot be moved to the second level.",
+		"同级下已存在相同名称的目录":                                     "A directory with this name already exists at the same level.",
+		"该目录下存在子目录，无法删除":                                    "This directory contains subdirectories and cannot be deleted.",
+		"该目录下存在文档，无法删除":                                     "This directory contains documents and cannot be deleted.",
+		"该目录下存在FAQ，无法删除":                                    "This directory contains FAQs and cannot be deleted.",
+		"只能调整同知识库同级目录排序":                                    "Only directories in the same knowledge base and same level can be reordered.",
+		"知识库目录不存在":                                          "Knowledge base directory not found.",
+		"知识库目录不属于当前知识库":                                     "This directory does not belong to the current knowledge base.",
+		"知识库目录不可用":                                          "This knowledge base directory is unavailable.",
+		"不能将目录设为自己的子目录":                                     "A directory cannot be moved under itself.",
+		"父目录不存在":                                            "Parent directory not found.",
+		"父目录不属于当前知识库":                                       "The parent directory does not belong to the current knowledge base.",
+		"知识库目录最多支持二级":                                       "Knowledge base directories support at most two levels.",
+		"请选择要移动的文档":                                         "Select documents to move.",
+		"只能移动当前知识库下的文档":                                     "Only documents in the current knowledge base can be moved.",
+		"请选择要删除的文档":                                         "Select documents to delete.",
+		"请选择要移动的FAQ":                                        "Select FAQs to move.",
+		"只能移动当前知识库下的FAQ":                                    "Only FAQs in the current knowledge base can be moved.",
+		"请选择要删除的FAQ":                                        "Select FAQs to delete.",
+		"导入模式不合法":                                           "Invalid import mode.",
+		"请选择导入文件":                                           "Choose a file to import.",
+		"仅支持.xlsx文件":                                        "Only .xlsx files are supported.",
+		"导入文件读取失败":                                          "Failed to read the import file.",
+		"Excel文件解析失败":                                       "Failed to parse the Excel file.",
+		"Excel文件为空":                                         "The Excel file is empty.",
+		"Excel文件读取失败":                                       "Failed to read the Excel file.",
+		"缺少标准问题列":                                           "The standard question column is missing.",
+		"缺少答案列":                                             "The answer column is missing.",
+		"标准问题已存在，已跳过":                                       "The standard question already exists and was skipped.",
+		"问题不能超过500字":                                        "The question cannot exceed 500 characters.",
 		"组长用户不存在":                                           "Team lead user not found.",
 		"结束日期必须晚于或等于开始日期":                                   "End date must be later than or equal to start date.",
 		"结束时间必须晚于开始时间":                                      "End time must be later than start time.",
@@ -332,6 +390,36 @@ func translateKnownPattern(locale string, message string) (string, bool) {
 	}
 	if matches := maxScheduleBatchMessagePattern.FindStringSubmatch(message); len(matches) == 2 {
 		return fmt.Sprintf("You can generate at most %s schedule entries at a time.", matches[1]), true
+	}
+	if matches := knowledgeBaseReferencedByAgentPattern.FindStringSubmatch(message); len(matches) == 2 {
+		return fmt.Sprintf("This knowledge base is referenced by AI Agent %q. Remove the binding first.", matches[1]), true
+	}
+	if matches := knowledgeBaseReferencedByAgentsPattern.FindStringSubmatch(message); len(matches) == 2 {
+		return fmt.Sprintf("This knowledge base is referenced by %s AI Agents. Remove the bindings first.", matches[1]), true
+	}
+	if matches := agentTeamScheduleConflictPattern.FindStringSubmatch(message); len(matches) == 3 {
+		return fmt.Sprintf("This agent team already has a schedule from %s to %s.", matches[1], matches[2]), true
+	}
+	if matches := knowledgeFAQImportDuplicatePattern.FindStringSubmatch(message); len(matches) == 2 {
+		return fmt.Sprintf("The standard question is duplicated in the same file. It first appeared on row %s.", matches[1]), true
+	}
+	if matches := requiredParamMessagePattern.FindStringSubmatch(message); len(matches) == 2 {
+		return fmt.Sprintf("Parameter %q is required.", matches[1]), true
+	}
+	if matches := mcpListToolsMessagePattern.FindStringSubmatch(message); len(matches) == 2 {
+		return fmt.Sprintf("Failed to list MCP tools: %s", matches[1]), true
+	}
+	if matches := mcpCallToolMessagePattern.FindStringSubmatch(message); len(matches) == 2 {
+		return fmt.Sprintf("Failed to call MCP tool: %s", matches[1]), true
+	}
+	if matches := mcpConnectServerMessagePattern.FindStringSubmatch(message); len(matches) == 2 {
+		return fmt.Sprintf("Failed to connect to MCP Server: %s", matches[1]), true
+	}
+	if matches := wxworkUnsupportedOutboundPattern.FindStringSubmatch(message); len(matches) == 2 {
+		return fmt.Sprintf("Unsupported WeCom outbound message type: %s", matches[1]), true
+	}
+	if matches := wxworkUnsupportedCurrentOutboundPattern.FindStringSubmatch(message); len(matches) == 2 {
+		return fmt.Sprintf("The current WeCom outbound message type is not supported yet: %s", matches[1]), true
 	}
 	if strings.HasPrefix(message, "开始时间格式错误，请使用 ") {
 		return translateTimeFormatMessage(message, "开始时间格式错误，请使用 ", "start time")

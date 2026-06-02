@@ -103,7 +103,7 @@ func (s *conversationService) getLatestNotFinishedByCustomerID(db *gorm.DB, cust
 func (s *conversationService) Create(externalUser openidentity.ExternalUser, channelID, aiAgentID int64) (*models.Conversation, error) {
 	aiAgent := AIAgentService.Get(aiAgentID)
 	if aiAgent == nil || aiAgent.Status != enums.StatusOk {
-		return nil, errorsx.InvalidParam("AI Agent not found")
+		return nil, errorsx.InvalidParam("AI Agent 不存在")
 	}
 
 	var conversation *models.Conversation

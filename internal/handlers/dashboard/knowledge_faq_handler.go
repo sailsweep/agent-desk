@@ -7,6 +7,7 @@ import (
 	"agent-desk/internal/pkg/dto/response"
 	"agent-desk/internal/pkg/errorsx"
 	"agent-desk/internal/pkg/httpx"
+	"agent-desk/internal/pkg/i18nx"
 	"agent-desk/internal/services"
 	"fmt"
 	"net/http"
@@ -87,6 +88,7 @@ func KnowledgeFAQPostImport(ctx *gin.Context) {
 		httpx.WriteJSON(ctx, err)
 		return
 	}
+	translateKnowledgeFAQImportResult(i18nx.Locale(ctx), result)
 	httpx.WriteJSON(ctx, result)
 }
 
@@ -231,6 +233,15 @@ func writeKnowledgeFAQExcelFile(ctx *gin.Context, file *response.KnowledgeFAQExp
 	ctx.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, file.Filename))
 	ctx.Header("Cache-Control", "no-store")
 	ctx.Data(http.StatusOK, file.ContentType, file.Data)
+}
+
+func translateKnowledgeFAQImportResult(locale string, result *response.KnowledgeFAQImportResult) {
+	if result == nil || len(result.Errors) == 0 {
+		return
+	}
+	for i := range result.Errors {
+		result.Errors[i].Message = i18nx.TranslateKnownMessage(locale, result.Errors[i].Message)
+	}
 }
 
 func fillKnowledgeFAQDirectory(resp *response.KnowledgeFAQResponse, directoryPaths map[int64]string) {
