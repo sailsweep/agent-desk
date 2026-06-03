@@ -1,15 +1,22 @@
 package graphs
 
-import "strings"
+import (
+	"strings"
+
+	"agent-desk/internal/pkg/i18nx"
+)
 
 const (
 	InterruptTypeTicketCreationConfirmation = "ticket_creation_confirmation"
 	InterruptTypeHandoffConfirmation        = "handoff_confirmation"
-	ConfirmOrCancelPrompt                   = `Please reply with "Confirm" or "Cancel".`
-	NeedExplicitConfirmationPrompt          = `I need your explicit confirmation. Please reply with "Confirm" or "Cancel".`
-	ConfirmationExpiredReply                = "This confirmation has expired. Please start again."
-	CancelCreateTicketReply                 = "Ticket creation has been cancelled."
-	CancelHandoffReply                      = "Human handoff has been cancelled."
+)
+
+var (
+	ConfirmOrCancelPrompt          = i18nx.Get("graph.confirmOrCancel")
+	NeedExplicitConfirmationPrompt = i18nx.Get("graph.needExplicitConfirmation")
+	ConfirmationExpiredReply       = i18nx.Get("graph.confirmationExpired")
+	CancelCreateTicketReply        = i18nx.Get("graph.cancelCreateTicket")
+	CancelHandoffReply             = i18nx.Get("graph.cancelHandoff")
 )
 
 type ConfirmationDecision string

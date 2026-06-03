@@ -11,6 +11,7 @@ import (
 	"agent-desk/internal/pkg/enums"
 	"agent-desk/internal/pkg/errorsx"
 	"agent-desk/internal/pkg/eventbus"
+	"agent-desk/internal/pkg/i18nx"
 	"agent-desk/internal/repositories"
 
 	"github.com/mlogclub/simple/sqls"
@@ -18,10 +19,18 @@ import (
 
 var ConversationHumanDispatchService = newConversationHumanDispatchService()
 
-const (
-	HandoffWaitingMessage  = "We are connecting you to a human support agent. Please wait."
-	HandoffOffHoursMessage = "Human support is currently outside service hours. You can keep describing the issue and I will do my best to help. You can also request a human agent again when service hours resume."
+var (
+	HandoffWaitingMessage  = HandoffWaitingMessageForLocale(i18nx.DefaultLocale)
+	HandoffOffHoursMessage = HandoffOffHoursMessageForLocale(i18nx.DefaultLocale)
 )
+
+func HandoffWaitingMessageForLocale(locale string) string {
+	return i18nx.Getf(locale, "conversation.handoff.waiting")
+}
+
+func HandoffOffHoursMessageForLocale(locale string) string {
+	return i18nx.Getf(locale, "conversation.handoff.offHours")
+}
 
 type HandoffDecisionType string
 

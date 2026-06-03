@@ -10,6 +10,7 @@ import (
 	"agent-desk/internal/models"
 	"agent-desk/internal/pkg/enums"
 	"agent-desk/internal/pkg/eventbus"
+	"agent-desk/internal/pkg/i18nx"
 	"agent-desk/internal/services"
 
 	"github.com/mlogclub/simple/common/strs"
@@ -37,11 +38,11 @@ func handleConversationAssignedNotify(ctx context.Context, event events.Conversa
 func conversationAssignedNotifyTitle(assignType string) string {
 	switch strings.TrimSpace(assignType) {
 	case events.ConversationAssignTypeTransfer:
-		return "Conversation transferred"
+		return i18nx.Get("notification.conversationTransferred.title")
 	case events.ConversationAssignTypeAutoAssign:
-		return "Conversation auto-assigned"
+		return i18nx.Get("notification.conversationAutoAssigned.title")
 	default:
-		return "Conversation assigned"
+		return i18nx.Get("notification.conversationAssigned.title")
 	}
 }
 
@@ -49,21 +50,21 @@ func buildConversationAssignedNotifyBody(conversation *models.Conversation, assi
 	if conversation == nil {
 		return ""
 	}
-	reasonLabel := "Assignment reason"
+	reasonKey := "notification.conversationAssigned.reason"
 	if strings.TrimSpace(assignType) == events.ConversationAssignTypeTransfer {
-		reasonLabel = "Transfer reason"
+		reasonKey = "notification.conversationTransferred.reason"
 	}
 	lines := []string{
-		fmt.Sprintf("Conversation ID: #%d", conversation.ID),
-		fmt.Sprintf("Summary: %s", strs.DefaultIfBlank(services.ConversationService.BuildConversationSummary(conversation), "-")),
-		fmt.Sprintf("Channel: %s", resolveConversationChannelLabel(conversation)),
-		fmt.Sprintf("Status: %s", enums.GetIMConversationStatusLabel(conversation.Status)),
-		fmt.Sprintf("Assignee: %s", resolveNotifyUserLabel(assigneeID)),
+		i18nx.Getf(i18nx.DefaultLocale, "notification.conversationAssigned.wxwork.id", conversation.ID),
+		i18nx.Getf(i18nx.DefaultLocale, "notification.conversationAssigned.wxwork.summary", strs.DefaultIfBlank(services.ConversationService.BuildConversationSummary(conversation), "-")),
+		i18nx.Getf(i18nx.DefaultLocale, "notification.conversationAssigned.wxwork.channel", resolveConversationChannelLabel(conversation)),
+		i18nx.Getf(i18nx.DefaultLocale, "notification.conversationAssigned.wxwork.status", enums.GetIMConversationStatusLabel(conversation.Status)),
+		i18nx.Getf(i18nx.DefaultLocale, "notification.assignee", resolveNotifyUserLabel(assigneeID)),
 	}
 	if strings.TrimSpace(reason) != "" {
-		lines = append(lines, fmt.Sprintf("%s: %s", reasonLabel, strings.TrimSpace(reason)))
+		lines = append(lines, i18nx.Getf(i18nx.DefaultLocale, reasonKey, strings.TrimSpace(reason)))
 	}
-	lines = append(lines, fmt.Sprintf("Time: %s", time.Now().Format("2006-01-02 15:04:05")))
+	lines = append(lines, i18nx.Getf(i18nx.DefaultLocale, "notification.time", time.Now().Format("2006-01-02 15:04:05")))
 	return strings.Join(lines, "\n")
 }
 

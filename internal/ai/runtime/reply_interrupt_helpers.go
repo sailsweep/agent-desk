@@ -7,6 +7,7 @@ import (
 
 	applicationruntime "agent-desk/internal/ai/application/runtime"
 	"agent-desk/internal/models"
+	"agent-desk/internal/pkg/i18nx"
 	svc "agent-desk/internal/services"
 )
 
@@ -39,7 +40,7 @@ func buildConversationInterrupt(conversation models.Conversation, message models
 
 func resolveInterruptPrompt(summary *applicationruntime.Summary) string {
 	if summary == nil || len(summary.Interrupts) == 0 {
-		return "Please provide more information and try again."
+		return i18nx.Get("conversation.interrupt.defaultPrompt")
 	}
 	if prompt := extractInterruptMessage(summary.Interrupts[0].InfoPreview); prompt != "" {
 		return prompt
@@ -47,7 +48,7 @@ func resolveInterruptPrompt(summary *applicationruntime.Summary) string {
 	if prompt := strings.TrimSpace(summary.Interrupts[0].InfoPreview); prompt != "" {
 		return prompt
 	}
-	return "Please provide more information and try again."
+	return i18nx.Get("conversation.interrupt.defaultPrompt")
 }
 
 func extractInterruptMessage(infoPreview string) string {

@@ -5,6 +5,7 @@ import (
 	"agent-desk/internal/models"
 	"agent-desk/internal/pkg/enums"
 	"agent-desk/internal/pkg/eventbus"
+	"agent-desk/internal/pkg/i18nx"
 	"agent-desk/internal/services"
 	"context"
 	"fmt"
@@ -29,7 +30,7 @@ func handleTicketAssignedNotify(ctx context.Context, event events.TicketAssigned
 		return nil
 	}
 	content := buildTicketAssignedNotifyBody(ticket, event.ToUserID, event.Reason)
-	return services.WxWorkNotifyService.SendTextToAssigneeOrDefault(event.ToUserID, "Ticket assigned", content)
+	return services.WxWorkNotifyService.SendTextToAssigneeOrDefault(event.ToUserID, i18nx.Get("notification.ticketAssigned.title"), content)
 }
 
 func buildTicketAssignedNotifyBody(ticket *models.Ticket, assigneeID int64, reason string) string {
@@ -37,14 +38,14 @@ func buildTicketAssignedNotifyBody(ticket *models.Ticket, assigneeID int64, reas
 		return ""
 	}
 	lines := []string{
-		fmt.Sprintf("Ticket no: %s", strs.DefaultIfBlank(ticket.TicketNo, fmt.Sprintf("#%d", ticket.ID))),
-		fmt.Sprintf("Title: %s", strs.DefaultIfBlank(ticket.Title, "-")),
-		fmt.Sprintf("Status: %s", enums.GetTicketStatusLabel(ticket.Status)),
-		fmt.Sprintf("Assignee: %s", resolveNotifyUserLabel(assigneeID)),
+		i18nx.Getf(i18nx.DefaultLocale, "notification.ticketAssigned.wxwork.no", strs.DefaultIfBlank(ticket.TicketNo, fmt.Sprintf("#%d", ticket.ID))),
+		i18nx.Getf(i18nx.DefaultLocale, "notification.ticketAssigned.wxwork.title", strs.DefaultIfBlank(ticket.Title, "-")),
+		i18nx.Getf(i18nx.DefaultLocale, "notification.ticketAssigned.wxwork.status", enums.GetTicketStatusLabel(ticket.Status)),
+		i18nx.Getf(i18nx.DefaultLocale, "notification.assignee", resolveNotifyUserLabel(assigneeID)),
 	}
 	if strings.TrimSpace(reason) != "" {
-		lines = append(lines, fmt.Sprintf("Assignment reason: %s", strings.TrimSpace(reason)))
+		lines = append(lines, i18nx.Getf(i18nx.DefaultLocale, "notification.ticketAssigned.reason", strings.TrimSpace(reason)))
 	}
-	lines = append(lines, fmt.Sprintf("Time: %s", time.Now().Format("2006-01-02 15:04:05")))
+	lines = append(lines, i18nx.Getf(i18nx.DefaultLocale, "notification.time", time.Now().Format("2006-01-02 15:04:05")))
 	return strings.Join(lines, "\n")
 }

@@ -457,10 +457,10 @@ function DebugDialogBody({
         </div>
 
         <div className="grid grid-cols-1 gap-4">
-          <ResultBlock title="Skill Route Trace" value={result?.skillRouteTrace} emptyText={t("skillDefinition.emptyData")} />
-          <ResultBlock title="Tool Search Trace" value={result?.toolSearchTrace} emptyText={t("skillDefinition.emptyData")} />
-          <ResultBlock title="Graph Tool Trace" value={result?.graphToolTrace} emptyText={t("skillDefinition.emptyData")} />
-          <ResultBlock title="Trace Data" value={result?.traceData} emptyText={t("skillDefinition.emptyData")} />
+          <ResultBlock title={t("skillDefinition.skillRouteTrace")} value={result?.skillRouteTrace} emptyText={t("skillDefinition.emptyData")} />
+          <ResultBlock title={t("skillDefinition.toolSearchTrace")} value={result?.toolSearchTrace} emptyText={t("skillDefinition.emptyData")} />
+          <ResultBlock title={t("skillDefinition.graphToolTrace")} value={result?.graphToolTrace} emptyText={t("skillDefinition.emptyData")} />
+          <ResultBlock title={t("skillDefinition.traceData")} value={result?.traceData} emptyText={t("skillDefinition.emptyData")} />
         </div>
 
         {result?.interrupted && result.checkPointId ? (
@@ -555,9 +555,9 @@ function DebugDialogBody({
                 </div>
               </CardContent>
             </Card>
-            <ResultBlock title="Resume Tool Search Trace" value={resumeResult.toolSearchTrace} emptyText={t("skillDefinition.emptyData")} />
-            <ResultBlock title="Resume Graph Tool Trace" value={resumeResult.graphToolTrace} emptyText={t("skillDefinition.emptyData")} />
-            <ResultBlock title="Resume Trace Data" value={resumeResult.traceData} emptyText={t("skillDefinition.emptyData")} />
+            <ResultBlock title={t("skillDefinition.resumeToolSearchTrace")} value={resumeResult.toolSearchTrace} emptyText={t("skillDefinition.emptyData")} />
+            <ResultBlock title={t("skillDefinition.resumeGraphToolTrace")} value={resumeResult.graphToolTrace} emptyText={t("skillDefinition.emptyData")} />
+            <ResultBlock title={t("skillDefinition.resumeTraceData")} value={resumeResult.traceData} emptyText={t("skillDefinition.emptyData")} />
           </div>
         ) : null}
       </div>

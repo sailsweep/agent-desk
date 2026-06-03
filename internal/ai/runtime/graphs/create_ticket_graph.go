@@ -10,6 +10,7 @@ import (
 	"agent-desk/internal/models"
 	"agent-desk/internal/pkg/dto"
 	"agent-desk/internal/pkg/dto/request"
+	"agent-desk/internal/pkg/i18nx"
 	"agent-desk/internal/services"
 
 	componenttool "github.com/cloudwego/eino/components/tool"
@@ -89,7 +90,7 @@ func (g *CreateTicketGraph) Run(ctx context.Context, argumentsInJSON string) (st
 			Handled:     true,
 			Terminal:    true,
 			Action:      "ticket_created",
-			ReplyText:   fmt.Sprintf("Ticket created. Ticket no: %s. Title: %s.", strings.TrimSpace(item.TicketNo), strings.TrimSpace(item.Title)),
+			ReplyText:   i18nx.Getf(i18nx.DefaultLocale, "graph.ticketCreated", strings.TrimSpace(item.TicketNo), strings.TrimSpace(item.Title)),
 			ShouldRetry: false,
 		}), nil
 	case ConfirmationDecisionCancel:
@@ -134,7 +135,7 @@ func (g *CreateTicketGraph) buildCreateRequest(argumentsInJSON string) (request.
 }
 
 func (g *CreateTicketGraph) buildConfirmationPrompt(req request.CreateTicketFromConversationRequest) string {
-	return fmt.Sprintf("I am ready to create a ticket for you.\nTitle: %s\nDescription: %s\nPlease reply with \"Confirm\" or \"Cancel\".",
+	return i18nx.Getf(i18nx.DefaultLocale, "graph.createTicketConfirmPrompt",
 		strings.TrimSpace(req.Title), strings.TrimSpace(req.Description))
 }
 

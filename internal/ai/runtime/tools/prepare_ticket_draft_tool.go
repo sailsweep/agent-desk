@@ -6,6 +6,7 @@ import (
 	"agent-desk/internal/ai/runtime/graphs"
 	"agent-desk/internal/ai/runtime/registry"
 	"agent-desk/internal/models"
+	"agent-desk/internal/pkg/i18nx"
 	"agent-desk/internal/pkg/toolx"
 
 	einotool "github.com/cloudwego/eino/components/tool"
@@ -48,7 +49,7 @@ func (t *PrepareTicketDraftTool) Build(ctx registry.Context) (einotool.BaseTool,
 func (t *PrepareTicketDraftTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
 	return &schema.ToolInfo{
 		Name: toolx.GraphPrepareTicketDraft.Name,
-		Desc: "Graph Tool. Prepares a ticket draft from the current conversation and collected information. Use it before create_ticket_with_confirmation when the ticket content needs to be organized.",
+		Desc: i18nx.Get("tool.graph.prepareTicketDraft.info"),
 		ParamsOneOf: schema.NewParamsOneOfByJSONSchema(&einojsonschema.Schema{
 			Version: einojsonschema.Version,
 			Type:    "object",
@@ -57,42 +58,42 @@ func (t *PrepareTicketDraftTool) Info(ctx context.Context) (*schema.ToolInfo, er
 					Key: "title",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "Prepared ticket title. Optional.",
+						Description: i18nx.Get("tool.graph.prepareTicketDraft.param.title"),
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "description",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "Prepared ticket description. Optional.",
+						Description: i18nx.Get("tool.graph.prepareTicketDraft.param.description"),
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "issue",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "The issue or error message the user is experiencing.",
+						Description: i18nx.Get("tool.graph.prepareTicketDraft.param.issue"),
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "impact",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "Impact scope, such as unable to sign in, unable to place an order, or business interruption.",
+						Description: i18nx.Get("tool.graph.prepareTicketDraft.param.impact"),
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "expectedOutcome",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "The user's expected outcome or request.",
+						Description: i18nx.Get("tool.graph.prepareTicketDraft.param.expectedOutcome"),
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "currentAttempt",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "当前已尝试过的处理步骤，可选。",
+						Description: i18nx.Get("tool.graph.prepareTicketDraft.param.currentAttempt"),
 					},
 				},
 			)),

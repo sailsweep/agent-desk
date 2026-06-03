@@ -6,6 +6,7 @@ import (
 	"agent-desk/internal/ai/runtime/graphs"
 	"agent-desk/internal/ai/runtime/registry"
 	"agent-desk/internal/models"
+	"agent-desk/internal/pkg/i18nx"
 	"agent-desk/internal/pkg/toolx"
 
 	einotool "github.com/cloudwego/eino/components/tool"
@@ -52,7 +53,7 @@ func (t *HandoffGraphTool) Build(ctx registry.Context) (einotool.BaseTool, error
 func (t *HandoffGraphTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
 	return &schema.ToolInfo{
 		Name: toolx.GraphHandoffConversation.Name,
-		Desc: "Graph Tool. Handles handoff reason preparation, user confirmation, actual human handoff, and result return. Use only when the user explicitly asks for a human agent or you have confirmed that human handling is required. Do not repeat the call when the result has terminal=true and shouldRetry=false.",
+		Desc: i18nx.Get("tool.graph.handoffConversation.info"),
 		ParamsOneOf: schema.NewParamsOneOfByJSONSchema(&einojsonschema.Schema{
 			Version: einojsonschema.Version,
 			Type:    "object",
@@ -61,7 +62,7 @@ func (t *HandoffGraphTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
 					Key: "reason",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "Handoff reason. Briefly explain why a human is needed, such as explicit user request, manual verification, or after-sales handling.",
+						Description: i18nx.Get("tool.graph.handoffConversation.param.reason"),
 					},
 				},
 			)),

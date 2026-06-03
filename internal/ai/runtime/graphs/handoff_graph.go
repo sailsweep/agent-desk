@@ -8,6 +8,7 @@ import (
 
 	"agent-desk/internal/ai/runtime/tooling"
 	"agent-desk/internal/models"
+	"agent-desk/internal/pkg/i18nx"
 	"agent-desk/internal/pkg/tracex"
 	"agent-desk/internal/services"
 
@@ -122,7 +123,7 @@ func (g *HandoffGraph) Run(ctx context.Context, argumentsInJSON string) (string,
 }
 
 func (g *HandoffGraph) buildReason(argumentsInJSON string) (string, error) {
-	reason := "The user needs human support."
+	reason := i18nx.Get("graph.defaultHandoffReason")
 	var args handoffGraphArgs
 	if strings.TrimSpace(argumentsInJSON) != "" {
 		if err := json.Unmarshal([]byte(argumentsInJSON), &args); err != nil {
@@ -136,7 +137,7 @@ func (g *HandoffGraph) buildReason(argumentsInJSON string) (string, error) {
 }
 
 func (g *HandoffGraph) buildConfirmationPrompt(reason string) string {
-	return fmt.Sprintf("I am ready to connect you to a human support agent.\nReason: %s\nPlease reply with \"Confirm\" or \"Cancel\".", strings.TrimSpace(reason))
+	return i18nx.Getf(i18nx.DefaultLocale, "graph.handoffConfirmPrompt", strings.TrimSpace(reason))
 }
 
 func parseHandoffDecision(value string) ConfirmationDecision {

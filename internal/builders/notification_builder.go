@@ -5,7 +5,6 @@ import (
 	"agent-desk/internal/pkg/dto/response"
 	"agent-desk/internal/pkg/i18nx"
 	"agent-desk/internal/pkg/utils"
-	"fmt"
 	"regexp"
 	"strings"
 )
@@ -74,11 +73,11 @@ func localizeTicketAssignedNotification(title string, content string) (string, s
 		return localizeNotificationTitle(title), content
 	}
 	if matches := ticketAssignedNotificationPattern.FindStringSubmatch(lines[0]); len(matches) == 2 {
-		lines[0] = fmt.Sprintf("Ticket %s has been assigned to you.", matches[1])
+		lines[0] = i18nx.Getf(i18nx.LocaleEnUS, "notification.ticketAssigned.line", matches[1])
 	}
 	for i, line := range lines[1:] {
 		if reason, ok := strings.CutPrefix(line, "指派原因: "); ok {
-			lines[i+1] = "Assignment reason: " + reason
+			lines[i+1] = i18nx.Getf(i18nx.LocaleEnUS, "notification.ticketAssigned.reason", reason)
 		}
 	}
 	return localizeNotificationTitle(title), strings.Join(lines, "\n")
@@ -90,15 +89,15 @@ func localizeConversationAssignedNotification(title string, content string) (str
 		return localizeNotificationTitle(title), content
 	}
 	if matches := conversationAssignedNotificationPattern.FindStringSubmatch(lines[0]); len(matches) == 2 {
-		lines[0] = fmt.Sprintf("Conversation #%s has been assigned to you.", matches[1])
+		lines[0] = i18nx.Getf(i18nx.LocaleEnUS, "notification.conversationAssigned.line", matches[1])
 	}
 	for i, line := range lines[1:] {
 		if reason, ok := strings.CutPrefix(line, "分配原因: "); ok {
-			lines[i+1] = "Assignment reason: " + reason
+			lines[i+1] = i18nx.Getf(i18nx.LocaleEnUS, "notification.conversationAssigned.reason", reason)
 			continue
 		}
 		if reason, ok := strings.CutPrefix(line, "转接原因: "); ok {
-			lines[i+1] = "Transfer reason: " + reason
+			lines[i+1] = i18nx.Getf(i18nx.LocaleEnUS, "notification.conversationTransferred.reason", reason)
 		}
 	}
 	return localizeNotificationTitle(title), strings.Join(lines, "\n")
@@ -107,13 +106,13 @@ func localizeConversationAssignedNotification(title string, content string) (str
 func localizeNotificationTitle(title string) string {
 	switch strings.TrimSpace(title) {
 	case "工单指派提醒":
-		return "Ticket assigned"
+		return i18nx.Getf(i18nx.LocaleEnUS, "notification.ticketAssigned.title")
 	case "会话转接提醒":
-		return "Conversation transferred"
+		return i18nx.Getf(i18nx.LocaleEnUS, "notification.conversationTransferred.title")
 	case "会话自动分配提醒":
-		return "Conversation auto-assigned"
+		return i18nx.Getf(i18nx.LocaleEnUS, "notification.conversationAutoAssigned.title")
 	case "会话分配提醒":
-		return "Conversation assigned"
+		return i18nx.Getf(i18nx.LocaleEnUS, "notification.conversationAssigned.title")
 	default:
 		return title
 	}

@@ -12,6 +12,7 @@ import (
 	"agent-desk/internal/pkg/enums"
 	"agent-desk/internal/pkg/errorsx"
 	"agent-desk/internal/pkg/eventbus"
+	"agent-desk/internal/pkg/i18nx"
 	"agent-desk/internal/pkg/utils"
 	"agent-desk/internal/repositories"
 
@@ -265,7 +266,7 @@ func (s *ticketService) CreateFromConversation(req request.CreateTicketFromConve
 		title = strings.TrimSpace(ConversationService.BuildConversationSummary(conversation))
 	}
 	if title == "" {
-		title = "Conversation ticket"
+		title = i18nx.Get("ticket.defaultConversationTitle")
 	}
 	description := strings.TrimSpace(req.Description)
 	if description == "" {

@@ -9,6 +9,7 @@ import (
 	"agent-desk/internal/events"
 	"agent-desk/internal/pkg/dto/request"
 	"agent-desk/internal/pkg/eventbus"
+	"agent-desk/internal/pkg/i18nx"
 	"agent-desk/internal/services"
 
 	"github.com/mlogclub/simple/common/strs"
@@ -31,16 +32,16 @@ func handleTicketAssignedInAppNotification(ctx context.Context, event events.Tic
 	if ticket == nil {
 		return nil
 	}
-	content := fmt.Sprintf("Ticket %s has been assigned to you.", strs.DefaultIfBlank(ticket.TicketNo, fmt.Sprintf("#%d", ticket.ID)))
+	content := i18nx.Getf(i18nx.DefaultLocale, "notification.ticketAssigned.line", strs.DefaultIfBlank(ticket.TicketNo, fmt.Sprintf("#%d", ticket.ID)))
 	if title := strings.TrimSpace(ticket.Title); title != "" {
 		content = content + "\n" + title
 	}
 	if reason := strings.TrimSpace(event.Reason); reason != "" {
-		content = content + "\nAssignment reason: " + reason
+		content = content + "\n" + i18nx.Getf(i18nx.DefaultLocale, "notification.ticketAssigned.reason", reason)
 	}
 	_, err := services.NotificationService.CreateAndPush(request.CreateNotificationRequest{
 		RecipientUserID:  event.ToUserID,
-		Title:            "Ticket assigned",
+		Title:            i18nx.Get("notification.ticketAssigned.title"),
 		Content:          content,
 		NotificationType: "ticket_assigned",
 		BizType:          "ticket",
@@ -61,12 +62,16 @@ func handleConversationAssignedInAppNotification(ctx context.Context, event even
 	if conversation == nil {
 		return nil
 	}
-	content := fmt.Sprintf("Conversation #%d has been assigned to you.", conversation.ID)
+	content := i18nx.Getf(i18nx.DefaultLocale, "notification.conversationAssigned.line", conversation.ID)
 	if summary := strings.TrimSpace(services.ConversationService.BuildConversationSummary(conversation)); summary != "" {
 		content = content + "\n" + summary
 	}
 	if reason := strings.TrimSpace(event.Reason); reason != "" {
-		content = content + "\nAssignment reason: " + reason
+		reasonKey := "notification.conversationAssigned.reason"
+		if strings.TrimSpace(event.AssignType) == events.ConversationAssignTypeTransfer {
+			reasonKey = "notification.conversationTransferred.reason"
+		}
+		content = content + "\n" + i18nx.Getf(i18nx.DefaultLocale, reasonKey, reason)
 	}
 	_, err := services.NotificationService.CreateAndPush(request.CreateNotificationRequest{
 		RecipientUserID:  event.ToUserID,

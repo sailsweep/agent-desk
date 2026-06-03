@@ -389,3 +389,117 @@ error.agentTeamSchedule.startTimeInvalid: "开始时间格式错误"
 error.agentTeamSchedule.startTimeInvalidWithFormat: "开始时间格式错误，请使用 HH:mm 或 HH:mm:ss"
 error.agentTeamSchedule.endTimeInvalid: "结束时间格式错误"
 error.agentTeamSchedule.endTimeInvalidWithFormat: "结束时间格式错误，请使用 HH:mm 或 HH:mm:ss"
+tool.builtin.toolSearch.title: "搜索并调用动态工具"
+tool.builtin.toolSearch.description: "用于搜索当前允许使用的 MCP 工具，并在确认目标 toolCode 后动态调用该工具。适合处理长尾工具，不应替代固定内置流程工具。"
+tool.builtin.toolSearch.appendix: |-
+  当你需要使用长尾 MCP 能力时，优先使用 tool_search 工具，并遵守以下规则：
+  1. 先调用 tool_search 搜索需要的动态工具，再继续使用已选中的真实工具。
+  2. 不要假设所有长尾工具一开始就可见；只有被 tool_search 选中的工具，后续模型调用才会暴露出来。
+  3. 如果当前已有固定内置工具可以完成任务，优先使用固定工具，不要滥用 tool_search。
+tool.builtin.skill.title: "加载专项技能说明"
+tool.builtin.skill.description: "用于按需加载当前 Agent 可用的专项技能说明文档，适合在需要专项处理规则时再注入上下文。"
+tool.graph.triageServiceRequest.title: "服务请求分流"
+tool.graph.triageServiceRequest.description: "Graph Tool。分析当前会话，判断应继续回答、准备工单草稿还是转人工；当适合创建工单时，也会准备工单草稿。"
+tool.graph.triageServiceRequest.appendix: |-
+  当你需要在继续回答、创建工单、转人工之间做判断时，优先调用 triage_service_request，并遵守以下规则：
+  1. 工具会返回 recommendedAction，并在需要创建工单时包含 ticketDraft。
+  2. 如果 recommendedAction=continue_answering，继续澄清或回答，不要直接升级。
+  3. 如果 recommendedAction=prepare_ticket，使用 ticketDraft 或补充缺失字段后，再考虑调用 create_ticket_with_confirmation。
+  4. 如果 recommendedAction=handoff_to_human，先确认转人工原因足够明确，再调用 handoff_to_human。
+  5. 当升级路径不明确时，使用此工具，而不是只依赖主提示词做复杂路由判断。
+tool.graph.analyzeConversation.title: "分析会话风险和摘要"
+tool.graph.analyzeConversation.description: "Graph Tool。总结当前会话，识别风险信号，并建议继续回答、创建工单或转人工。"
+tool.graph.analyzeConversation.appendix: |-
+  当会话可能涉及升级、退款、赔偿、明显负面情绪、创建工单或转人工时，优先调用 analyze_conversation，并遵守以下规则：
+  1. 此工具返回结构化摘要、风险信号和下一步建议；它不会创建工单或执行转人工。
+  2. 如果工具建议 handoff_to_human，先确认转人工条件，再调用 handoff_to_human。
+  3. 如果工具建议 prepare_ticket，调用 prepare_ticket_draft 或继续收集信息后再创建工单。
+  4. 如果工具建议 continue_answering，继续澄清和回答，不要过早升级。
+tool.graph.prepareTicketDraft.title: "准备工单草稿"
+tool.graph.prepareTicketDraft.description: "Graph Tool。基于当前会话和已收集信息准备工单草稿，包括建议标题、描述、缺失字段和追问问题。"
+tool.graph.prepareTicketDraft.appendix: |-
+  当用户要求创建工单、投诉、报障或售后处理，但标题或描述仍不清晰时，优先调用 prepare_ticket_draft，并遵守以下规则：
+  1. 此工具会准备工单草稿，并返回建议标题、建议描述、缺失字段和追问问题。
+  2. 如果 ready=false，根据 missingFields 和 followUpQuestions 继续追问，不要直接创建工单。
+  3. 如果 ready=true，使用结果考虑调用 create_ticket_with_confirmation。
+  4. 此工具只准备草稿，不会创建工单。
+tool.graph.createTicketConfirm.title: "创建工单确认流程"
+tool.graph.createTicketConfirm.description: "Graph Tool。处理工单参数准备、用户确认、实际创建工单和结果返回。"
+tool.graph.createTicketConfirm.appendix: |-
+  收集到足够信息后，可以调用 create_ticket_with_confirmation，但必须遵守以下规则：
+  1. 只有当用户明确想提交工单、投诉、问题报告或售后请求时，才考虑使用此工具。
+  2. 调用前准备清晰的工单标题和问题描述；如果信息仍然分散，先调用 prepare_ticket_draft 或继续追问。
+  3. 一旦准备创建工单，必须调用 create_ticket_with_confirmation，不要只用文本声称工单已创建。
+  4. 此 Graph Tool 会先请求用户确认；只有用户确认后才会创建工单，用户取消则流程结束。
+  5. 如果用户只是提问、泛泛抱怨或表达不满但没有明确要求创建工单，应继续澄清，而不是主动创建。
+tool.graph.handoffConversation.title: "转人工确认流程"
+tool.graph.handoffConversation.description: "Graph Tool。处理转人工原因准备、用户确认、实际转人工和结果返回。"
+tool.graph.handoffConversation.appendix: |-
+  确认需要人工帮助后，可以调用 handoff_to_human，但必须遵守以下规则：
+  1. 只有当用户明确要求人工客服，或你判断该问题必须由人工处理时才调用此工具。
+  2. 调用前清晰总结转人工原因；如果原因模糊，先追问。
+  3. 一旦决定转人工，必须调用 handoff_to_human，不要只用文本声称已接入人工。
+  4. 此 Graph Tool 会先请求用户确认；只有用户确认后才会转人工，用户取消则流程结束。
+  5. 如果问题仍可在当前会话解决，继续帮助用户，不要过早升级。
+  6. 如果工具返回 terminal=true 且 shouldRetry=false，说明转人工流程已结束，不要重复调用。
+conversation.handoff.waiting: "正在为你接入人工客服，请稍候。"
+conversation.handoff.offHours: "当前不在人工客服服务时间内。你可以继续描述问题，我会尽力协助；也可以在服务时间恢复后再次申请人工客服。"
+notification.ticketAssigned.title: "工单指派提醒"
+notification.ticketAssigned.line: "工单 %s 已指派给你"
+notification.ticketAssigned.reason: "指派原因: %s"
+notification.conversationTransferred.title: "会话转接提醒"
+notification.conversationAutoAssigned.title: "会话自动分配提醒"
+notification.conversationAssigned.title: "会话分配提醒"
+notification.conversationAssigned.line: "会话 #%s 已分配给你"
+notification.conversationAssigned.reason: "分配原因: %s"
+notification.conversationTransferred.reason: "转接原因: %s"
+notification.ticketAssigned.wxwork.no: "工单号: %s"
+notification.ticketAssigned.wxwork.title: "工单标题: %s"
+notification.ticketAssigned.wxwork.status: "当前状态: %s"
+notification.assignee: "处理人: %s"
+notification.conversationAssigned.wxwork.id: "会话ID: #%d"
+notification.conversationAssigned.wxwork.summary: "摘要: %s"
+notification.conversationAssigned.wxwork.channel: "渠道: %s"
+notification.conversationAssigned.wxwork.status: "状态: %s"
+notification.time: "时间: %s"
+graph.confirmOrCancel: "请回复“确认”或“取消”。"
+graph.needExplicitConfirmation: "需要你明确确认。请回复“确认”或“取消”。"
+graph.confirmationExpired: "本次确认已过期，请重新发起。"
+graph.cancelCreateTicket: "已取消本次工单创建。"
+graph.cancelHandoff: "已取消本次转人工。"
+graph.ticketCreated: "工单已创建。工单号：%s。标题：%s。"
+graph.createTicketConfirmPrompt: |-
+  我已准备好为你创建工单。
+  标题：%s
+  描述：%s
+  请回复“确认”或“取消”。
+graph.defaultHandoffReason: "用户需要人工客服支持。"
+graph.handoffConfirmPrompt: |-
+  我已准备好为你接入人工客服。
+  原因：%s
+  请回复“确认”或“取消”。
+conversation.interrupt.defaultPrompt: "请补充更多信息后再试。"
+ticket.defaultConversationTitle: "会话工单"
+tool.graph.createTicketConfirm.info: "Graph Tool。处理工单参数准备、用户确认、实际创建工单和结果返回。仅当用户明确要求创建工单且标题、描述清晰时使用。"
+tool.graph.createTicketConfirm.param.title: "工单标题。简洁概括问题。"
+tool.graph.createTicketConfirm.param.description: "工单描述。清晰记录用户的问题、现象和诉求。"
+tool.graph.handoffConversation.info: "Graph Tool。处理转人工原因准备、用户确认、实际转人工和结果返回。仅当用户明确要求人工客服，或你确认需要人工处理时使用。当结果 terminal=true 且 shouldRetry=false 时不要重复调用。"
+tool.graph.handoffConversation.param.reason: "转人工原因。简要说明为什么需要人工，例如用户明确要求、需要人工核验或售后处理。"
+tool.graph.triageServiceRequest.info: "Graph Tool。分析当前会话，判断应继续回答、准备工单草稿还是转人工。建议创建工单时，会返回结构化工单草稿建议。"
+tool.graph.triageServiceRequest.param.goal: "分析目标，例如是否升级、创建工单或转人工。"
+tool.graph.triageServiceRequest.param.observedIssue: "当前会话中观察到的主要问题或争议。"
+tool.graph.triageServiceRequest.param.needTicket: "是否重点评估创建工单。"
+tool.graph.triageServiceRequest.param.needHumanHandoff: "是否重点评估转人工。"
+tool.graph.triageServiceRequest.param.additionalContext: "补充上下文，例如已经识别的风险信号或约束。"
+tool.graph.analyzeConversation.info: "Graph Tool。总结当前会话，识别投诉、支付、情绪等风险信号，并建议继续回答、创建工单或转人工。"
+tool.graph.analyzeConversation.param.goal: "分析目标，例如是否转人工、创建工单或执行风险复核。"
+tool.graph.analyzeConversation.param.observedIssue: "当前会话中观察到的主要问题或请求。"
+tool.graph.analyzeConversation.param.needQualityCheck: "是否重点进行风险或质量复核。"
+tool.graph.analyzeConversation.param.additionalContext: "补充上下文，例如争议点、投诉点或已识别的业务约束。"
+tool.graph.prepareTicketDraft.info: "Graph Tool。根据当前会话和已收集信息准备工单草稿。当工单内容需要整理时，应在 create_ticket_with_confirmation 之前使用。"
+tool.graph.prepareTicketDraft.param.title: "准备好的工单标题，可选。"
+tool.graph.prepareTicketDraft.param.description: "准备好的工单描述，可选。"
+tool.graph.prepareTicketDraft.param.issue: "用户正在遇到的问题或报错信息。"
+tool.graph.prepareTicketDraft.param.impact: "影响范围，例如无法登录、无法下单或业务中断。"
+tool.graph.prepareTicketDraft.param.expectedOutcome: "用户期望的处理结果或诉求。"
+tool.graph.prepareTicketDraft.param.currentAttempt: "当前已尝试过的处理步骤，可选。"

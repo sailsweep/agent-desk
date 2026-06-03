@@ -389,3 +389,117 @@ error.agentTeamSchedule.startTimeInvalid: "Invalid start time format."
 error.agentTeamSchedule.startTimeInvalidWithFormat: "Invalid start time format. Use HH:mm or HH:mm:ss."
 error.agentTeamSchedule.endTimeInvalid: "Invalid end time format."
 error.agentTeamSchedule.endTimeInvalidWithFormat: "Invalid end time format. Use HH:mm or HH:mm:ss."
+tool.builtin.toolSearch.title: "Search and Run Dynamic Tools"
+tool.builtin.toolSearch.description: "Searches the MCP tools currently available to the agent and runs the selected tool after its toolCode is confirmed. Best for long-tail tools; it should not replace fixed built-in workflow tools."
+tool.builtin.toolSearch.appendix: |-
+  When you need long-tail MCP capabilities, prefer the tool_search tool and follow these rules:
+  1. Call tool_search first to find the dynamic tool you need, then continue with the selected real tool.
+  2. Do not assume all long-tail tools are visible at the start; only tools selected by tool_search are exposed to subsequent model calls.
+  3. If a fixed built-in tool can already complete the task, prefer the fixed tool and do not overuse tool_search.
+tool.builtin.skill.title: "Load Skill Instructions"
+tool.builtin.skill.description: "Loads specialized skill instructions for the current agent when extra task-specific guidance is needed."
+tool.graph.triageServiceRequest.title: "Route Service Request"
+tool.graph.triageServiceRequest.description: "Analyzes the current conversation to decide whether to keep answering, prepare a ticket draft, or hand off to a human, including a ticket draft when ticket creation is appropriate."
+tool.graph.triageServiceRequest.appendix: |-
+  When you need to decide between continuing the answer, creating a ticket, or handing off to a human, call triage_service_request first and follow these rules:
+  1. The tool returns recommendedAction and includes ticketDraft when ticket creation is needed.
+  2. If recommendedAction=continue_answering, continue clarifying or answering instead of escalating directly.
+  3. If recommendedAction=prepare_ticket, use ticketDraft or collect missing fields before calling create_ticket_with_confirmation.
+  4. If recommendedAction=handoff_to_human, confirm the reason is sufficient before calling handoff_to_human.
+  5. When the escalation path is unclear, use this tool instead of making a complex routing decision from the main prompt alone.
+tool.graph.analyzeConversation.title: "Analyze Conversation Risk and Summary"
+tool.graph.analyzeConversation.description: "Summarizes the current conversation, identifies risk signals, and recommends whether to keep answering, create a ticket, or hand off to a human."
+tool.graph.analyzeConversation.appendix: |-
+  When the conversation may involve escalation, refunds, compensation, clear negative sentiment, ticket creation, or human handoff, call analyze_conversation first and follow these rules:
+  1. This tool returns a structured summary, risk signals, and next-step recommendation. It does not create tickets or hand off to a human.
+  2. If the tool recommends handoff_to_human, confirm the handoff conditions before calling handoff_to_human.
+  3. If the tool recommends prepare_ticket, call prepare_ticket_draft or collect more information before creating a ticket.
+  4. If the tool recommends continue_answering, continue clarifying and answering instead of escalating too early.
+tool.graph.prepareTicketDraft.title: "Prepare Ticket Draft"
+tool.graph.prepareTicketDraft.description: "Turns the current conversation and collected details into a ticket draft with a suggested title, description, missing fields, and follow-up questions."
+tool.graph.prepareTicketDraft.appendix: |-
+  When the user has asked to create a ticket, file a complaint, report an issue, or request after-sales handling, but the title or description is still unclear, call prepare_ticket_draft first and follow these rules:
+  1. This tool prepares a ticket draft and returns a suggested title, suggested description, missing fields, and follow-up questions.
+  2. If ready=false, ask follow-up questions based on missingFields and followUpQuestions instead of creating a ticket directly.
+  3. If ready=true, use the result to consider calling create_ticket_with_confirmation.
+  4. This tool only prepares a draft. It does not create a ticket.
+tool.graph.createTicketConfirm.title: "Create Ticket With Confirmation"
+tool.graph.createTicketConfirm.description: "Guides ticket creation with parameter preparation, customer confirmation, actual ticket creation, and final result delivery."
+tool.graph.createTicketConfirm.appendix: |-
+  You can call create_ticket_with_confirmation after enough information has been collected, but follow these rules:
+  1. Only consider this tool when the user explicitly wants to submit a ticket, complaint, issue report, or after-sales request.
+  2. Before calling it, prepare a clear ticket title and issue description. If the information is still scattered, call prepare_ticket_draft or ask follow-up questions first.
+  3. Once you are ready to create a ticket, you must call create_ticket_with_confirmation. Do not simply claim in text that the ticket has been created.
+  4. This Graph Tool asks the user for confirmation first. The ticket is created only after the user confirms; if the user cancels, the flow ends.
+  5. If the user is only asking questions, complaining generally, or expressing dissatisfaction without explicitly requesting a ticket, continue clarifying instead of proactively creating one.
+tool.graph.handoffConversation.title: "Handoff to Human With Confirmation"
+tool.graph.handoffConversation.description: "Guides human handoff with reason preparation, customer confirmation, actual transfer, and final result delivery."
+tool.graph.handoffConversation.appendix: |-
+  You can call handoff_to_human after confirming that human help is needed, but follow these rules:
+  1. Only call this tool when the user explicitly asks for a human agent or you have determined that the issue must be handled by a human.
+  2. Before calling it, summarize the handoff reason clearly. If the reason is vague, ask a follow-up question first.
+  3. Once you decide to hand off, you must call handoff_to_human. Do not simply say in text that you have connected the user to a human.
+  4. This Graph Tool asks the user for confirmation first. The handoff happens only after the user confirms; if the user cancels, the flow ends.
+  5. If the issue can still be solved in the current conversation, continue helping instead of escalating too early.
+  6. If the tool returns terminal=true and shouldRetry=false, the handoff flow has ended. Do not call it repeatedly.
+conversation.handoff.waiting: "We are connecting you to a human support agent. Please wait."
+conversation.handoff.offHours: "Human support is currently outside service hours. You can keep describing the issue and I will do my best to help. You can also request a human agent again when service hours resume."
+notification.ticketAssigned.title: "Ticket assigned"
+notification.ticketAssigned.line: "Ticket %s has been assigned to you."
+notification.ticketAssigned.reason: "Assignment reason: %s"
+notification.conversationTransferred.title: "Conversation transferred"
+notification.conversationAutoAssigned.title: "Conversation auto-assigned"
+notification.conversationAssigned.title: "Conversation assigned"
+notification.conversationAssigned.line: "Conversation #%s has been assigned to you."
+notification.conversationAssigned.reason: "Assignment reason: %s"
+notification.conversationTransferred.reason: "Transfer reason: %s"
+notification.ticketAssigned.wxwork.no: "Ticket no: %s"
+notification.ticketAssigned.wxwork.title: "Title: %s"
+notification.ticketAssigned.wxwork.status: "Status: %s"
+notification.assignee: "Assignee: %s"
+notification.conversationAssigned.wxwork.id: "Conversation ID: #%d"
+notification.conversationAssigned.wxwork.summary: "Summary: %s"
+notification.conversationAssigned.wxwork.channel: "Channel: %s"
+notification.conversationAssigned.wxwork.status: "Status: %s"
+notification.time: "Time: %s"
+graph.confirmOrCancel: "Please reply with \"Confirm\" or \"Cancel\"."
+graph.needExplicitConfirmation: "I need your explicit confirmation. Please reply with \"Confirm\" or \"Cancel\"."
+graph.confirmationExpired: "This confirmation has expired. Please start again."
+graph.cancelCreateTicket: "Ticket creation has been cancelled."
+graph.cancelHandoff: "Human handoff has been cancelled."
+graph.ticketCreated: "Ticket created. Ticket no: %s. Title: %s."
+graph.createTicketConfirmPrompt: |-
+  I am ready to create a ticket for you.
+  Title: %s
+  Description: %s
+  Please reply with "Confirm" or "Cancel".
+graph.defaultHandoffReason: "The user needs human support."
+graph.handoffConfirmPrompt: |-
+  I am ready to connect you to a human support agent.
+  Reason: %s
+  Please reply with "Confirm" or "Cancel".
+conversation.interrupt.defaultPrompt: "Please provide more information and try again."
+ticket.defaultConversationTitle: "Conversation ticket"
+tool.graph.createTicketConfirm.info: "Graph Tool. Handles ticket parameter preparation, user confirmation, actual ticket creation, and result return. Use only when the user explicitly asks to create a ticket and the title and description are clear."
+tool.graph.createTicketConfirm.param.title: "Ticket title. Concisely summarizes the issue."
+tool.graph.createTicketConfirm.param.description: "Ticket description. Clearly captures the user's issue, symptoms, and request."
+tool.graph.handoffConversation.info: "Graph Tool. Handles handoff reason preparation, user confirmation, actual human handoff, and result return. Use only when the user explicitly asks for a human agent or you have confirmed that human handling is required. Do not repeat the call when the result has terminal=true and shouldRetry=false."
+tool.graph.handoffConversation.param.reason: "Handoff reason. Briefly explain why a human is needed, such as explicit user request, manual verification, or after-sales handling."
+tool.graph.triageServiceRequest.info: "Graph Tool. Analyzes the current conversation to decide whether to continue answering, prepare a ticket draft, or hand off to a human. When ticket creation is recommended, it returns a structured ticket draft suggestion."
+tool.graph.triageServiceRequest.param.goal: "Analysis goal, such as whether to escalate, create a ticket, or hand off to a human."
+tool.graph.triageServiceRequest.param.observedIssue: "Main issue or dispute observed in the conversation."
+tool.graph.triageServiceRequest.param.needTicket: "Whether to focus on evaluating ticket creation."
+tool.graph.triageServiceRequest.param.needHumanHandoff: "Whether to focus on evaluating human handoff."
+tool.graph.triageServiceRequest.param.additionalContext: "Additional context, such as risk signals or constraints already identified."
+tool.graph.analyzeConversation.info: "Graph Tool. Summarizes the current conversation, identifies complaint/payment/sentiment risk signals, and recommends whether to continue answering, create a ticket, or hand off to a human."
+tool.graph.analyzeConversation.param.goal: "Analysis goal, such as whether to hand off to a human, create a ticket, or perform risk review."
+tool.graph.analyzeConversation.param.observedIssue: "Main issue or request observed in the conversation."
+tool.graph.analyzeConversation.param.needQualityCheck: "Whether to focus on risk or quality review."
+tool.graph.analyzeConversation.param.additionalContext: "Additional context, such as disputes, complaint points, or business constraints already identified."
+tool.graph.prepareTicketDraft.info: "Graph Tool. Prepares a ticket draft from the current conversation and collected information. Use it before create_ticket_with_confirmation when the ticket content needs to be organized."
+tool.graph.prepareTicketDraft.param.title: "Prepared ticket title. Optional."
+tool.graph.prepareTicketDraft.param.description: "Prepared ticket description. Optional."
+tool.graph.prepareTicketDraft.param.issue: "The issue or error message the user is experiencing."
+tool.graph.prepareTicketDraft.param.impact: "Impact scope, such as unable to sign in, unable to place an order, or business interruption."
+tool.graph.prepareTicketDraft.param.expectedOutcome: "The user's expected outcome or request."
+tool.graph.prepareTicketDraft.param.currentAttempt: "Current attempted troubleshooting steps. Optional."

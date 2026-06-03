@@ -53,12 +53,12 @@ func TestRegisteredToolTextUsesEnglishLocale(t *testing.T) {
 
 func TestRegisteredToolTextKeepsChineseLocale(t *testing.T) {
 	title := GetRegisteredToolTitleLocale(GraphCreateTicketConfirm.Code, i18nx.LocaleZhCN)
-	if title != GraphCreateTicketConfirm.Title {
+	if title != "创建工单确认流程" {
 		t.Fatalf("unexpected chinese title: %q", title)
 	}
 
 	description := GetRegisteredToolDescriptionLocale(GraphCreateTicketConfirm.Code, i18nx.LocaleZhCN)
-	if description != GraphCreateTicketConfirm.Description {
+	if description != "Graph Tool。处理工单参数准备、用户确认、实际创建工单和结果返回。" {
 		t.Fatalf("unexpected chinese description: %q", description)
 	}
 }

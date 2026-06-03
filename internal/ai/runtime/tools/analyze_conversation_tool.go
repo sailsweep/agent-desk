@@ -6,6 +6,7 @@ import (
 	"agent-desk/internal/ai/runtime/graphs"
 	"agent-desk/internal/ai/runtime/registry"
 	"agent-desk/internal/models"
+	"agent-desk/internal/pkg/i18nx"
 	"agent-desk/internal/pkg/toolx"
 
 	einotool "github.com/cloudwego/eino/components/tool"
@@ -48,7 +49,7 @@ func (t *AnalyzeConversationTool) Build(ctx registry.Context) (einotool.BaseTool
 func (t *AnalyzeConversationTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
 	return &schema.ToolInfo{
 		Name: toolx.GraphAnalyzeConversation.Name,
-		Desc: "Graph Tool. Summarizes the current conversation, identifies complaint/payment/sentiment risk signals, and recommends whether to continue answering, create a ticket, or hand off to a human.",
+		Desc: i18nx.Get("tool.graph.analyzeConversation.info"),
 		ParamsOneOf: schema.NewParamsOneOfByJSONSchema(&einojsonschema.Schema{
 			Version: einojsonschema.Version,
 			Type:    "object",
@@ -57,42 +58,42 @@ func (t *AnalyzeConversationTool) Info(ctx context.Context) (*schema.ToolInfo, e
 					Key: "goal",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "Analysis goal, such as whether to hand off to a human, create a ticket, or perform risk review.",
+						Description: i18nx.Get("tool.graph.analyzeConversation.param.goal"),
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "observedIssue",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "Main issue or request observed in the conversation.",
+						Description: i18nx.Get("tool.graph.analyzeConversation.param.observedIssue"),
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "needTicket",
 					Value: &einojsonschema.Schema{
 						Type:        "boolean",
-						Description: "Whether to focus on evaluating ticket creation.",
+						Description: i18nx.Get("tool.graph.triageServiceRequest.param.needTicket"),
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "needHumanHandoff",
 					Value: &einojsonschema.Schema{
 						Type:        "boolean",
-						Description: "Whether to focus on evaluating human handoff.",
+						Description: i18nx.Get("tool.graph.triageServiceRequest.param.needHumanHandoff"),
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "needQualityCheck",
 					Value: &einojsonschema.Schema{
 						Type:        "boolean",
-						Description: "Whether to focus on risk or quality review.",
+						Description: i18nx.Get("tool.graph.analyzeConversation.param.needQualityCheck"),
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "additionalContext",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "Additional context, such as disputes, complaint points, or business constraints already identified.",
+						Description: i18nx.Get("tool.graph.analyzeConversation.param.additionalContext"),
 					},
 				},
 			)),

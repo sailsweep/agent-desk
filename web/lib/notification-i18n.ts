@@ -1,3 +1,6 @@
+import { normalizeLocale } from "@/i18n/config"
+import { translateMessage } from "@/i18n/messages"
+
 type LocalizableNotification = {
   title: string
   content: string
@@ -19,76 +22,87 @@ export function localizeNotificationItem<T extends LocalizableNotification>(
   notification: T,
   locale: string
 ): T {
-  if (locale !== "en-US") {
+  const normalizedLocale = normalizeLocale(locale)
+  if (normalizedLocale !== "en-US") {
     return notification
   }
   if (notification.notificationType === "ticket_assigned") {
     return {
       ...notification,
-      title: localizeNotificationTitle(notification.title),
-      content: localizeTicketAssignedContent(notification.content),
+      title: localizeNotificationTitle(notification.title, normalizedLocale),
+      content: localizeTicketAssignedContent(notification.content, normalizedLocale),
     }
   }
   if (notification.notificationType === "conversation_assigned") {
     return {
       ...notification,
-      title: localizeNotificationTitle(notification.title),
-      content: localizeConversationAssignedContent(notification.content),
+      title: localizeNotificationTitle(notification.title, normalizedLocale),
+      content: localizeConversationAssignedContent(notification.content, normalizedLocale),
     }
   }
   return notification
 }
 
-function localizeTicketAssignedContent(content: string) {
+function localizeTicketAssignedContent(content: string, locale: ReturnType<typeof normalizeLocale>) {
   const lines = splitNotificationLines(content)
   if (lines.length === 0) {
     return content
   }
   const match = lines[0].match(TICKET_ASSIGNED_PATTERN)
   if (match?.[1]) {
-    lines[0] = `Ticket ${match[1]} has been assigned to you.`
+    lines[0] = translateMessage(locale, "notification.ticketAssignedLine", {
+      ticketNo: match[1],
+    })
   }
   return lines
     .map((line) =>
       line.startsWith(ASSIGNMENT_REASON_PREFIX)
-        ? `Assignment reason: ${line.slice(ASSIGNMENT_REASON_PREFIX.length)}`
+        ? translateMessage(locale, "notification.assignmentReason", {
+            reason: line.slice(ASSIGNMENT_REASON_PREFIX.length),
+          })
         : line
     )
     .join("\n")
 }
 
-function localizeConversationAssignedContent(content: string) {
+function localizeConversationAssignedContent(content: string, locale: ReturnType<typeof normalizeLocale>) {
   const lines = splitNotificationLines(content)
   if (lines.length === 0) {
     return content
   }
   const match = lines[0].match(CONVERSATION_ASSIGNED_PATTERN)
   if (match?.[1]) {
-    lines[0] = `Conversation #${match[1]} has been assigned to you.`
+    lines[0] = translateMessage(locale, "notification.conversationAssignedLine", {
+      conversationId: match[1],
+    })
   }
   return lines
     .map((line) => {
       if (line.startsWith(CONVERSATION_ASSIGNMENT_REASON_PREFIX)) {
-        return `Assignment reason: ${line.slice(CONVERSATION_ASSIGNMENT_REASON_PREFIX.length)}`
+        return translateMessage(locale, "notification.assignmentReason", {
+          reason: line.slice(CONVERSATION_ASSIGNMENT_REASON_PREFIX.length),
+        })
       }
       if (line.startsWith(TRANSFER_REASON_PREFIX)) {
-        return `Transfer reason: ${line.slice(TRANSFER_REASON_PREFIX.length)}`
+        return translateMessage(locale, "notification.transferReason", {
+          reason: line.slice(TRANSFER_REASON_PREFIX.length),
+        })
       }
       return line
     })
     .join("\n")
 }
 
-function localizeNotificationTitle(title: string) {
+function localizeNotificationTitle(title: string, locale: ReturnType<typeof normalizeLocale>) {
   switch (title.trim()) {
     case TICKET_ASSIGNED_TITLE:
-      return "Ticket assigned"
+      return translateMessage(locale, "notification.ticketAssignedTitle")
     case CONVERSATION_TRANSFERRED_TITLE:
-      return "Conversation transferred"
+      return translateMessage(locale, "notification.conversationTransferredTitle")
     case CONVERSATION_AUTO_ASSIGNED_TITLE:
-      return "Conversation auto-assigned"
+      return translateMessage(locale, "notification.conversationAutoAssignedTitle")
     case CONVERSATION_ASSIGNED_TITLE:
-      return "Conversation assigned"
+      return translateMessage(locale, "notification.conversationAssignedTitle")
     default:
       return title
   }
