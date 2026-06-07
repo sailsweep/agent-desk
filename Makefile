@@ -5,12 +5,14 @@ SPA_INDEX := $(WEB_DIR)/out/index.html
 
 GO ?= go
 PNPM ?= pnpm
+DOCKER ?= docker
 GOOS ?= $(shell $(GO) env GOOS)
 GOARCH ?= $(shell $(GO) env GOARCH)
 DEV_SERVER_URL ?= http://127.0.0.1:8083
 LANCEDB_VERSION ?= v0.1.2
 LANCEDB_DOWNLOAD_SCRIPT ?= https://raw.githubusercontent.com/lancedb/lancedb-go/main/scripts/download-artifacts.sh
 LANCEDB_TEST_PKGS ?= ./internal/ai/rag/vectordb
+LANCEDB_DOCKER_IMAGE ?= mlogclub/agent-desk:lancedb
 
 UNAME_S := $(shell uname -s)
 UNAME_M := $(shell uname -m)
@@ -60,7 +62,7 @@ LANCEDB_CGO_LDFLAGS := $(LANCEDB_NATIVE_LIB) $(LANCEDB_SYSTEM_LDFLAGS)
 .PHONY: all help build build-go build-linux release run run-go dev test check clean clean-web \
 	web-install web-dev web-build-spa ensure-spa build-spa web-build-ssr web-typecheck web-lint \
 	generator enums migration testdata lancedb-platform-info lancedb-artifacts lancedb-check \
-	build-lancedb test-lancedb clean-lancedb-artifacts
+	build-lancedb test-lancedb clean-lancedb-artifacts docker-build-lancedb
 
 all: build
 
@@ -89,6 +91,7 @@ help:
 	@echo "  make lancedb-artifacts    Download LanceDB native libraries for this platform"
 	@echo "  make build-lancedb        Build Go binary with LanceDB provider enabled"
 	@echo "  make test-lancedb         Run LanceDB provider tests with native libraries"
+	@echo "  make docker-build-lancedb Build Docker image with LanceDB provider enabled"
 
 build: web-build-spa
 	@$(MAKE) build-go
@@ -222,3 +225,10 @@ test-lancedb: lancedb-check
 
 clean-lancedb-artifacts:
 	@rm -rf lib include
+
+docker-build-lancedb:
+	@$(DOCKER) build \
+		--target app-lancedb \
+		--build-arg LANCEDB_VERSION=$(LANCEDB_VERSION) \
+		-t $(LANCEDB_DOCKER_IMAGE) \
+		.

@@ -11,6 +11,8 @@ docker-data
 dist
 data
 qdrant
+include
+lib
 *.log
 __debug_bin*
 
