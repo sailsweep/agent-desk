@@ -50,6 +50,14 @@ func (r *knowledgeFAQRepository) Count(db *gorm.DB, cnd *sqls.Cnd) int64 {
 	return cnd.Count(db, &models.KnowledgeFAQ{})
 }
 
+func (r *knowledgeFAQRepository) CountActiveByDirectoryID(db *gorm.DB, directoryID int64) int64 {
+	var count int64
+	db.Model(&models.KnowledgeFAQ{}).
+		Where("directory_id = ? AND status <> ?", directoryID, enums.StatusDeleted).
+		Count(&count)
+	return count
+}
+
 func (r *knowledgeFAQRepository) Create(db *gorm.DB, t *models.KnowledgeFAQ) error {
 	return db.Create(t).Error
 }

@@ -93,6 +93,33 @@ func TestKnowledgeDirectoryDeleteRejectsAttachedContent(t *testing.T) {
 	}
 }
 
+func TestKnowledgeDirectoryDeleteAllowsSoftDeletedDocument(t *testing.T) {
+	setupKnowledgeDirectoryTestDB(t)
+	operator := knowledgeDirectoryTestOperator()
+	kb := createKnowledgeDirectoryTestBase(t, "Document KB", string(enums.KnowledgeBaseTypeDocument))
+	directory, err := KnowledgeDirectoryService.CreateDirectory(request.CreateKnowledgeDirectoryRequest{
+		KnowledgeBaseID: kb.ID,
+		Name:            "已清空目录",
+	}, operator)
+	if err != nil {
+		t.Fatalf("create directory: %v", err)
+	}
+	if err := repositories.KnowledgeDocumentRepository.Create(sqls.DB(), &models.KnowledgeDocument{
+		KnowledgeBaseID: kb.ID,
+		DirectoryID:     directory.ID,
+		Title:           "Deleted Doc",
+		ContentType:     enums.KnowledgeDocumentContentTypeMarkdown,
+		Status:          enums.StatusDeleted,
+		IndexStatus:     enums.KnowledgeDocumentIndexStatusPending,
+	}); err != nil {
+		t.Fatalf("create soft deleted document: %v", err)
+	}
+
+	if err := KnowledgeDirectoryService.DeleteDirectory(directory.ID); err != nil {
+		t.Fatalf("DeleteDirectory() error = %v, want nil when only soft deleted documents exist", err)
+	}
+}
+
 func setupKnowledgeDirectoryTestDB(t *testing.T) {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})

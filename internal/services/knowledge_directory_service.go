@@ -117,10 +117,10 @@ func (s *knowledgeDirectoryService) DeleteDirectory(id int64) error {
 	if s.Count(sqls.NewCnd().Eq("parent_id", id)) > 0 {
 		return errorsx.InvalidParamI18n("error.e0316")
 	}
-	if KnowledgeDocumentService.Count(sqls.NewCnd().Eq("directory_id", id)) > 0 {
+	if repositories.KnowledgeDocumentRepository.CountActiveByDirectoryID(sqls.DB(), id) > 0 {
 		return errorsx.InvalidParamI18n("error.e0317")
 	}
-	if KnowledgeFAQService.Count(sqls.NewCnd().Eq("directory_id", id)) > 0 {
+	if repositories.KnowledgeFAQRepository.CountActiveByDirectoryID(sqls.DB(), id) > 0 {
 		return errorsx.InvalidParamI18n("error.e0315")
 	}
 	return repositories.KnowledgeDirectoryRepository.Delete(sqls.DB(), id)
