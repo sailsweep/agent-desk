@@ -50,19 +50,19 @@ COPY --from=web-builder /src/web/out ./web/out
 RUN --mount=type=cache,target=/go/pkg/mod \
 	--mount=type=cache,target=/root/.cache/go-build \
 	set -eux; \
-	if [ "$${TARGETOS}" != "linux" ]; then \
-		echo "LanceDB Docker image supports TARGETOS=linux only, got $${TARGETOS}" >&2; \
+	if [ "${TARGETOS}" != "linux" ]; then \
+		echo "LanceDB Docker image supports TARGETOS=linux only, got ${TARGETOS}" >&2; \
 		exit 1; \
 	fi; \
-	arch="$${TARGETARCH:-$$(go env GOARCH)}"; \
-	case "$$arch" in \
+	arch="${TARGETARCH:-$(go env GOARCH)}"; \
+	case "$arch" in \
 		amd64|arm64) ;; \
-		*) echo "Unsupported LanceDB Docker architecture: $$arch" >&2; exit 1 ;; \
+		*) echo "Unsupported LanceDB Docker architecture: $arch" >&2; exit 1 ;; \
 	esac; \
-	curl -sSL https://raw.githubusercontent.com/lancedb/lancedb-go/main/scripts/download-artifacts.sh | bash -s "$${LANCEDB_VERSION}"; \
-	CGO_ENABLED=1 GOOS="$${TARGETOS}" GOARCH="$$arch" \
+	curl -sSL https://raw.githubusercontent.com/lancedb/lancedb-go/main/scripts/download-artifacts.sh | bash -s "${LANCEDB_VERSION}"; \
+	CGO_ENABLED=1 GOOS="${TARGETOS}" GOARCH="$arch" \
 	CGO_CFLAGS="-I/src/include" \
-	CGO_LDFLAGS="/src/lib/linux_$$arch/liblancedb_go.a -lm -ldl -lpthread" \
+	CGO_LDFLAGS="/src/lib/linux_$arch/liblancedb_go.a -lm -ldl -lpthread" \
 	go build -tags lancedb -v -trimpath -ldflags="-s -w" -o /out/agent-desk ./cmd/server
 
 FROM debian:bookworm-slim AS app-lancedb
