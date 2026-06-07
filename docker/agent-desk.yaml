@@ -46,10 +46,14 @@ storage:
 
 vectorDB:
   type: qdrant
-  host: qdrant
-  grpcPort: 6334
-  apiKey: ""
-  useTls: false
+  qdrant:
+    host: qdrant
+    grpcPort: 6334
+    apiKey: ""
+    useTls: false
+  # LanceDB requires building the backend with -tags lancedb and LanceDB native libraries.
+  lancedb:
+    path: /app/data/lancedb
 
 mcp:
   enabled: true

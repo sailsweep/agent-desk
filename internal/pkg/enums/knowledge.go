@@ -3,11 +3,13 @@ package enums
 type VectorDBType string
 
 const (
-	VectorDBTypeQdrant VectorDBType = "qdrant"
+	VectorDBTypeQdrant  VectorDBType = "qdrant"
+	VectorDBTypeLanceDB VectorDBType = "lancedb"
 )
 
 var vectorDBTypeLabelMap = map[VectorDBType]string{
-	VectorDBTypeQdrant: "Qdrant",
+	VectorDBTypeQdrant:  "Qdrant",
+	VectorDBTypeLanceDB: "LanceDB",
 }
 
 func GetVectorDBTypeLabel(dbType VectorDBType) string {

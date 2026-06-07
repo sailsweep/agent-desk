@@ -123,12 +123,20 @@ type OSSStorageConfig struct {
 }
 
 type VectorDBConfig struct {
-	Type     string `yaml:"type"`
+	Type    string                `yaml:"type"`
+	Qdrant  QdrantVectorDBConfig  `yaml:"qdrant"`
+	LanceDB LanceDBVectorDBConfig `yaml:"lancedb"`
+}
+
+type QdrantVectorDBConfig struct {
 	Host     string `yaml:"host"`
-	Port     int    `yaml:"port"`
-	APIKey   string `yaml:"apiKey"`
 	GrpcPort int    `yaml:"grpcPort"`
+	APIKey   string `yaml:"apiKey"`
 	UseTLS   bool   `yaml:"useTls"`
+}
+
+type LanceDBVectorDBConfig struct {
+	Path string `yaml:"path"`
 }
 
 type MCPConfig struct {

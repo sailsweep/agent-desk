@@ -18,7 +18,9 @@ func Init(cfg *config.VectorDBConfig) error {
 	var err error
 	switch enums.VectorDBType(cfg.Type) {
 	case enums.VectorDBTypeQdrant:
-		defaultProvider, err = NewQdrantProvider(cfg)
+		defaultProvider, err = NewQdrantProvider(&cfg.Qdrant)
+	case enums.VectorDBTypeLanceDB:
+		defaultProvider, err = NewLanceDBProvider(&cfg.LanceDB)
 	default:
 		return fmt.Errorf("unsupported vectordb type: %s", cfg.Type)
 	}

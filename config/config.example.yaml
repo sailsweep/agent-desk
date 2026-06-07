@@ -77,11 +77,15 @@ storage:
     signedUrlExpireSeconds: 600
 
 vectorDB:
-  type: qdrant
-  host: 127.0.0.1
-  grpcPort: 6334
-  apiKey: ""
-  useTls: false
+  type: qdrant # qdrant, lancedb
+  qdrant:
+    host: 127.0.0.1
+    grpcPort: 6334
+    apiKey: ""
+    useTls: false
+  # LanceDB requires building the backend with -tags lancedb and LanceDB native libraries.
+  lancedb:
+    path: data/lancedb
 
 mcp:
   # Global switch for MCP tool integration.

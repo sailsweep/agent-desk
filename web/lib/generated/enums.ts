@@ -347,10 +347,12 @@ export const StatusLabels: Record<Status, string> = {
 export enum ThirdProvider {
   WxWork = "wxwork",
   Dingtalk = "dingtalk",
+  OIDC = "oidc",
 }
 export const ThirdProviderLabels: Record<ThirdProvider, string> = {
   [ThirdProvider.WxWork]: "企业微信",
   [ThirdProvider.Dingtalk]: "钉钉",
+  [ThirdProvider.OIDC]: "OIDC",
 }
 
 export enum TicketStatus {
@@ -366,7 +368,9 @@ export const TicketStatusLabels: Record<TicketStatus, string> = {
 
 export enum VectorDBType {
   Qdrant = "qdrant",
+  LanceDB = "lancedb",
 }
 export const VectorDBTypeLabels: Record<VectorDBType, string> = {
   [VectorDBType.Qdrant]: "Qdrant",
+  [VectorDBType.LanceDB]: "LanceDB",
 }
