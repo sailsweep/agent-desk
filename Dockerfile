@@ -37,7 +37,7 @@ ARG TARGETARCH
 ARG LANCEDB_VERSION=v0.1.2
 
 RUN apt-get update \
-	&& apt-get install -y --no-install-recommends bash binutils build-essential ca-certificates curl git \
+	&& apt-get install -y --no-install-recommends bash binutils build-essential ca-certificates curl file git \
 	&& rm -rf /var/lib/apt/lists/*
 
 COPY go.mod go.sum ./
@@ -56,27 +56,36 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 	fi; \
 	arch="${TARGETARCH:-$(go env GOARCH)}"; \
 	case "$arch" in \
-		amd64|arm64) ;; \
-		*) echo "Unsupported LanceDB Docker architecture: $arch" >&2; exit 1 ;; \
+		amd64) ;; \
+		*) echo "LanceDB Docker image currently supports linux/amd64 only, got linux/$arch" >&2; exit 1 ;; \
 	esac; \
-	curl -sSL https://raw.githubusercontent.com/lancedb/lancedb-go/main/scripts/download-artifacts.sh | bash -s "${LANCEDB_VERSION}"; \
-	ranlib "/src/lib/linux_$arch/liblancedb_go.a"; \
+	mkdir -p /out; \
+	curl -fL --retry 3 --retry-delay 2 -o /tmp/lancedb-go-native-binaries.tar.gz \
+		"https://github.com/lancedb/lancedb-go/releases/download/${LANCEDB_VERSION}/lancedb-go-native-binaries.tar.gz"; \
+	tar -xzf /tmp/lancedb-go-native-binaries.tar.gz -C /src; \
+	test -f "/src/include/lancedb.h"; \
+	test -f "/src/lib/linux_$arch/liblancedb_go.so"; \
+	file "/src/lib/linux_$arch/liblancedb_go.so"; \
 	CGO_ENABLED=1 GOOS="${TARGETOS}" GOARCH="$arch" \
 	CGO_CFLAGS="-I/src/include" \
-	CGO_LDFLAGS="/src/lib/linux_$arch/liblancedb_go.a -lm -ldl -lpthread" \
-	go build -tags lancedb -v -trimpath -ldflags="-s -w" -o /out/agent-desk ./cmd/server
+	CGO_LDFLAGS="-L/src/lib/linux_$arch -llancedb_go -Wl,-rpath,/usr/local/lib -lm -ldl -lpthread" \
+	go build -tags lancedb -v -trimpath -ldflags="-s -w" -o /out/agent-desk ./cmd/server; \
+	ldd /out/agent-desk; \
+	cp "/src/lib/linux_$arch/liblancedb_go.so" /out/liblancedb_go.so
 
 FROM debian:bookworm-slim AS app-lancedb
 WORKDIR /app
 
 ENV TZ=Asia/Shanghai
+ENV LD_LIBRARY_PATH=/usr/local/lib
 
 RUN apt-get update \
-	&& apt-get install -y --no-install-recommends ca-certificates tzdata wget \
+	&& apt-get install -y --no-install-recommends ca-certificates libgcc-s1 tzdata wget \
 	&& mkdir -p /app/config /app/data/storage /app/data/lancedb \
 	&& rm -rf /var/lib/apt/lists/*
 
 COPY --from=server-builder-lancedb /out/agent-desk /app/agent-desk
+COPY --from=server-builder-lancedb /out/liblancedb_go.so /usr/local/lib/liblancedb_go.so
 COPY config/config.example.yaml /app/config/config.example.yaml
 COPY config/config.example.yaml /app/config/config.yaml
 
