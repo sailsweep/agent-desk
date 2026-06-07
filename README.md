@@ -188,7 +188,9 @@ Default development URLs:
 ```bash
 make dev        # start backend and frontend development servers
 make build      # build the frontend SPA and current-platform Go binary into dist/
+make build LANCEDB=1  # build the current-platform LanceDB binary into dist/
 make release    # build linux/darwin/windows release binaries into dist/
+make release LANCEDB=1  # build LanceDB release binaries into dist/
 make generator  # run code generation
 make enums      # generate frontend enums
 make help       # show available make targets
