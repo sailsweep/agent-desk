@@ -1,6 +1,6 @@
 services:
   agent-desk:
-    image: mlogclub/agent-desk:v1.5.1-rc-lancedb
+    image: mlogclub/agent-desk:latest-lancedb
     restart: unless-stopped
     ports:
       - "8083:8083"
