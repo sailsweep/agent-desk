@@ -37,7 +37,7 @@ ARG TARGETARCH
 ARG LANCEDB_VERSION=v0.1.2
 
 RUN apt-get update \
-	&& apt-get install -y --no-install-recommends bash build-essential ca-certificates curl git \
+	&& apt-get install -y --no-install-recommends bash binutils build-essential ca-certificates curl git \
 	&& rm -rf /var/lib/apt/lists/*
 
 COPY go.mod go.sum ./
@@ -60,6 +60,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 		*) echo "Unsupported LanceDB Docker architecture: $arch" >&2; exit 1 ;; \
 	esac; \
 	curl -sSL https://raw.githubusercontent.com/lancedb/lancedb-go/main/scripts/download-artifacts.sh | bash -s "${LANCEDB_VERSION}"; \
+	ranlib "/src/lib/linux_$arch/liblancedb_go.a"; \
 	CGO_ENABLED=1 GOOS="${TARGETOS}" GOARCH="$arch" \
 	CGO_CFLAGS="-I/src/include" \
 	CGO_LDFLAGS="/src/lib/linux_$arch/liblancedb_go.a -lm -ldl -lpthread" \
