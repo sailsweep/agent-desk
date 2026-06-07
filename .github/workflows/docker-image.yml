@@ -56,6 +56,19 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
 
+      - name: Extract LanceDB Docker metadata
+        id: meta-lancedb
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+          flavor: |
+            suffix=-lancedb,onlatest=true
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
@@ -65,3 +78,13 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Build and push LanceDB
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: app-lancedb
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta-lancedb.outputs.tags }}
+          labels: ${{ steps.meta-lancedb.outputs.labels }}
