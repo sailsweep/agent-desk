@@ -191,6 +191,7 @@ make build      # build the frontend SPA and current-platform Go binary into dis
 make release    # build linux/darwin/windows release binaries into dist/
 make generator  # run code generation
 make enums      # generate frontend enums
+make help       # show available make targets
 ```
 
 ## AI Agent Workflow

@@ -64,8 +64,17 @@ LANCEDB_CGO_LDFLAGS := $(LANCEDB_NATIVE_LIB) $(LANCEDB_SYSTEM_LDFLAGS)
 
 .DEFAULT_GOAL := build
 
-.PHONY: dev build release generator enums \
+.PHONY: help dev build release generator enums \
 	_web-build-spa _web-dev _prepare-dist _lancedb-artifacts _lancedb-check
+
+help:
+	@echo "Available targets:"
+	@echo "  make dev        Start backend and frontend development servers"
+	@echo "  make build      Build the current system into dist/"
+	@echo "  make release    Build linux/darwin/windows release binaries into dist/"
+	@echo "  make generator  Run code generation"
+	@echo "  make enums      Generate frontend enums"
+	@echo "  make help       Show this help"
 
 dev: _lancedb-check
 	@CGO_ENABLED=1 CGO_CFLAGS="$(LANCEDB_CGO_CFLAGS)" CGO_LDFLAGS="$(LANCEDB_CGO_LDFLAGS)" \
