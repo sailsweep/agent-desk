@@ -35,7 +35,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AuthSession | null>(null)
   const [ready, setReady] = useState(false)
   const isDashboardLoginRoute = pathname?.startsWith("/dashboard/login") ?? false
-  const requiresAuth = (pathname?.startsWith("/dashboard") ?? false) && !isDashboardLoginRoute
+  const requiresAuth =
+    ((pathname?.startsWith("/dashboard") ?? false) ||
+      (pathname?.startsWith("/workbench") ?? false)) &&
+    !isDashboardLoginRoute
 
   const refreshProfile = useCallback(async () => {
     const stored = readSession()
@@ -52,16 +55,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: profile.user,
         permissions: profile.permissions,
         roles: profile.roles,
+        accessToken: profile.accessToken || stored.accessToken,
+        expiresAt: profile.expiresAt || stored.expiresAt,
       }
       writeSession(nextSession)
       setSession(nextSession)
-    } catch {
-      clearSession()
-      setSession(null)
-      if (requiresAuth) {
-        startTransition(() => {
-          router.replace("/dashboard/login")
-        })
+    } catch (error) {
+      const errorCode = (error as Error & { errorCode?: number }).errorCode
+      if (errorCode === 3000 || errorCode === 3002) {
+        clearSession()
+        setSession(null)
+        if (requiresAuth) {
+          startTransition(() => {
+            router.replace("/dashboard/login")
+          })
+        }
       }
     } finally {
       setReady(true)

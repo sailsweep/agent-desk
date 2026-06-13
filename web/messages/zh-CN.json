@@ -2351,6 +2351,11 @@
     "changePassword": "修改密码",
     "signOut": "退出登录"
   },
+  "workspace": {
+    "dashboard": "管理后台",
+    "workbench": "客服工作台",
+    "switchWorkspace": "切换工作区"
+  },
   "theme": {
     "toggle": "切换主题",
     "light": "浅色模式",

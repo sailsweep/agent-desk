@@ -1,7 +1,6 @@
 "use client"
 
 import type { ComponentProps } from "react"
-import Link from "next/link"
 import { useMemo } from "react"
 
 import { useI18n } from "@/i18n/provider"
@@ -13,6 +12,7 @@ import { useAuth } from "@/components/auth-provider"
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
+import { WorkspaceSwitcher } from "@/components/workspace-switcher"
 import {
   Sidebar,
   SidebarContent,
@@ -45,19 +45,16 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              className="data-[slot=sidebar-menu-button]:p-1.5!"
-              render={<Link href="/dashboard" />}
-            >
-              <img
-                src="/images/logo.svg"
-                alt={t("app.brand")}
-                width="32"
-                height="32"
-                className="size-7 shrink-0 object-contain"
-              />
-              <span className="text-base font-semibold">{t("app.brand")}</span>
-            </SidebarMenuButton>
+            <WorkspaceSwitcher
+              currentWorkspace="dashboard"
+              variant="sidebar"
+              trigger={
+                <SidebarMenuButton
+                  size="lg"
+                  className="data-[slot=sidebar-menu-button]:p-1.5!"
+                />
+              }
+            />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>

@@ -2351,6 +2351,11 @@
     "changePassword": "Change Password",
     "signOut": "Sign Out"
   },
+  "workspace": {
+    "dashboard": "Admin Dashboard",
+    "workbench": "Support Workbench",
+    "switchWorkspace": "Switch workspace"
+  },
   "theme": {
     "toggle": "Change theme",
     "light": "Light",
