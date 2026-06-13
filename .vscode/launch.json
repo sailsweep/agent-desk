@@ -8,6 +8,7 @@
       "mode": "auto",
       "program": "${workspaceFolder}/cmd/server/main.go",
       "cwd": "${workspaceFolder}",
+      "buildFlags": "-tags=dev",
       "args": [
         "-config",
         "${workspaceFolder}/config/config.yaml"
