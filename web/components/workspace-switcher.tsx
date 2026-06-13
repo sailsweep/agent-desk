@@ -2,7 +2,7 @@
 
 import { CheckIcon, ChevronsUpDownIcon } from "lucide-react"
 import Link from "next/link"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { ReactElement } from "react"
 
 import { useI18n } from "@/i18n/provider"
@@ -82,6 +82,14 @@ export function WorkspaceSwitcher({
     }, 120)
   }
 
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current)
+      }
+    }
+  }, [])
+
   const triggerClassName = cn(
     "gap-2 text-left",
     variant === "header" &&
@@ -133,8 +141,6 @@ export function WorkspaceSwitcher({
       <DropdownMenuTrigger
         onPointerEnter={openHoverMenu}
         onPointerLeave={closeHoverMenu}
-        onFocus={openHoverMenu}
-        onBlur={closeHoverMenu}
         render={
           trigger ?? <Button variant="ghost" className={triggerClassName} />
         }

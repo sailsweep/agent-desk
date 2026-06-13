@@ -35,7 +35,6 @@ import {
 } from "@/components/ui/resizable";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { useAgentConversationRealtime } from "@/hooks/use-agent-conversation-realtime";
 import { useI18n } from "@/i18n/provider";
 import {
   agentConversationFilterOptions,
@@ -134,8 +133,6 @@ export function ConversationWorkbench() {
       reset: false,
     });
   }
-
-  useAgentConversationRealtime();
 
   const handleSidebarToggle = () => {
     const panel = sidebarPanelRef.current;

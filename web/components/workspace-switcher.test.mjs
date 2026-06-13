@@ -13,4 +13,9 @@ describe("workspace switcher config", () => {
 it("wraps the dropdown label in a Base UI menu group", async () => {
   assert.match(source, /<DropdownMenuGroup>[\s\S]*<DropdownMenuLabel>\{t\("workspace\.switchWorkspace"\)\}<\/DropdownMenuLabel>/);
 });
+
+it("does not auto-open the rail menu from focus events", async () => {
+  assert.doesNotMatch(source, /onFocus=\{openHoverMenu\}/);
+  assert.doesNotMatch(source, /onBlur=\{closeHoverMenu\}/);
+});
 });

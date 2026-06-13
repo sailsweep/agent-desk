@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation"
 import type { CSSProperties, ReactNode } from "react"
 import { useEffect } from "react"
 
+import { AgentRealtimeProvider } from "@/components/agent-realtime-provider"
 import { useAuth } from "@/components/auth-provider"
 import { NotificationProvider } from "@/components/notification-provider"
 import { WorkbenchHeader } from "@/components/workbench-header"
@@ -56,6 +57,7 @@ export default function WorkbenchLayout({
       }
     >
       <NotificationProvider>
+        <AgentRealtimeProvider />
         <WorkbenchRail />
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <WorkbenchHeader />

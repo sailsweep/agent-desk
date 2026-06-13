@@ -49,6 +49,13 @@ async function login(page: Page) {
     .toBe(true);
 }
 
+async function expectWorkbenchRealtimeOnline(page: Page) {
+  await expect(page.getByText(/平台实时：在线|Realtime: online/)).toBeVisible({
+    timeout: 15000,
+  });
+  await expect(page.getByText(/平台实时：已断开|Realtime: disconnected/)).toHaveCount(0);
+}
+
 test.describe("support workbench", () => {
   test("logs in and switches between workbench and dashboard", async ({ page }) => {
     const runtimeErrors: string[] = [];
@@ -65,6 +72,7 @@ test.describe("support workbench", () => {
     await page.goto(`${baseUrl}/workbench/`);
     await page.waitForLoadState("networkidle");
     await screenshot(page, "03-workbench-initial");
+    await expectWorkbenchRealtimeOnline(page);
 
     await expect(page.getByText(/客服工作台|Support Workbench/).first()).toBeVisible();
     const conversationsEntry = page.getByRole("link", { name: /会话|Conversations/ }).first();
@@ -110,6 +118,7 @@ test.describe("support workbench", () => {
     await page.waitForLoadState("networkidle");
     await expect(returnedTicketsEntry).toHaveClass(/bg-sidebar-primary/);
     await expect(returnedConversationsEntry).not.toHaveClass(/bg-sidebar-primary/);
+    await expectWorkbenchRealtimeOnline(page);
     await page.mouse.move(640, 360);
     await screenshot(page, "09-workbench-tickets-active");
 
