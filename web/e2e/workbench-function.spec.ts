@@ -67,7 +67,7 @@ test.describe("support workbench", () => {
     await screenshot(page, "03-workbench-initial");
 
     await expect(page.getByText(/客服工作台|Support Workbench/).first()).toBeVisible();
-    await page.getByRole("button", { name: /贝壳AGENT|Shell Agent/i }).first().click();
+    await page.getByRole("button", { name: /贝壳AGENT|Agent Desk/i }).first().click();
     await expect(page.getByText(/切换工作区|Switch workspace/)).toBeVisible();
     await expect(page.getByRole("menuitem", { name: /管理后台|Admin Dashboard/ })).toBeVisible();
     await page.waitForTimeout(300);
@@ -79,7 +79,7 @@ test.describe("support workbench", () => {
     await screenshot(page, "05-dashboard-after-switch");
     await expect(page.getByText(/管理后台|Admin Dashboard/).first()).toBeVisible();
 
-    await page.getByRole("button", { name: /贝壳AGENT|Shell Agent/i }).first().click();
+    await page.getByRole("button", { name: /贝壳AGENT|Agent Desk/i }).first().click();
     await expect(page.getByRole("menuitem", { name: /客服工作台|Support Workbench/ })).toBeVisible();
     await page.waitForTimeout(300);
     await screenshot(page, "06-dashboard-switcher-open");

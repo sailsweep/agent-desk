@@ -8,6 +8,7 @@ import { useEffect } from "react"
 import { useAuth } from "@/components/auth-provider"
 import { NotificationProvider } from "@/components/notification-provider"
 import { WorkbenchHeader } from "@/components/workbench-header"
+import { WorkbenchRail } from "@/components/workbench-rail"
 import { useI18n } from "@/i18n/provider"
 
 export default function WorkbenchLayout({
@@ -47,7 +48,7 @@ export default function WorkbenchLayout({
 
   return (
     <div
-      className="flex h-svh min-h-0 flex-col overflow-hidden bg-background"
+      className="flex h-svh min-h-0 overflow-hidden bg-background"
       style={
         {
           "--header-height": "calc(var(--spacing) * 12)",
@@ -55,8 +56,11 @@ export default function WorkbenchLayout({
       }
     >
       <NotificationProvider>
-        <WorkbenchHeader />
-        <main className="flex min-h-0 flex-1 overflow-hidden">{children}</main>
+        <WorkbenchRail />
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <WorkbenchHeader />
+          <main className="flex min-h-0 flex-1 overflow-hidden">{children}</main>
+        </div>
       </NotificationProvider>
     </div>
   )
