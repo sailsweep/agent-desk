@@ -31,12 +31,14 @@ const LocaleContext = createContext<LocaleContextValue>({
 
 export function AppI18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<AppLocale>(DEFAULT_LOCALE)
+  const [isLocaleReady, setIsLocaleReady] = useState(false)
 
   useEffect(() => {
     const storedLocale = readStoredLocale()
     setLocaleState(storedLocale)
     document.documentElement.lang = storedLocale
     document.title = translateMessage(storedLocale, "app.metadataTitle")
+    setIsLocaleReady(true)
   }, [])
 
   useEffect(() => {
@@ -56,6 +58,10 @@ export function AppI18nProvider({ children }: { children: ReactNode }) {
     }),
     [locale]
   )
+
+  if (!isLocaleReady) {
+    return null
+  }
 
   return (
     <LocaleContext.Provider value={value}>
