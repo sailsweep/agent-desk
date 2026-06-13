@@ -3,9 +3,9 @@ package config
 import (
 	"agent-desk/internal/pkg/enums"
 	"fmt"
-	"os"
+	"strings"
 
-	"gopkg.in/yaml.v3"
+	"github.com/spf13/viper"
 )
 
 type Config struct {
@@ -199,13 +199,19 @@ type WxWorkConfig struct {
 }
 
 func Load(path string) (*Config, error) {
-	b, err := os.ReadFile(path)
-	if err != nil {
+	v := viper.New()
+	v.SetConfigFile(path)
+	v.SetConfigType("yaml")
+	v.SetEnvPrefix("AGENT_DESK")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
+
+	if err := v.ReadInConfig(); err != nil {
 		return nil, err
 	}
 
 	cfg := &Config{}
-	if err := yaml.Unmarshal(b, cfg); err != nil {
+	if err := v.Unmarshal(cfg); err != nil {
 		return nil, err
 	}
 	return cfg, nil

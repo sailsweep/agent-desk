@@ -7,7 +7,9 @@ GO ?= go
 PNPM ?= pnpm
 GOOS ?= $(shell $(GO) env GOOS)
 GOARCH ?= $(shell $(GO) env GOARCH)
-DEV_SERVER_URL ?= http://127.0.0.1:8083/api/health
+DEV_PORT ?= 8083
+DEV_API_BASE_URL ?= http://127.0.0.1:$(DEV_PORT)
+DEV_SERVER_URL ?= $(DEV_API_BASE_URL)/api/health
 LANCEDB_VERSION ?= v0.1.2
 LANCEDB_DOWNLOAD_SCRIPT ?= https://raw.githubusercontent.com/lancedb/lancedb-go/main/scripts/download-artifacts.sh
 LANCEDB ?= 0
@@ -92,7 +94,7 @@ help:
 	@echo "  make help       Show this help"
 
 dev: _lancedb-check
-	@CGO_ENABLED=1 CGO_CFLAGS="$(LANCEDB_CGO_CFLAGS)" CGO_LDFLAGS="$(LANCEDB_CGO_LDFLAGS)" \
+	@AGENT_DESK_SERVER_PORT="$(DEV_PORT)" CGO_ENABLED=1 CGO_CFLAGS="$(LANCEDB_CGO_CFLAGS)" CGO_LDFLAGS="$(LANCEDB_CGO_LDFLAGS)" \
 		$(GO) run -tags "dev lancedb" $(MAIN) & \
 	server_pid=$$!; \
 	trap 'kill $$server_pid 2>/dev/null || true' EXIT INT TERM; \
@@ -171,7 +173,7 @@ _web-build-spa:
 	@cd $(WEB_DIR) && $(PNPM) build:sdk && $(PNPM) build
 
 _web-dev:
-	@cd $(WEB_DIR) && $(PNPM) dev
+	@cd $(WEB_DIR) && NEXT_PUBLIC_API_BASE_URL="$(DEV_API_BASE_URL)" $(PNPM) dev
 
 _prepare-dist:
 	@mkdir -p $(DIST_DIR)
