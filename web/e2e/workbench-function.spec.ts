@@ -82,8 +82,7 @@ test.describe("support workbench", () => {
     await conversationsEntry.hover();
     await expect(page.getByText(/会话|Conversations/).last()).toBeVisible();
     await screenshot(page, "04-workbench-rail-tooltip");
-    await page.getByRole("button", { name: /贝壳AGENT|Agent Desk/i }).first().click();
-    await expect(page.getByText(/切换工作区|Switch workspace/)).toBeVisible();
+    await page.getByRole("button", { name: /贝壳AGENT|Agent Desk/i }).first().hover();
     await expect(page.getByRole("menuitem", { name: /管理后台|Admin Dashboard/ })).toBeVisible();
     await page.waitForTimeout(300);
     await screenshot(page, "05-workbench-switcher-open");

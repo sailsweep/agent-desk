@@ -2,6 +2,7 @@
 
 import { CheckIcon, ChevronsUpDownIcon } from "lucide-react"
 import Link from "next/link"
+import { useRef, useState } from "react"
 import type { ReactElement } from "react"
 
 import { useI18n } from "@/i18n/provider"
@@ -51,8 +52,36 @@ export function WorkspaceSwitcher({
   trigger,
 }: WorkspaceSwitcherProps) {
   const t = useI18n()
+  const [hoverOpen, setHoverOpen] = useState(false)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isRail = variant === "rail"
   const currentOption =
     workspaceOptions.find((item) => item.key === currentWorkspace) ?? workspaceOptions[0]
+
+  const clearCloseTimer = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = null
+    }
+  }
+  const openHoverMenu = () => {
+    if (!isRail) {
+      return
+    }
+    clearCloseTimer()
+    setHoverOpen(true)
+  }
+  const closeHoverMenu = () => {
+    if (!isRail) {
+      return
+    }
+    clearCloseTimer()
+    closeTimerRef.current = setTimeout(() => {
+      setHoverOpen(false)
+      closeTimerRef.current = null
+    }, 120)
+  }
+
   const triggerClassName = cn(
     "gap-2 text-left",
     variant === "header" &&
@@ -97,8 +126,15 @@ export function WorkspaceSwitcher({
     )
 
   return (
-    <DropdownMenu>
+    <DropdownMenu
+      open={isRail ? hoverOpen : undefined}
+      onOpenChange={isRail ? setHoverOpen : undefined}
+    >
       <DropdownMenuTrigger
+        onPointerEnter={openHoverMenu}
+        onPointerLeave={closeHoverMenu}
+        onFocus={openHoverMenu}
+        onBlur={closeHoverMenu}
         render={
           trigger ?? <Button variant="ghost" className={triggerClassName} />
         }
@@ -109,6 +145,8 @@ export function WorkspaceSwitcher({
         align="start"
         side={variant === "sidebar" || variant === "rail" ? "right" : "bottom"}
         sideOffset={8}
+        onPointerEnter={openHoverMenu}
+        onPointerLeave={closeHoverMenu}
         className="w-60 min-w-60"
       >
         <DropdownMenuGroup>
