@@ -1,6 +1,15 @@
 "use client";
 
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  memo,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { BotIcon, LockKeyholeIcon, UserCheckIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { ConversationTransferDialog } from "@/components/conversation-actions/transfer-dialog";
@@ -38,6 +47,63 @@ import { formatDateTime } from "@/lib/utils";
 import { AgentMessageEditor } from "./agent-message-editor";
 
 const EMPTY_AGENT_MESSAGES: AgentMessage[] = [];
+
+type ComposerNoticeTone = "muted" | "ai" | "action";
+
+type ComposerNoticeProps = {
+  icon: ReactNode;
+  message: string;
+  tone?: ComposerNoticeTone;
+  action?: ReactNode;
+};
+
+function getComposerNoticeClassName(tone: ComposerNoticeTone) {
+  if (tone === "ai") {
+    return {
+      wrap: "border-primary/15 bg-primary/5",
+      icon: "bg-primary/10 text-primary",
+    };
+  }
+
+  if (tone === "action") {
+    return {
+      wrap: "border-border bg-muted/35",
+      icon: "bg-background text-foreground shadow-sm",
+    };
+  }
+
+  return {
+    wrap: "border-border bg-muted/30",
+    icon: "bg-muted text-muted-foreground",
+  };
+}
+
+function ComposerNotice({
+  icon,
+  message,
+  tone = "muted",
+  action,
+}: ComposerNoticeProps) {
+  const className = getComposerNoticeClassName(tone);
+
+  return (
+    <div className="flex h-full min-h-0 items-center justify-center px-4 py-3">
+      <div
+        className={`flex w-full max-w-lg items-center gap-3 rounded-md border px-4 py-3 text-sm shadow-sm ${className.wrap}`}
+      >
+        <div
+          className={`flex size-9 shrink-0 items-center justify-center rounded-md ${className.icon}`}
+        >
+          {icon}
+        </div>
+        <div className="min-w-0 flex-1 leading-6 text-foreground">
+          {message}
+        </div>
+        {action ? <div className="shrink-0">{action}</div> : null}
+      </div>
+    </div>
+  );
+}
 
 export function ChatPanel() {
   const t = useI18n();
@@ -395,16 +461,22 @@ export function ChatPanel() {
   const bottomPanel = (
     <div className="h-full overflow-auto border-t border-border/80 bg-card">
       {isClosedConversation ? (
-        <div className="h-full flex justify-center items-center">
-          {t("conversation.closedNotice")}
-        </div>
+        <ComposerNotice
+          icon={<LockKeyholeIcon className="size-4" />}
+          message={t("conversation.closedNotice")}
+        />
       ) : conversation?.status === 1 ? (
-        <div className="h-full flex justify-center items-center">
-          {t("conversation.aiServingNotice")}
-        </div>
+        <ComposerNotice
+          icon={<BotIcon className="size-4" />}
+          message={t("conversation.aiServingNotice")}
+          tone="ai"
+        />
       ) : isPendingConversation ? (
-        <div className="h-full flex justify-center items-center">
-          <div className="flex items-center gap-2 h-full">
+        <ComposerNotice
+          icon={<UserCheckIcon className="size-4" />}
+          message={t("conversation.claimCurrent")}
+          tone="action"
+          action={
             <Button
               onClick={() => setClaimDialogOpen(true)}
               disabled={claiming}
@@ -412,8 +484,8 @@ export function ChatPanel() {
             >
               {claiming ? t("conversation.claiming") : t("conversation.claim")}
             </Button>
-          </div>
-        </div>
+          }
+        />
       ) : (
         <div className="flex h-full min-h-0 flex-col">
           <div className="min-h-0 flex-1">
