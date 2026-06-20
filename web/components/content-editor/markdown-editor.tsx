@@ -56,29 +56,67 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
     const editorId = useId()
     const editorRef = useRef<ExposeParam>(null)
     const { resolvedTheme } = useTheme()
+    const showModeSwitch = allowedModes.length > 1
     const defToolbars = useMemo(
-      () => [
-        <EditorModeSwitch
-          key="mode-switch"
-          value={mode}
-          allowedModes={allowedModes}
-          disabled={disabled}
-          onChange={onModeChange}
-        />,
-        <NormalToolbar
+      () => {
+        const fullscreenToolbar = (
+          <NormalToolbar
           key="toggle-fullscreen"
           title={fullscreen ? t("editor.exitFullscreen") : t("editor.fullscreen")}
           disabled={disabled}
           onClick={onToggleFullscreen}
-        >
-          {fullscreen ? (
-            <Minimize2Icon className="h-[16px] w-[16px]" />
-          ) : (
-            <Maximize2Icon className="h-[16px] w-[16px]" />
-          )}
-        </NormalToolbar>,
+          >
+            {fullscreen ? (
+              <Minimize2Icon className="h-[16px] w-[16px]" />
+            ) : (
+              <Maximize2Icon className="h-[16px] w-[16px]" />
+            )}
+          </NormalToolbar>
+        )
+
+        if (!showModeSwitch) {
+          return [fullscreenToolbar]
+        }
+
+        return [
+          <EditorModeSwitch
+            key="mode-switch"
+            value={mode}
+            allowedModes={allowedModes}
+            disabled={disabled}
+            onChange={onModeChange}
+          />,
+          fullscreenToolbar,
+        ]
+      },
+      [allowedModes, disabled, fullscreen, mode, onModeChange, onToggleFullscreen, showModeSwitch, t]
+    )
+    const toolbars = useMemo(
+      () => [
+        ...(showModeSwitch ? [0, "-"] : []),
+        "bold",
+        "underline",
+        "italic",
+        "strikeThrough",
+        "-",
+        "title",
+        "quote",
+        "unorderedList",
+        "orderedList",
+        "-",
+        "codeRow",
+        "code",
+        "link",
+        "image",
+        "-",
+        "revoke",
+        "next",
+        showModeSwitch ? 1 : 0,
+        "=",
+        "preview",
+        "previewOnly",
       ],
-      [allowedModes, disabled, fullscreen, mode, onModeChange, onToggleFullscreen, t]
+      [showModeSwitch]
     )
 
     useImperativeHandle(ref, () => ({
@@ -99,31 +137,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
             onChange={onChange}
             theme={resolvedTheme === "dark" ? "dark" : "light"}
             preview={false}
-            toolbars={[
-              0,
-              "-",
-              "bold",
-              "underline",
-              "italic",
-              "strikeThrough",
-              "-",
-              "title",
-              "quote",
-              "unorderedList",
-              "orderedList",
-              "-",
-              "codeRow",
-              "code",
-              "link",
-              "image",
-              "-",
-              "revoke",
-              "next",
-              1,
-              "=",
-              "preview",
-              "previewOnly",
-            ]}
+            toolbars={toolbars}
             defToolbars={defToolbars}
             footers={[]}
             noMermaid

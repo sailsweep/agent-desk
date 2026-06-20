@@ -2,9 +2,10 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo, useState } from "react";
-import { type Resolver, useForm } from "react-hook-form";
+import { Controller, type Resolver, useForm } from "react-hook-form";
 import { z } from "zod/v4";
 
+import { ContentEditor } from "@/components/content-editor";
 import { OptionCombobox } from "@/components/option-combobox";
 import { ProjectDialog } from "@/components/project-dialog";
 import { Button } from "@/components/ui/button";
@@ -155,6 +156,7 @@ function SkillEditDialogBody({
     handleSubmit,
     reset,
     register,
+    control,
     formState: { errors },
   } = form;
 
@@ -316,14 +318,21 @@ function SkillEditDialogBody({
           </Field>
 
           <Field data-invalid={!!errors.instruction}>
-            <FieldLabel htmlFor="skill-instruction">{t("skillDefinition.instruction")}</FieldLabel>
+            <FieldLabel>{t("skillDefinition.instruction")}</FieldLabel>
             <FieldContent>
-              <Textarea
-                id="skill-instruction"
-                rows={12}
-                placeholder={t("skillDefinition.instructionPlaceholder")}
-                aria-invalid={!!errors.instruction}
-                {...register("instruction")}
+              <Controller
+                control={control}
+                name="instruction"
+                render={({ field }) => (
+                  <ContentEditor
+                    value={{ mode: "markdown", raw: field.value ?? "" }}
+                    onChange={(next) => field.onChange(next.raw)}
+                    placeholder={t("skillDefinition.instructionPlaceholder")}
+                    disabled={saving || loading}
+                    allowedModes={["markdown"]}
+                    height={360}
+                  />
+                )}
               />
               <FieldError errors={[errors.instruction]} />
             </FieldContent>
