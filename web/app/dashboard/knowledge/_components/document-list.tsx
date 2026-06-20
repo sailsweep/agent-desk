@@ -65,6 +65,7 @@ import { DocumentEditDialog } from "./document-edit";
 import { KnowledgeContentDetailDialog } from "./knowledge-content-detail";
 import { KnowledgeBulkMoveDialog } from "./knowledge-bulk-move-dialog";
 import { KnowledgeDirectoryPanel } from "./knowledge-directory-panel";
+import { SelectionCheckbox } from "./selection-checkbox";
 
 type DocumentListProps = {
   knowledgeBaseId: number | null;
@@ -516,9 +517,8 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex min-w-0 flex-1 items-start gap-2">
-                          <Checkbox
+                          <SelectionCheckbox
                             checked={selectedIds.includes(item.id)}
-                            onClick={(event) => event.stopPropagation()}
                             onCheckedChange={(checked) => toggleSelected(item.id, Boolean(checked))}
                             aria-label={t("knowledge.selectItem", { name: item.title })}
                             className="mt-0.5"
@@ -623,9 +623,8 @@ export function DocumentList({ knowledgeBaseId, onActionStateChange }: DocumentL
                       )}
                       onClick={() => openDetailDialog(item)}
                     >
-                      <Checkbox
+                      <SelectionCheckbox
                         checked={selectedIds.includes(item.id)}
-                        onClick={(event) => event.stopPropagation()}
                         onCheckedChange={(checked) => toggleSelected(item.id, Boolean(checked))}
                         aria-label={t("knowledge.selectItem", { name: item.title })}
                       />

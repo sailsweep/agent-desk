@@ -62,6 +62,7 @@ import { FAQImportDialog } from "./faq-import-dialog";
 import { KnowledgeContentDetailDialog } from "./knowledge-content-detail";
 import { KnowledgeBulkMoveDialog } from "./knowledge-bulk-move-dialog";
 import { KnowledgeDirectoryPanel } from "./knowledge-directory-panel";
+import { SelectionCheckbox } from "./selection-checkbox";
 
 type FAQListProps = {
   knowledgeBaseId: number | null;
@@ -459,9 +460,8 @@ export function FAQList({
                         )}
                         onClick={() => openDetailDialog(item)}
                       >
-                        <Checkbox
+                        <SelectionCheckbox
                           checked={selectedIds.includes(item.id)}
-                          onClick={(event) => event.stopPropagation()}
                           onCheckedChange={(checked) => toggleSelected(item.id, Boolean(checked))}
                           aria-label={t("knowledge.selectItem", { name: item.question })}
                         />
