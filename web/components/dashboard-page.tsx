@@ -1,12 +1,10 @@
 "use client"
 
 import type { ReactNode } from "react"
-import { usePathname } from "next/navigation"
 
 import { cn } from "@/lib/utils"
 import { TableCell, TableRow } from "@/components/ui/table"
 import { useI18n } from "@/i18n/provider"
-import { getPageTitleKey } from "@/lib/navigation"
 
 export function DashboardPage({
   className,
@@ -15,15 +13,8 @@ export function DashboardPage({
   className?: string
   children: ReactNode
 }) {
-  const t = useI18n()
-  const pathname = usePathname()
-  const title = t(getPageTitleKey(pathname))
-
   return (
     <div className={cn("flex flex-1 flex-col gap-4 p-4 lg:p-5", className)}>
-      <div className="flex min-h-8 items-center">
-        <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
-      </div>
       {children}
     </div>
   )
