@@ -48,12 +48,6 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
             <WorkspaceSwitcher
               currentWorkspace="dashboard"
               variant="sidebar"
-              trigger={
-                <SidebarMenuButton
-                  size="lg"
-                  className="data-[slot=sidebar-menu-button]:p-1.5!"
-                />
-              }
             />
           </SidebarMenuItem>
         </SidebarMenu>

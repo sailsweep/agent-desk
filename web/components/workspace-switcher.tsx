@@ -63,7 +63,7 @@ export function WorkspaceSwitcher({
     variant === "sidebar" &&
       "relative data-[slot=sidebar-menu-button]:p-1.5! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:data-[slot=sidebar-menu-button]:p-0!",
     variant === "rail" &&
-      "relative size-11 rounded-lg border-0 bg-transparent p-0 shadow-none hover:bg-sidebar-accent",
+      "relative size-8 rounded-md border-0 bg-transparent p-0 shadow-none hover:bg-sidebar-accent",
     className
   )
   const triggerContent =

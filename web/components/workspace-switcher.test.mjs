@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { describe, it } from "node:test";
 
 const source = await readFile(new URL("./workspace-switcher.tsx", import.meta.url), "utf8");
+const appSidebarSource = await readFile(new URL("./app-sidebar.tsx", import.meta.url), "utf8");
 
 describe("workspace switcher config", () => {
   it("contains dashboard and workbench destinations", async () => {
@@ -25,8 +26,14 @@ it("does not auto-open the rail menu from focus or hover events", async () => {
 it("centers the dashboard switcher logo and shows a collapsed switch indicator", async () => {
   assert.match(source, /variant === "sidebar" &&[\s\S]*group-data-\[collapsible=icon\]:p-0!/);
   assert.match(source, /variant === "sidebar" &&[\s\S]*group-data-\[collapsible=icon\]:justify-center/);
+  assert.match(appSidebarSource, /className="relative data-\[slot=sidebar-menu-button\]:p-1\.5! group-data-\[collapsible=icon\]:justify-center group-data-\[collapsible=icon\]:p-0!"/);
   assert.match(source, /const switchIndicatorClassName =\s*"absolute bottom-0\.5 right-0\.5 size-2\.5/);
   assert.match(source, /variant === "rail" \? \([\s\S]*<ChevronsUpDownIcon className=\{switchIndicatorClassName\} \/>/);
   assert.match(source, /className=\{cn\(switchIndicatorClassName, "hidden group-data-\[collapsible=icon\]:block"\)\}/);
+});
+
+it("uses the same compact trigger footprint for dashboard collapsed and workbench rail switchers", async () => {
+  assert.match(source, /variant === "rail" &&\s*"relative size-8 rounded-md/);
+  assert.doesNotMatch(source, /variant === "rail" &&\s*"relative size-11/);
 });
 });
