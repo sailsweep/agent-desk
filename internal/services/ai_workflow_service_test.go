@@ -8,6 +8,7 @@ import (
 	"agent-desk/internal/models"
 	"agent-desk/internal/pkg/dto"
 	"agent-desk/internal/pkg/dto/request"
+	"agent-desk/internal/repositories"
 
 	"github.com/glebarez/sqlite"
 	"github.com/mlogclub/simple/sqls"
@@ -112,6 +113,43 @@ func TestAIWorkflowServicePublishIncrementsVersion(t *testing.T) {
 
 	if first.Version != 1 || second.Version != 2 {
 		t.Fatalf("expected versions 1 and 2, got %d and %d", first.Version, second.Version)
+	}
+}
+
+func TestAIWorkflowServicePublishRejectsInvalidDSL(t *testing.T) {
+	setupAIWorkflowTestDB(t)
+	operator := aiWorkflowTestOperator()
+	workflow, err := AIWorkflowService.CreateWorkflow(request.CreateAIWorkflowRequest{
+		Name:       "invalid publish flow",
+		OwnerType:  "ai_agent",
+		OwnerID:    23,
+		Definition: validAIWorkflowDefinition(),
+	}, operator)
+	if err != nil {
+		t.Fatalf("CreateWorkflow() error = %v", err)
+	}
+
+	_, err = AIWorkflowService.PublishWorkflow(request.PublishAIWorkflowRequest{
+		WorkflowID: workflow.ID,
+		Definition: dsl.Definition{
+			SchemaVersion: 1,
+			EntryNodeID:   "start_1",
+			Nodes: []dsl.Node{
+				{ID: "start_1", Type: "start"},
+				{ID: "create_1", Type: "create_ticket"},
+				{ID: "end_1", Type: "end"},
+			},
+			Edges: []dsl.Edge{
+				{ID: "e1", Source: "start_1", Target: "create_1"},
+				{ID: "e2", Source: "create_1", Target: "end_1"},
+			},
+		},
+	}, operator)
+	if err == nil {
+		t.Fatalf("expected invalid publish to fail")
+	}
+	if versions := repositories.AIWorkflowVersionRepository.Find(sqls.DB(), sqls.NewCnd().Eq("workflow_id", workflow.ID)); len(versions) != 0 {
+		t.Fatalf("expected no versions after invalid publish, got %d", len(versions))
 	}
 }
 
