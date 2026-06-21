@@ -3,7 +3,10 @@
 import { useEffect, useRef } from "react"
 import { usePathname } from "next/navigation"
 
+import { LocaleSwitcher } from "@/components/locale-switcher"
+import { PaletteToggle } from "@/components/palette-toggle"
 import { RealtimeConnectionStatus } from "@/components/realtime-connection-status"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { useI18n } from "@/i18n/provider"
 import { getPageTitleKey } from "@/lib/navigation"
 import { useAgentConversationsStore } from "@/lib/stores/agent-conversations"
@@ -73,6 +76,11 @@ export function SiteHeader() {
               </BreadcrumbList>
             </Breadcrumb>
           </div>
+        </div>
+        <div className="flex shrink-0 items-center justify-end gap-2">
+          <LocaleSwitcher />
+          <PaletteToggle />
+          <ThemeToggle />
         </div>
       </div>
     </header>
