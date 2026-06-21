@@ -21,4 +21,12 @@ it("does not auto-open the rail menu from focus or hover events", async () => {
   assert.doesNotMatch(source, /onPointerLeave=\{closeHoverMenu\}/);
   assert.doesNotMatch(source, /hoverOpen/);
 });
+
+it("centers the dashboard switcher logo and shows a collapsed switch indicator", async () => {
+  assert.match(source, /variant === "sidebar" &&[\s\S]*group-data-\[collapsible=icon\]:p-0!/);
+  assert.match(source, /variant === "sidebar" &&[\s\S]*group-data-\[collapsible=icon\]:justify-center/);
+  assert.match(source, /const switchIndicatorClassName =\s*"absolute bottom-0\.5 right-0\.5 size-2\.5/);
+  assert.match(source, /variant === "rail" \? \([\s\S]*<ChevronsUpDownIcon className=\{switchIndicatorClassName\} \/>/);
+  assert.match(source, /className=\{cn\(switchIndicatorClassName, "hidden group-data-\[collapsible=icon\]:block"\)\}/);
+});
 });

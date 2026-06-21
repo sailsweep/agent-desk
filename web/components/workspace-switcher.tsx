@@ -53,12 +53,15 @@ export function WorkspaceSwitcher({
   const t = useI18n()
   const currentOption =
     workspaceOptions.find((item) => item.key === currentWorkspace) ?? workspaceOptions[0]
+  const switchIndicatorClassName =
+    "absolute bottom-0.5 right-0.5 size-2.5 rounded-full bg-sidebar text-sidebar-foreground/70"
 
   const triggerClassName = cn(
     "gap-2 text-left",
     variant === "header" &&
       "h-9 rounded-md border border-border/70 bg-background px-2.5 shadow-xs hover:bg-muted",
-    variant === "sidebar" && "data-[slot=sidebar-menu-button]:p-1.5!",
+    variant === "sidebar" &&
+      "relative data-[slot=sidebar-menu-button]:p-1.5! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:data-[slot=sidebar-menu-button]:p-0!",
     variant === "rail" &&
       "relative size-11 rounded-lg border-0 bg-transparent p-0 shadow-none hover:bg-sidebar-accent",
     className
@@ -76,7 +79,7 @@ export function WorkspaceSwitcher({
         <span className="sr-only">
           {t("workspace.switchWorkspace")} - {t(currentOption.labelKey)}
         </span>
-        <ChevronsUpDownIcon className="absolute bottom-0.5 right-0.5 size-3 rounded-full bg-sidebar text-sidebar-foreground/70" />
+        <ChevronsUpDownIcon className={switchIndicatorClassName} />
       </>
     ) : (
       <>
@@ -93,7 +96,12 @@ export function WorkspaceSwitcher({
             {t(currentOption.labelKey)}
           </span>
         </div>
-        <ChevronsUpDownIcon className="ml-auto size-4 shrink-0 text-muted-foreground" />
+        <ChevronsUpDownIcon className="ml-auto size-4 shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden" />
+        {variant === "sidebar" ? (
+          <ChevronsUpDownIcon
+            className={cn(switchIndicatorClassName, "hidden group-data-[collapsible=icon]:block")}
+          />
+        ) : null}
       </>
     )
 
