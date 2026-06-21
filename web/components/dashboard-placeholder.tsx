@@ -28,25 +28,25 @@ export function DashboardPlaceholder({
   const t = useI18n()
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4 pt-4 lg:p-6 lg:pt-6">
-      <Card className="border-dashed">
-        <CardHeader className="gap-3">
-          <span className="text-xs font-medium tracking-[0.24em] uppercase text-muted-foreground">
+    <div className="flex flex-1 flex-col gap-4 p-4 lg:p-5">
+      <Card className="rounded-md border-dashed shadow-none">
+        <CardHeader className="gap-2 p-4">
+          <span className="text-xs font-medium uppercase text-muted-foreground">
             {eyebrow}
           </span>
-          <CardTitle className="text-3xl">{title}</CardTitle>
+          <CardTitle className="text-xl">{title}</CardTitle>
           <CardDescription className="max-w-2xl text-sm leading-6">
             {description}
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-2xl border bg-muted/40 p-5">
+        <CardContent className="grid gap-3 p-4 pt-0 md:grid-cols-[1.2fr_0.8fr]">
+          <div className="rounded-md border bg-muted/30 p-4">
             <p className="text-sm font-medium">{t("placeholder.nextSteps")}</p>
-            <div className="mt-4 grid gap-3">
+            <div className="mt-3 grid gap-2">
               {nextSteps.map((item) => (
                 <div
                   key={item}
-                  className="flex items-start gap-3 rounded-xl bg-background p-3"
+                  className="flex items-start gap-3 rounded-md bg-background p-3"
                 >
                   <Clock3Icon className="mt-0.5 size-4 text-muted-foreground" />
                   <p className="text-sm">{item}</p>
@@ -54,14 +54,14 @@ export function DashboardPlaceholder({
               ))}
             </div>
           </div>
-          <div className="flex flex-col justify-between rounded-2xl border bg-background p-5">
+          <div className="flex flex-col justify-between rounded-md border bg-background p-4">
             <div>
               <p className="text-sm font-medium">{t("placeholder.status")}</p>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 {t("placeholder.statusDescription")}
               </p>
             </div>
-            <Button variant="outline" className="mt-6 justify-between">
+            <Button variant="outline" className="mt-5 justify-between">
               {t("placeholder.nextPhase")}
               <ArrowUpRightIcon />
             </Button>

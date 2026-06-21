@@ -2343,6 +2343,7 @@
     "permissions": "权限管理",
     "dashboardHome": "后台总览",
     "notifications": "通知中心",
+    "preferences": "偏好设置",
     "changePassword": "修改密码",
     "signOut": "退出登录"
   },

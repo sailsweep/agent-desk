@@ -844,7 +844,7 @@ function EditDialogBody({
                 </Field>
               </div>
 
-              <div className="rounded-lg border bg-muted/10 p-4">
+              <div className="rounded-md border bg-muted/10 p-3">
                 <div className="mb-1 text-sm font-medium">{t("aiAgent.teams")}</div>
                 <div className="mb-4 text-xs text-muted-foreground">
                   {t("aiAgent.currentHandoffMode", { mode: selectedHandoffModeLabel })}
@@ -1270,7 +1270,7 @@ function SectionCard({
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <section className="rounded-lg border bg-card p-5">
+    <section className="border-t pt-4">
       <button
         type="button"
         className="flex w-full items-start justify-between gap-4 text-left"
@@ -1285,7 +1285,7 @@ function SectionCard({
             </div>
           ) : null}
         </div>
-        <span className="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted/30 text-muted-foreground transition-colors hover:bg-muted/50">
+        <span className="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-md border bg-muted/30 text-muted-foreground transition-colors hover:bg-muted/50">
           <ChevronDownIcon
             className={`size-4 transition-transform duration-200 ${
               open ? "rotate-180" : "rotate-0"

@@ -32,14 +32,14 @@ export function AlertList({ alerts }: AlertListProps) {
   const t = useI18n()
 
   return (
-    <Card>
+    <Card className="rounded-md shadow-none">
       <CardHeader>
         <CardTitle>{t("dashboardHome.riskAlerts")}</CardTitle>
         <CardDescription>{t("dashboardHome.riskAlertsDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {alerts.length === 0 ? (
-          <div className="rounded-2xl border border-dashed px-4 py-10 text-center">
+          <div className="rounded-md border border-dashed px-4 py-10 text-center">
             <ShieldAlertIcon className="mx-auto mb-3 size-8 text-muted-foreground" />
             <div className="text-sm font-medium">{t("dashboardHome.noRiskTitle")}</div>
             <div className="mt-1 text-sm text-muted-foreground">
@@ -49,7 +49,7 @@ export function AlertList({ alerts }: AlertListProps) {
         ) : (
           alerts.map((item) => (
             <Link key={item.id} href={item.link} className="block">
-              <div className="rounded-2xl border p-4 transition-colors hover:border-primary/40">
+              <div className="rounded-md border p-4 transition-colors hover:border-primary/40">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2">

@@ -75,7 +75,7 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
   const t = useI18n()
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
       {cards.map((item) => {
         const Icon = item.icon
         const rawValue = summary[item.key]
@@ -86,18 +86,18 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
 
         return (
           <Link key={item.key} href={item.link}>
-            <Card className="h-full transition-colors hover:border-primary/40">
-              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
+            <Card className="h-full rounded-md shadow-none transition-colors hover:border-primary/40">
+              <CardHeader className="flex flex-row items-start justify-between space-y-0 p-4 pb-2">
                 <div className="space-y-1">
                   <CardTitle className="text-sm font-medium">{t(item.titleKey)}</CardTitle>
                   <CardDescription>{t(item.descriptionKey)}</CardDescription>
                 </div>
-                <div className="rounded-full bg-primary/10 p-2 text-primary">
+                <div className="rounded-md bg-muted p-2 text-muted-foreground">
                   <Icon className="size-4" />
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-semibold tracking-tight">{value}</div>
+              <CardContent className="px-4 pb-4">
+                <div className="text-2xl font-semibold tracking-tight">{value}</div>
               </CardContent>
             </Card>
           </Link>

@@ -6,7 +6,10 @@ import { useState } from "react"
 import { useAuth } from "@/components/auth-provider"
 import { useI18n } from "@/i18n/provider"
 import { ChangePasswordDialog } from "@/components/change-password-dialog"
+import { LocaleSwitcher } from "@/components/locale-switcher"
 import { useNotifications } from "@/components/notification-provider"
+import { PaletteToggle } from "@/components/palette-toggle"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { Badge } from "@/components/ui/badge"
 import {
   Avatar,
@@ -94,6 +97,17 @@ export function NavUser({
                     </div>
                   </div>
                 </DropdownMenuLabel>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="px-2 py-1.5 text-xs font-normal text-muted-foreground">
+                  {t("nav.preferences")}
+                </DropdownMenuLabel>
+                <div className="flex items-center gap-2 px-2 pb-2">
+                  <LocaleSwitcher />
+                  <PaletteToggle />
+                  <ThemeToggle />
+                </div>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>

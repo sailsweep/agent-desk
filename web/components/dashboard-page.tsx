@@ -1,10 +1,12 @@
 "use client"
 
 import type { ReactNode } from "react"
+import { usePathname } from "next/navigation"
 
 import { cn } from "@/lib/utils"
 import { TableCell, TableRow } from "@/components/ui/table"
 import { useI18n } from "@/i18n/provider"
+import { getPageTitleKey } from "@/lib/navigation"
 
 export function DashboardPage({
   className,
@@ -13,8 +15,15 @@ export function DashboardPage({
   className?: string
   children: ReactNode
 }) {
+  const t = useI18n()
+  const pathname = usePathname()
+  const title = t(getPageTitleKey(pathname))
+
   return (
-    <div className={cn("flex flex-1 flex-col gap-5 p-4 lg:p-6", className)}>
+    <div className={cn("flex flex-1 flex-col gap-4 p-4 lg:p-5", className)}>
+      <div className="flex min-h-8 items-center">
+        <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+      </div>
       {children}
     </div>
   )
@@ -32,7 +41,7 @@ export function DashboardToolbar({
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 rounded-lg border border-border/70 bg-card/95 p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] lg:flex-row lg:items-center lg:justify-between dark:shadow-none",
+        "flex flex-col gap-3 border-b border-border/70 bg-background pb-3 lg:flex-row lg:items-center lg:justify-between",
         className
       )}
     >
@@ -56,8 +65,8 @@ export function DashboardTableShell({
   children: ReactNode
 }) {
   return (
-    <div className={cn("space-y-4", className)}>
-      <div className="overflow-hidden rounded-lg border border-border/70 bg-card text-card-foreground shadow-[0_1px_2px_rgba(15,23,42,0.035)] dark:shadow-none">
+    <div className={cn("space-y-3", className)}>
+      <div className="overflow-hidden rounded-md border border-border/70 bg-card text-card-foreground">
         {children}
       </div>
       {pagination ? <div>{pagination}</div> : null}

@@ -58,7 +58,7 @@ export function TrendPanel({
 
   return (
     <div className="grid gap-4 xl:grid-cols-[1.5fr_0.9fr]">
-      <Card>
+      <Card className="rounded-md shadow-none">
         <CardHeader>
           <CardTitle>{title}</CardTitle>
           <CardDescription>{description}</CardDescription>
@@ -90,7 +90,7 @@ export function TrendPanel({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="rounded-md shadow-none">
         <CardHeader>
           <CardTitle>{t("dashboardHome.statusDistribution")}</CardTitle>
           <CardDescription>{t("dashboardHome.statusDistributionDescription")}</CardDescription>

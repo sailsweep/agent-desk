@@ -115,7 +115,7 @@ export default function DashboardChannelsPage() {
           label: t("channel.columnChannel"),
           render: (item) => (
             <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-2xl bg-muted">
+              <div className="flex size-10 items-center justify-center rounded-md bg-muted">
                 <ChannelIcon channelType={item.channelType} />
               </div>
               <div>

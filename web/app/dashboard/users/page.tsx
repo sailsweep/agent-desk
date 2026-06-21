@@ -352,7 +352,7 @@ export default function DashboardUsersPage() {
                   <TableRow key={item.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="flex size-10 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+                        <div className="flex size-10 items-center justify-center rounded-md bg-muted text-muted-foreground">
                           <UserRoundIcon className="size-4" />
                         </div>
                         <div>

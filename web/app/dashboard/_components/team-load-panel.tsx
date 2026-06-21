@@ -29,7 +29,7 @@ export function TeamLoadPanel({ agentStats }: TeamLoadPanelProps) {
   const t = useI18n()
 
   return (
-    <Card>
+    <Card className="rounded-md shadow-none">
       <CardHeader>
         <CardTitle>{t("dashboardHome.teamLoad")}</CardTitle>
         <CardDescription>
@@ -42,12 +42,12 @@ export function TeamLoadPanel({ agentStats }: TeamLoadPanelProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         {agentStats.teamLoads.length === 0 ? (
-          <div className="rounded-xl border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
+          <div className="rounded-md border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
             {t("dashboardHome.noTeamData")}
           </div>
         ) : (
           agentStats.teamLoads.map((item) => (
-            <div key={item.teamId} className="rounded-2xl border p-4">
+            <div key={item.teamId} className="rounded-md border p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
@@ -86,19 +86,19 @@ export function TeamLoadPanel({ agentStats }: TeamLoadPanelProps) {
               </div>
 
               <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-xl bg-muted/40 px-3 py-2">
+                <div className="rounded-md bg-muted/35 px-3 py-2">
                   <div className="text-muted-foreground">{t("dashboardHome.waiting")}</div>
                   <div className="mt-1 text-lg font-semibold">{item.waitingConversations}</div>
                 </div>
-                <div className="rounded-xl bg-muted/40 px-3 py-2">
+                <div className="rounded-md bg-muted/35 px-3 py-2">
                   <div className="text-muted-foreground">{t("dashboardHome.processing")}</div>
                   <div className="mt-1 text-lg font-semibold">{item.processingConversations}</div>
                 </div>
-                <div className="rounded-xl bg-muted/40 px-3 py-2">
+                <div className="rounded-md bg-muted/35 px-3 py-2">
                   <div className="text-muted-foreground">{t("dashboardHome.capacity")}</div>
                   <div className="mt-1 text-lg font-semibold">{item.maxConcurrentCapacity}</div>
                 </div>
-                <div className="rounded-xl bg-muted/40 px-3 py-2">
+                <div className="rounded-md bg-muted/35 px-3 py-2">
                   <div className="text-muted-foreground">{t("dashboardHome.busyAgents")}</div>
                   <div className="mt-1 text-lg font-semibold">{item.busyAgents}</div>
                 </div>

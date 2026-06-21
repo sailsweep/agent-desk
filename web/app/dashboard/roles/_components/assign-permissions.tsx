@@ -191,7 +191,7 @@ function AssignPermissionsDrawerBody({
                   const value = field.value || [];
 
                   return (
-                    <div className="flex-1 min-h-0 space-y-4 overflow-y-auto rounded-xl border p-3">
+                    <div className="flex-1 min-h-0 space-y-4 overflow-y-auto rounded-md border p-3">
                       {loading ? (
                         <div className="py-8 text-center text-sm text-muted-foreground">
                           {t("role.loadingPermissions")}
