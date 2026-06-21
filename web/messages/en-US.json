@@ -1087,7 +1087,7 @@
     "sectionCapabilities": "Capabilities",
     "knowledgeTab": "Knowledge",
     "skillsTab": "Skills",
-    "directToolsTab": "Direct Tools",
+    "directToolsTab": "MCP tools",
     "graphToolsTab": "Graph Tools",
     "knowledgeHint": "Select at least one knowledge base. You can adjust priority order.",
     "selectKnowledge": "Select and add knowledge base",
