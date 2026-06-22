@@ -58,7 +58,7 @@ export function OptionCombobox({
           <Button
             variant="outline"
             role="combobox"
-            className="w-full justify-between font-normal"
+            className="m-0 w-full justify-between font-normal"
             disabled={disabled}
           />
         }
