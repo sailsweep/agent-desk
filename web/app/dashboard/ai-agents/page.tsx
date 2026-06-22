@@ -235,14 +235,15 @@ export default function DashboardAIAgentsPage() {
       getItemId={(item) => item.id}
       createItem={createAIAgent}
       updateItem={(item, payload) => updateAIAgent({ id: item.id, ...payload })}
+      onEditItem={(item) => router.push(`/dashboard/ai-agents/config?agentId=${item.id}`)}
       deleteItem={(item) => deleteAIAgent(item.id)}
       rowActions={[
         {
           key: "workflow",
           icon: <GitBranchIcon />,
-          label: t("aiAgent.workflow"),
+          label: t("aiAgent.configure"),
           run: ({ item }) => {
-            router.push(`/dashboard/ai-agents/workflow?agentId=${item.id}`);
+            router.push(`/dashboard/ai-agents/config?agentId=${item.id}`);
           },
         },
         createDashboardStatusToggleAction<AIAgent, number>({
@@ -286,7 +287,7 @@ export default function DashboardAIAgentsPage() {
         loading: t("aiAgent.loadingRows"),
         empty: t("aiAgent.emptyRows"),
         actions: t("aiAgent.columnActions"),
-        edit: t("aiAgent.edit"),
+        edit: t("aiAgent.configure"),
         delete: t("aiAgent.delete"),
         processing: t("aiAgent.processing"),
         moreActions: (item) => t("aiAgent.moreActions", { name: item.name }),

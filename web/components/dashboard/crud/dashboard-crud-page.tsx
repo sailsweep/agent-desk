@@ -149,6 +149,7 @@ export type DashboardCrudPageProps<TItem, TPayload> = {
   createItem: (payload: TPayload) => Promise<unknown>
   updateItem: (item: TItem, payload: TPayload) => Promise<unknown>
   canEdit?: (item: TItem) => boolean
+  onEditItem?: (item: TItem) => void
   deleteItem?: (item: TItem) => Promise<unknown>
   canDelete?: (item: TItem) => boolean
   deleteConfirm?: false | ConfirmOptions | ((item: TItem) => ConfirmOptions)
@@ -199,6 +200,7 @@ export function DashboardCrudPage<TItem, TPayload>({
   createItem,
   updateItem,
   canEdit,
+  onEditItem,
   deleteItem,
   canDelete,
   deleteConfirm,
@@ -412,7 +414,13 @@ export function DashboardCrudPage<TItem, TPayload>({
               variant="outline"
               size="sm"
               disabled={canEdit ? !canEdit(item) : false}
-              onClick={() => openEditDialog(item)}
+              onClick={() => {
+                if (onEditItem) {
+                  onEditItem(item)
+                  return
+                }
+                openEditDialog(item)
+              }}
             >
               {labels.edit}
             </Button>

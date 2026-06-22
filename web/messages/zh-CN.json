@@ -1025,6 +1025,7 @@
     "processing": "处理中...",
     "stop": "停用",
     "workflow": "会话流程",
+    "configure": "配置",
     "delete": "删除",
     "loadingRows": "正在加载 AI Agent...",
     "emptyRows": "暂无 AI Agent",

@@ -1025,6 +1025,7 @@
     "processing": "Working...",
     "stop": "Disable",
     "workflow": "Workflow",
+    "configure": "Configure",
     "delete": "Delete",
     "loadingRows": "Loading AI agents...",
     "emptyRows": "No AI agents yet",
