@@ -148,6 +148,7 @@ export type DashboardCrudPageProps<TItem, TPayload> = {
   getItemId: (item: TItem) => number
   createItem: (payload: TPayload) => Promise<unknown>
   updateItem: (item: TItem, payload: TPayload) => Promise<unknown>
+  onCreateItem?: () => void
   canEdit?: (item: TItem) => boolean
   onEditItem?: (item: TItem) => void
   deleteItem?: (item: TItem) => Promise<unknown>
@@ -199,6 +200,7 @@ export function DashboardCrudPage<TItem, TPayload>({
   getItemId,
   createItem,
   updateItem,
+  onCreateItem,
   canEdit,
   onEditItem,
   deleteItem,
@@ -255,9 +257,13 @@ export function DashboardCrudPage<TItem, TPayload>({
   }
 
   const openCreateDialog = useCallback(() => {
+    if (onCreateItem) {
+      onCreateItem()
+      return
+    }
     setEditingItem(null)
     setDialogOpen(true)
-  }, [])
+  }, [onCreateItem])
 
   function openEditDialog(item: TItem) {
     setEditingItem(item)

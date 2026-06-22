@@ -26,7 +26,6 @@ import {
 import { IMConversationServiceMode, Status } from "@/lib/generated/enums";
 import { useI18n } from "@/i18n/provider";
 import { AIAgentConfigWorkbench } from "./_components/config-workbench";
-import { EditDialog } from "./_components/edit";
 
 type TFunction = (key: string, values?: Record<string, string | number>) => string;
 
@@ -67,6 +66,7 @@ export default function DashboardAIAgentsPage() {
   const t = useI18n();
   const statusOptions = useMemo(() => getStatusOptions(t), [t]);
   const [configAgentId, setConfigAgentId] = useState<number | null>(null);
+  const [configOpen, setConfigOpen] = useState(false);
   const [crudActions, setCrudActions] = useState<DashboardCrudActionState | null>(null);
 
   const filters = useMemo<DashboardCrudFilter[]>(
@@ -239,7 +239,14 @@ export default function DashboardAIAgentsPage() {
       getItemId={(item) => item.id}
       createItem={createAIAgent}
       updateItem={(item, payload) => updateAIAgent({ id: item.id, ...payload })}
-      onEditItem={(item) => setConfigAgentId(item.id)}
+      onCreateItem={() => {
+        setConfigAgentId(null);
+        setConfigOpen(true);
+      }}
+      onEditItem={(item) => {
+        setConfigAgentId(item.id);
+        setConfigOpen(true);
+      }}
       deleteItem={(item) => deleteAIAgent(item.id)}
       rowActions={[
         {
@@ -248,6 +255,7 @@ export default function DashboardAIAgentsPage() {
           label: t("aiAgent.configure"),
           run: ({ item }) => {
             setConfigAgentId(item.id);
+            setConfigOpen(true);
           },
         },
         createDashboardStatusToggleAction<AIAgent, number>({
@@ -275,15 +283,6 @@ export default function DashboardAIAgentsPage() {
         errorMessage: t("aiAgent.sortUpdateFailed"),
         handleLabel: t("aiAgent.dragSort", { name: "" }),
       }}
-      renderEditDialog={({ open, saving, itemId, onOpenChange, onSubmit }) => (
-        <EditDialog
-          open={open}
-          saving={saving}
-          itemId={itemId}
-          onOpenChange={onOpenChange}
-          onSubmit={onSubmit}
-        />
-      )}
       onActionStateChange={setCrudActions}
       labels={{
         refresh: t("aiAgent.refresh"),
@@ -305,8 +304,9 @@ export default function DashboardAIAgentsPage() {
       }}
       />
       <ProjectDialog
-        open={configAgentId !== null}
+        open={configOpen}
         onOpenChange={(open) => {
+          setConfigOpen(open);
           if (!open) setConfigAgentId(null);
         }}
         title={t("aiAgent.configure")}
@@ -315,9 +315,10 @@ export default function DashboardAIAgentsPage() {
         contentClassName="top-5 left-5 h-[calc(100vh-40px)] max-h-[calc(100vh-40px)] w-[calc(100vw-40px)] max-w-[calc(100vw-40px)] translate-x-0 translate-y-0 sm:max-w-[calc(100vw-40px)]"
         headerClassName="sr-only"
       >
-        {configAgentId ? (
+        {configOpen ? (
           <AIAgentConfigWorkbench
             agentId={configAgentId}
+            onAgentCreated={(agent) => setConfigAgentId(agent.id)}
             onAgentSaved={() => crudActions?.onRefresh()}
           />
         ) : null}

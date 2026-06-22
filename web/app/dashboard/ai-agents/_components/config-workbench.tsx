@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
+  createAIAgent,
   fetchAIAgent,
   fetchAIAgentWorkflow,
   fetchAIConfigsAll,
@@ -114,10 +115,13 @@ function uniqueNumbers(input: number[]) {
 export function AIAgentConfigWorkbench({
   agentId,
   onAgentSaved,
+  onAgentCreated,
 }: {
-  agentId: number
+  agentId?: number | null
   onAgentSaved?: () => void
+  onAgentCreated?: (agent: AIAgent) => void
 }) {
+  const [currentAgentId, setCurrentAgentId] = useState(agentId ?? null)
   const [activeSection, setActiveSection] = useState<SectionKey>("basic")
   const [agent, setAgent] = useState<AIAgent | null>(null)
   const [workflow, setWorkflow] = useState<AIWorkflow | null>(null)
@@ -162,16 +166,14 @@ export function AIAgentConfigWorkbench({
     [workflow?.id, workflow?.updatedAt]
   )
 
+  useEffect(() => {
+    setCurrentAgentId(agentId ?? null)
+  }, [agentId])
+
   const loadData = useCallback(async () => {
-    if (!Number.isFinite(agentId) || agentId <= 0) {
-      setLoading(false)
-      return
-    }
     setLoading(true)
     try {
       const [
-        agentDetail,
-        workflowDetail,
         specs,
         configs,
         bases,
@@ -179,8 +181,6 @@ export function AIAgentConfigWorkbench({
         skillList,
         catalog,
       ] = await Promise.all([
-        fetchAIAgent(agentId),
-        fetchAIAgentWorkflow(agentId),
         fetchAIWorkflowNodeSpecs(),
         fetchAIConfigsAll({ modelType: AIModelType.LLM }),
         fetchKnowledgeBasesAll({ status: Status.Ok }),
@@ -189,14 +189,44 @@ export function AIAgentConfigWorkbench({
         fetchMCPCatalog(),
       ])
 
-      setAgent(agentDetail)
-      setWorkflow(workflowDetail)
       setNodeSpecs(specs ?? [])
       setAIConfigs(configs ?? [])
       setKnowledgeBases(bases ?? [])
       setAgentTeams(teams ?? [])
       setSkills(skillList ?? [])
       setToolCatalog(catalog ?? [])
+
+      if (!currentAgentId || currentAgentId <= 0) {
+        setAgent(null)
+        setWorkflow(null)
+        setName("")
+        setDescription("")
+        setAIConfigId("")
+        setServiceMode(String(IMConversationServiceMode.AIFirst))
+        setSystemPrompt("")
+        setWelcomeMessage("")
+        setReplyTimeoutSeconds("180")
+        setHandoffMode(String(AIAgentHandoffMode.WaitPool))
+        setFallbackMode(String(AIAgentFallbackMode.NoAnswer))
+        setFallbackMessage("")
+        setSelectedKnowledgeIds([])
+        setSelectedTeamIds([])
+        setSelectedSkillIds([])
+        setDirectTools([])
+        setWorkflowName("新建 Agent 会话流程")
+        setWorkflowDescription("")
+        setDefinition(emptyDefinition)
+        setValidation(null)
+        return
+      }
+
+      const [agentDetail, workflowDetail] = await Promise.all([
+        fetchAIAgent(currentAgentId),
+        fetchAIAgentWorkflow(currentAgentId),
+      ])
+
+      setAgent(agentDetail)
+      setWorkflow(workflowDetail)
       setName(agentDetail.name)
       setDescription(agentDetail.description || "")
       setAIConfigId(toText(agentDetail.aiConfigId))
@@ -220,7 +250,7 @@ export function AIAgentConfigWorkbench({
     } finally {
       setLoading(false)
     }
-  }, [agentId])
+  }, [currentAgentId])
 
   useEffect(() => {
     void loadData()
@@ -361,13 +391,20 @@ export function AIAgentConfigWorkbench({
   }
 
   async function saveAgentSettings() {
-    if (!agent) return
     setSavingAgent(true)
     try {
       const payload = buildPayload()
-      await updateAIAgent({ id: agent.id, ...payload })
-      toast.success("Agent config saved")
-      await loadData()
+      if (agent) {
+        await updateAIAgent({ id: agent.id, ...payload })
+        toast.success("Agent config saved")
+        await loadData()
+      } else {
+        const created = await createAIAgent(payload)
+        setCurrentAgentId(created.id)
+        setAgent(created)
+        toast.success("Agent created")
+        onAgentCreated?.(created)
+      }
       onAgentSaved?.()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save Agent config")
@@ -377,10 +414,11 @@ export function AIAgentConfigWorkbench({
   }
 
   async function saveWorkflowDraft() {
+    if (!currentAgentId) return
     setSavingWorkflow(true)
     try {
       const saved = await saveAIAgentWorkflow({
-        agentId,
+        agentId: currentAgentId,
         name: workflowName,
         description: workflowDescription,
         definition,
@@ -410,15 +448,16 @@ export function AIAgentConfigWorkbench({
   }
 
   async function publishWorkflow() {
+    if (!currentAgentId) return
     setSavingWorkflow(true)
     try {
       await saveAIAgentWorkflow({
-        agentId,
+        agentId: currentAgentId,
         name: workflowName,
         description: workflowDescription,
         definition,
       })
-      const version = await publishAIAgentWorkflow(agentId, definition)
+      const version = await publishAIAgentWorkflow(currentAgentId, definition)
       toast.success(`Published version ${version.version}`)
       await loadData()
       onAgentSaved?.()
@@ -452,7 +491,7 @@ export function AIAgentConfigWorkbench({
             <BotMessageSquareIcon className="size-5" />
           </div>
           <div className="min-w-0">
-            <h1 className="truncate text-base font-semibold">{agent?.name ?? "AI Agent 配置"}</h1>
+            <h1 className="truncate text-base font-semibold">{agent?.name ?? "新建 AI Agent"}</h1>
             <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
               {agent?.statusName ? <Badge variant="secondary">{agent.statusName}</Badge> : null}
               {agent?.workflowVersionId ? <Badge>已发布流程</Badge> : <Badge variant="outline">草稿流程</Badge>}
@@ -464,7 +503,7 @@ export function AIAgentConfigWorkbench({
             <SaveIcon className="size-4" />
             保存
           </Button>
-          <Button disabled={savingWorkflow || loading} onClick={publishWorkflow}>
+          <Button disabled={savingWorkflow || loading || !currentAgentId} onClick={publishWorkflow}>
             <SendIcon className="size-4" />
             发布流程
           </Button>
@@ -690,15 +729,15 @@ export function AIAgentConfigWorkbench({
                           {validation.valid ? "校验通过" : `${validation.errors.length} 个问题`}
                         </Badge>
                       ) : null}
-                      <Button variant="outline" disabled={savingWorkflow} onClick={validateWorkflowDraft}>
+                      <Button variant="outline" disabled={savingWorkflow || !currentAgentId} onClick={validateWorkflowDraft}>
                         <CheckCircle2Icon className="size-4" />
                         校验
                       </Button>
-                      <Button variant="outline" disabled={savingWorkflow} onClick={saveWorkflowDraft}>
+                      <Button variant="outline" disabled={savingWorkflow || !currentAgentId} onClick={saveWorkflowDraft}>
                         <SaveIcon className="size-4" />
                         保存草稿
                       </Button>
-                      <Button disabled={savingWorkflow} onClick={publishWorkflow}>
+                      <Button disabled={savingWorkflow || !currentAgentId} onClick={publishWorkflow}>
                         <SendIcon className="size-4" />
                         发布
                       </Button>
