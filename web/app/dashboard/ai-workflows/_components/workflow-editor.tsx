@@ -393,9 +393,7 @@ export function WorkflowEditor({
         </>
       ) : null}
       <ResizablePanel
-        defaultSize={
-          nodeLibraryCollapsed ? (selectedNode ? "74%" : "100%") : selectedNode ? "56%" : "82%"
-        }
+        defaultSize={nodeLibraryCollapsed ? "100%" : "82%"}
         minSize="30%"
         className="min-h-0"
       >
@@ -447,6 +445,28 @@ export function WorkflowEditor({
             <MiniMap pannable zoomable />
           </ReactFlow>
           <WorkflowValidationBadge errors={validation.errors} valid={validation.valid} />
+          {selectedNode ? (
+            <aside className="absolute top-3 right-3 z-30 h-[calc(100%-1.5rem)] w-[min(380px,calc(100%-1.5rem))] overflow-hidden rounded-md border bg-background shadow-lg">
+              <ScrollArea className="h-full min-h-0">
+                <NodeConfigPanel
+                  node={selectedNode}
+                  nodeSpec={selectedNodeSpec}
+                  availableVariables={availableVariables}
+                  onChange={updateNodeData}
+                />
+                {!validation.valid ? (
+                  <div className="border-t p-4">
+                    <div className="mb-2 text-sm font-medium">流程检查</div>
+                    <ul className="space-y-1 text-xs text-destructive">
+                      {validation.errors.map((error) => (
+                        <li key={error}>{error}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </ScrollArea>
+            </aside>
+          ) : null}
           {pendingNodeDrag?.active ? (
             <div
               className="pointer-events-none fixed z-50 rounded-md border bg-background px-3 py-2 text-sm font-medium shadow-lg"
@@ -460,31 +480,6 @@ export function WorkflowEditor({
           ) : null}
         </section>
       </ResizablePanel>
-      {selectedNode ? (
-        <>
-          <ResizableHandle withHandle />
-          <ResizablePanel defaultSize="26%" minSize="18%" maxSize="40%" className="min-h-0">
-            <aside className="h-full min-h-0 overflow-y-auto bg-muted/10">
-              <NodeConfigPanel
-                node={selectedNode}
-                nodeSpec={selectedNodeSpec}
-                availableVariables={availableVariables}
-                onChange={updateNodeData}
-              />
-              {!validation.valid ? (
-                <div className="border-t p-4">
-                  <div className="mb-2 text-sm font-medium">流程检查</div>
-                  <ul className="space-y-1 text-xs text-destructive">
-                    {validation.errors.map((error) => (
-                      <li key={error}>{error}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </aside>
-          </ResizablePanel>
-        </>
-      ) : null}
     </ResizablePanelGroup>
   )
 }
