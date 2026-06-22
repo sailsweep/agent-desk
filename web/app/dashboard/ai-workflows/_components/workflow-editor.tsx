@@ -314,7 +314,12 @@ export function WorkflowEditor({
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize="56%" minSize="30%" className="min-h-0">
-        <section className="relative h-full min-h-0">
+        <section
+          data-workflow-canvas
+          className="relative h-full min-h-0"
+          onDragOver={onCanvasDragOver}
+          onDrop={onCanvasDrop}
+        >
           <ReactFlow
             nodes={renderedNodes}
             edges={edges}
@@ -327,8 +332,6 @@ export function WorkflowEditor({
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onInit={setFlowInstance}
-            onDragOver={onCanvasDragOver}
-            onDrop={onCanvasDrop}
             onNodeClick={(_, node) => setSelectedNodeId(node.id)}
             fitView
             fitViewOptions={fitViewOptions}
