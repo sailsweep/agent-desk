@@ -24,6 +24,7 @@ import { AlertCircleIcon, CheckCircle2Icon } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Popover,
   PopoverContent,
@@ -331,36 +332,40 @@ export function WorkflowEditor({
   return (
     <ResizablePanelGroup orientation="horizontal" className="h-full min-h-0">
       <ResizablePanel defaultSize="18%" minSize="12%" maxSize="34%" className="min-h-0">
-        <aside className="h-full min-h-0 overflow-y-auto bg-muted/20 p-3">
-          <div className="mb-3 text-sm font-medium">节点库</div>
-          <div className="space-y-2">
-            {nodeSpecs.map((spec) => (
-              <button
-                key={spec.type}
-                type="button"
-                onPointerDown={(event) => onNodePointerDown(event, spec)}
-                onClick={() => {
-                  if (suppressNextClickRef.current) {
-                    suppressNextClickRef.current = false
-                    return
-                  }
-                  addNode(spec)
-                }}
-                className="flex w-full cursor-grab rounded-md border bg-background px-3 py-2 text-left text-sm hover:bg-muted active:cursor-grabbing"
-              >
-                <span className="min-w-0">
-                  <span className="block truncate font-medium">{spec.title}</span>
-                  <span className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                    {spec.description}
-                  </span>
-                  <span className="mt-1 flex gap-2 text-[11px] text-muted-foreground">
-                    <span>输入 {spec.inputSchema?.length ?? 0}</span>
-                    <span>输出 {spec.outputSchema?.length ?? 0}</span>
-                  </span>
-                </span>
-              </button>
-            ))}
-          </div>
+        <aside className="h-full min-h-0 bg-muted/20">
+          <ScrollArea className="h-full min-h-0">
+            <div className="p-3">
+              <div className="mb-3 text-sm font-medium">节点库</div>
+              <div className="space-y-2">
+                {nodeSpecs.map((spec) => (
+                  <button
+                    key={spec.type}
+                    type="button"
+                    onPointerDown={(event) => onNodePointerDown(event, spec)}
+                    onClick={() => {
+                      if (suppressNextClickRef.current) {
+                        suppressNextClickRef.current = false
+                        return
+                      }
+                      addNode(spec)
+                    }}
+                    className="flex w-full cursor-grab rounded-md border bg-background px-3 py-2 text-left text-sm hover:bg-muted active:cursor-grabbing"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium">{spec.title}</span>
+                      <span className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                        {spec.description}
+                      </span>
+                      <span className="mt-1 flex gap-2 text-[11px] text-muted-foreground">
+                        <span>输入 {spec.inputSchema?.length ?? 0}</span>
+                        <span>输出 {spec.outputSchema?.length ?? 0}</span>
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </ScrollArea>
         </aside>
       </ResizablePanel>
       <ResizableHandle withHandle />
