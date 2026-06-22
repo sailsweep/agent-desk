@@ -25,6 +25,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import {
   createAIAgent,
@@ -32,6 +40,7 @@ import {
   fetchAIAgentWorkflow,
   fetchAIConfigsAll,
   fetchAIWorkflowNodeSpecs,
+  fetchAIWorkflowVersions,
   fetchAgentTeamsAll,
   fetchKnowledgeBasesAll,
   fetchMCPCatalog,
@@ -45,6 +54,7 @@ import {
   type AIWorkflow,
   type AIWorkflowDefinition,
   type AIWorkflowNodeSpec,
+  type AIWorkflowVersion,
   type AIWorkflowValidationResult,
   type AdminAgentTeam,
   type CreateAIAgentPayload,
@@ -162,6 +172,7 @@ export function AIAgentConfigWorkbench({
   const [activeSection, setActiveSection] = useState<SectionKey>("basic")
   const [agent, setAgent] = useState<AIAgent | null>(null)
   const [workflow, setWorkflow] = useState<AIWorkflow | null>(null)
+  const [workflowVersions, setWorkflowVersions] = useState<AIWorkflowVersion[]>([])
   const [nodeSpecs, setNodeSpecs] = useState<AIWorkflowNodeSpec[]>([])
   const [validation, setValidation] = useState<AIWorkflowValidationResult | null>(null)
   const [loading, setLoading] = useState(true)
@@ -234,6 +245,7 @@ export function AIAgentConfigWorkbench({
       if (!currentAgentId || currentAgentId <= 0) {
         setAgent(null)
         setWorkflow(null)
+        setWorkflowVersions([])
         setName("")
         setDescription("")
         setAIConfigId("")
@@ -260,6 +272,12 @@ export function AIAgentConfigWorkbench({
 
       setAgent(agentDetail)
       setWorkflow(workflowDetail)
+      if (workflowDetail?.id > 0) {
+        const versionPage = await fetchAIWorkflowVersions({ workflowId: workflowDetail.id, limit: 20 })
+        setWorkflowVersions(versionPage.results ?? [])
+      } else {
+        setWorkflowVersions([])
+      }
       setName(agentDetail.name)
       setDescription(agentDetail.description || "")
       setAIConfigId(toText(agentDetail.aiConfigId))
@@ -600,7 +618,7 @@ export function AIAgentConfigWorkbench({
           ) : (
             <div className={activeSection === "workflow" ? "h-full min-h-0" : "w-full p-6"}>
               {activeSection === "basic" ? (
-                <ConfigSection title="基础信息" description="定义这个 Agent 在渠道和后台中的基础身份。">
+                <ConfigSection>
                   <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                     <FieldBlock label="名称">
                       <Input value={name} onChange={(event) => setName(event.target.value)} />
@@ -621,7 +639,7 @@ export function AIAgentConfigWorkbench({
               ) : null}
 
               {activeSection === "model" ? (
-                <ConfigSection title="模型与 Prompt" description="配置模型、系统提示词和首响内容。">
+                <ConfigSection>
                   <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                     <FieldBlock label="AI 配置">
                       <OptionCombobox
@@ -658,7 +676,7 @@ export function AIAgentConfigWorkbench({
               ) : null}
 
               {activeSection === "knowledge" ? (
-                <ConfigSection title="知识库" description="选择 Agent 检索知识的范围和优先级。">
+                <ConfigSection>
                   <AddRow
                     value={knowledgeToAdd}
                     options={knowledgeOptions.filter((option) => !selectedKnowledgeIds.includes(Number(option.value)))}
@@ -703,7 +721,7 @@ export function AIAgentConfigWorkbench({
               ) : null}
 
               {activeSection === "skills" ? (
-                <ConfigSection title="Skills" description="选择固定业务流程和多步任务能力。">
+                <ConfigSection>
                   <AddRow
                     value={skillToAdd}
                     options={skillOptions.filter((option) => !selectedSkillIds.includes(Number(option.value)))}
@@ -723,7 +741,7 @@ export function AIAgentConfigWorkbench({
               ) : null}
 
               {activeSection === "tools" ? (
-                <ConfigSection title="MCP Tools" description="配置外部 MCP Direct Tools。内置 Graph Tool 由会话流程节点管理。">
+                <ConfigSection>
                   <div className="grid grid-cols-1 gap-3 lg:grid-cols-[220px_minmax(0,1fr)_auto]">
                     <OptionCombobox
                       value={directToolGroupToAdd}
@@ -781,7 +799,7 @@ export function AIAgentConfigWorkbench({
               ) : null}
 
               {activeSection === "handoff" ? (
-                <ConfigSection title="转人工与兜底" description="配置无法自动完成时的接入和回复策略。">
+                <ConfigSection>
                   <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                     <FieldBlock label="转人工模式">
                       <OptionCombobox value={handoffMode} options={handoffModeOptions} placeholder="选择转人工模式" onChange={setHandoffMode} />
@@ -812,14 +830,76 @@ export function AIAgentConfigWorkbench({
               ) : null}
 
               {activeSection === "publish" ? (
-                <ConfigSection title="发布状态" description="查看当前 Agent 流程发布状态。">
-                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                    <StatusTile label="Agent 状态" value={agent?.statusName || "-"} />
-                    <StatusTile label="运行模式" value={agent?.runtimeModeName || "-"} />
-                    <StatusTile label="生效流程版本" value={agent?.workflowVersionId ? `#${agent.workflowVersionId}` : "未发布"} />
+                <ConfigSection>
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-md border px-3 py-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Agent 状态</span>
+                      <Badge variant="secondary">{agent?.statusName || "-"}</Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">运行模式</span>
+                      <Badge variant="outline">{agent?.runtimeModeName || "-"}</Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">生效流程版本</span>
+                      <Badge variant={agent?.workflowVersionId ? "default" : "outline"}>
+                        {agent?.workflowVersionId ? `#${agent.workflowVersionId}` : "未发布"}
+                      </Badge>
+                    </div>
+                    <div className="min-w-0 flex-1 text-xs text-muted-foreground">
+                      发布会保存草稿、生成不可变版本，并绑定为当前生效流程。
+                    </div>
                   </div>
-                  <div className="rounded-md border bg-muted/20 p-4 text-sm text-muted-foreground">
-                    发布会先保存当前流程草稿，再生成不可变版本，并将该版本绑定为 Agent 当前生效流程。
+                  <div className="space-y-3">
+                    <div>
+                      <h3 className="text-sm font-medium">版本记录</h3>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        仅展示已发布的不可变流程版本，当前页面暂不支持切换或回滚版本。
+                      </p>
+                    </div>
+                    <div className="overflow-hidden rounded-md border">
+                      {workflowVersions.length > 0 ? (
+                        <Table>
+                          <TableHeader className="bg-muted/40">
+                            <TableRow>
+                              <TableHead className="w-28">版本</TableHead>
+                              <TableHead>发布时间</TableHead>
+                              <TableHead>发布人</TableHead>
+                              <TableHead>状态</TableHead>
+                              <TableHead className="text-right">定义指纹</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {workflowVersions.map((version) => (
+                              <TableRow key={version.id}>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">v{version.version}</span>
+                                    {agent?.workflowVersionId === version.id ? (
+                                      <Badge variant="secondary">当前生效</Badge>
+                                    ) : null}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">
+                                  {version.publishedAt || version.createdAt || "-"}
+                                </TableCell>
+                                <TableCell>{version.publishedByName || "-"}</TableCell>
+                                <TableCell>
+                                  <Badge variant={version.status === Status.Ok ? "outline" : "secondary"}>
+                                    {version.status === Status.Ok ? "启用" : "禁用"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                                  {version.definitionHash ? version.definitionHash.slice(0, 8) : "-"}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      ) : (
+                        <div className="p-4 text-sm text-muted-foreground">暂无已发布版本。</div>
+                      )}
+                    </div>
                   </div>
                 </ConfigSection>
               ) : null}
@@ -833,20 +913,12 @@ export function AIAgentConfigWorkbench({
 }
 
 function ConfigSection({
-  title,
-  description,
   children,
 }: {
-  title: string
-  description: string
   children: ReactNode
 }) {
   return (
     <section className="space-y-5">
-      <div>
-        <h2 className="text-lg font-semibold">{title}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-      </div>
       <div className="space-y-4">{children}</div>
     </section>
   )
@@ -908,15 +980,6 @@ function BadgeList({
           </Button>
         </Badge>
       ))}
-    </div>
-  )
-}
-
-function StatusTile({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border bg-muted/20 p-4">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="mt-2 text-sm font-medium">{value}</div>
     </div>
   )
 }

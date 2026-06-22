@@ -815,6 +815,12 @@ export function fetchAIWorkflowNodeSpecs() {
   return request<AIWorkflowNodeSpec[]>("/api/dashboard/ai-workflow/node-spec/list")
 }
 
+export function fetchAIWorkflowVersions(query?: Record<string, string | number | undefined>) {
+  return request<PageResult<AIWorkflowVersion>>(
+    `/api/dashboard/ai-workflow/version/list${toQueryString(query)}`
+  )
+}
+
 export function validateAIWorkflow(definition: AIWorkflowDefinition) {
   return request<AIWorkflowValidationResult>("/api/dashboard/ai-agent/workflow/validate", {
     method: "POST",
