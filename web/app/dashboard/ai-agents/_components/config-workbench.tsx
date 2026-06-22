@@ -468,7 +468,7 @@ export function AIAgentConfigWorkbench({
     { key: "model", title: "模型与 Prompt", icon: <BrainCircuitIcon /> },
     { key: "knowledge", title: "知识库", icon: <DatabaseIcon /> },
     { key: "skills", title: "Skills", icon: <ShieldCheckIcon /> },
-    { key: "tools", title: "工具能力", icon: <PlugIcon /> },
+    { key: "tools", title: "MCP Tools", icon: <PlugIcon /> },
     { key: "workflow", title: "会话流程", icon: <GitBranchIcon /> },
     { key: "handoff", title: "转人工与兜底", icon: <LifeBuoyIcon /> },
     { key: "publish", title: "发布状态", icon: <ShieldCheckIcon /> },
@@ -668,7 +668,7 @@ export function AIAgentConfigWorkbench({
               ) : null}
 
               {activeSection === "tools" ? (
-                <ConfigSection title="工具能力" description="配置外部 MCP Direct Tools。内置 Graph Tool 由会话流程节点管理。">
+                <ConfigSection title="MCP Tools" description="配置外部 MCP Direct Tools。内置 Graph Tool 由会话流程节点管理。">
                   <div className="grid grid-cols-1 gap-3 lg:grid-cols-[220px_minmax(0,1fr)_auto]">
                     <OptionCombobox
                       value={directToolGroupToAdd}
@@ -718,12 +718,9 @@ export function AIAgentConfigWorkbench({
 
               {activeSection === "workflow" ? (
                 <div className="flex h-full min-h-0 flex-col">
-                  <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
+                  <div className="flex shrink-0 items-center justify-between border-b px-3 py-2">
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-medium">主会话流程</div>
-                      <div className="mt-1 truncate text-xs text-muted-foreground">
-                        当前 Agent 只维护一个主流程，发布后作为会话运行入口。
-                      </div>
                     </div>
                     <div className="ml-3 flex items-center gap-2">
                       {validation ? (
@@ -731,15 +728,15 @@ export function AIAgentConfigWorkbench({
                           {validation.valid ? "校验通过" : `${validation.errors.length} 个问题`}
                         </Badge>
                       ) : null}
-                      <Button variant="outline" disabled={savingWorkflow || !currentAgentId} onClick={validateWorkflowDraft}>
+                      <Button size="sm" variant="outline" disabled={savingWorkflow || !currentAgentId} onClick={validateWorkflowDraft}>
                         <CheckCircle2Icon className="size-4" />
                         校验
                       </Button>
-                      <Button variant="outline" disabled={savingWorkflow || !currentAgentId} onClick={saveWorkflowDraft}>
+                      <Button size="sm" variant="outline" disabled={savingWorkflow || !currentAgentId} onClick={saveWorkflowDraft}>
                         <SaveIcon className="size-4" />
                         保存草稿
                       </Button>
-                      <Button disabled={savingWorkflow || !currentAgentId} onClick={publishWorkflow}>
+                      <Button size="sm" disabled={savingWorkflow || !currentAgentId} onClick={publishWorkflow}>
                         <SendIcon className="size-4" />
                         发布
                       </Button>
