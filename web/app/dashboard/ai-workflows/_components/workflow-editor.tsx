@@ -20,6 +20,11 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
@@ -217,11 +222,7 @@ export function WorkflowEditor({
             <Controls />
             <MiniMap pannable zoomable />
           </ReactFlow>
-          <div className="absolute left-3 top-3 flex gap-2">
-            <Badge variant={validation.valid ? "default" : "destructive"}>
-              {validation.valid ? "Valid draft" : `${validation.errors.length} issues`}
-            </Badge>
-          </div>
+          <WorkflowValidationBadge errors={validation.errors} valid={validation.valid} />
         </section>
       </ResizablePanel>
       <ResizableHandle withHandle />
@@ -250,5 +251,46 @@ export function WorkflowEditor({
         </aside>
       </ResizablePanel>
     </ResizablePanelGroup>
+  )
+}
+
+function WorkflowValidationBadge({
+  errors,
+  valid,
+}: {
+  errors: string[]
+  valid: boolean
+}) {
+  return (
+    <div className="absolute left-3 top-3 flex gap-2">
+      {valid ? (
+        <Badge variant="default">Valid draft</Badge>
+      ) : (
+        <Popover>
+          <PopoverTrigger
+            render={
+              <button
+                type="button"
+                className="inline-flex rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            }
+          >
+            <Badge variant="destructive" className="cursor-pointer">
+              {errors.length} issues
+            </Badge>
+          </PopoverTrigger>
+          <PopoverContent side="bottom" align="start" className="w-80">
+            <div className="text-sm font-medium">Validation issues</div>
+            <ul className="mt-2 max-h-72 space-y-1 overflow-y-auto text-xs text-destructive">
+              {errors.map((error) => (
+                <li key={error} className="rounded-md bg-destructive/10 px-2 py-1.5">
+                  {error}
+                </li>
+              ))}
+            </ul>
+          </PopoverContent>
+        </Popover>
+      )}
+    </div>
   )
 }
