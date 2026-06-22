@@ -505,15 +505,15 @@ export function AIAgentConfigWorkbench({
         </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[240px_minmax(0,1fr)] bg-muted/30">
-        <aside className="min-h-0 overflow-y-auto border-r bg-muted/50 p-3">
-          <div className="space-y-1.5">
+      <div className="grid min-h-0 flex-1 grid-cols-[190px_minmax(0,1fr)] bg-muted/30">
+        <aside className="min-h-0 overflow-y-auto border-r bg-muted/50 p-2">
+          <div className="space-y-1">
             {sections.map((section) => (
               <button
                 key={section.key}
                 type="button"
                 onClick={() => setActiveSection(section.key)}
-                className={`group relative flex h-10 w-full items-center gap-3 rounded-md border px-3 text-left text-sm transition-colors ${
+                className={`group relative flex h-9 w-full items-center gap-2 rounded-md border px-2.5 text-left text-sm transition-colors ${
                   activeSection === section.key
                     ? "border-primary/25 bg-primary/10 font-medium text-foreground shadow-xs"
                     : "border-border/60 bg-background/55 text-muted-foreground shadow-xs hover:border-primary/20 hover:bg-background hover:text-foreground hover:shadow-sm"
@@ -523,7 +523,7 @@ export function AIAgentConfigWorkbench({
                   <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-primary" />
                 ) : null}
                 <span
-                  className={`flex size-6 shrink-0 items-center justify-center rounded-sm ${
+                  className={`flex size-5 shrink-0 items-center justify-center rounded-sm ${
                     activeSection === section.key
                       ? "bg-primary/15 text-primary"
                       : "bg-muted/80 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
