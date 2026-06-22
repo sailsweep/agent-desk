@@ -530,14 +530,38 @@ export function AIAgentConfigWorkbench({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" disabled={savingAgent || loading} onClick={saveAgentSettings}>
-            <SaveIcon className="size-4" />
-            保存
-          </Button>
-          <Button disabled={savingWorkflow || loading || !currentAgentId} onClick={publishWorkflow}>
-            <SendIcon className="size-4" />
-            发布流程
-          </Button>
+          {activeSection === "workflow" ? (
+            <>
+              {validation ? (
+                <Badge variant={validation.valid ? "default" : "destructive"}>
+                  {validation.valid ? "校验通过" : `${validation.errors.length} 个问题`}
+                </Badge>
+              ) : null}
+              <Button variant="outline" disabled={savingWorkflow || loading || !currentAgentId} onClick={validateWorkflowDraft}>
+                <CheckCircle2Icon className="size-4" />
+                校验
+              </Button>
+              <Button variant="outline" disabled={savingWorkflow || loading || !currentAgentId} onClick={saveWorkflowDraft}>
+                <SaveIcon className="size-4" />
+                保存草稿
+              </Button>
+              <Button disabled={savingWorkflow || loading || !currentAgentId} onClick={publishWorkflow}>
+                <SendIcon className="size-4" />
+                发布流程
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" disabled={savingAgent || loading} onClick={saveAgentSettings}>
+                <SaveIcon className="size-4" />
+                保存
+              </Button>
+              <Button disabled={savingWorkflow || loading || !currentAgentId} onClick={publishWorkflow}>
+                <SendIcon className="size-4" />
+                发布流程
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -753,40 +777,12 @@ export function AIAgentConfigWorkbench({
               ) : null}
 
               {activeSection === "workflow" ? (
-                <div className="flex h-full min-h-0 flex-col">
-                  <div className="flex shrink-0 items-center justify-between border-b px-3 py-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium">主会话流程</div>
-                    </div>
-                    <div className="ml-3 flex items-center gap-2">
-                      {validation ? (
-                        <Badge variant={validation.valid ? "default" : "destructive"}>
-                          {validation.valid ? "校验通过" : `${validation.errors.length} 个问题`}
-                        </Badge>
-                      ) : null}
-                      <Button size="sm" variant="outline" disabled={savingWorkflow || !currentAgentId} onClick={validateWorkflowDraft}>
-                        <CheckCircle2Icon className="size-4" />
-                        校验
-                      </Button>
-                      <Button size="sm" variant="outline" disabled={savingWorkflow || !currentAgentId} onClick={saveWorkflowDraft}>
-                        <SaveIcon className="size-4" />
-                        保存草稿
-                      </Button>
-                      <Button size="sm" disabled={savingWorkflow || !currentAgentId} onClick={publishWorkflow}>
-                        <SendIcon className="size-4" />
-                        发布
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="min-h-0 flex-1">
-                    <WorkflowEditor
-                      key={editorKey}
-                      definition={definition}
-                      nodeSpecs={nodeSpecs}
-                      onDefinitionChange={setDefinition}
-                    />
-                  </div>
-                </div>
+                <WorkflowEditor
+                  key={editorKey}
+                  definition={definition}
+                  nodeSpecs={nodeSpecs}
+                  onDefinitionChange={setDefinition}
+                />
               ) : null}
 
               {activeSection === "handoff" ? (

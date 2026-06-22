@@ -24,7 +24,6 @@ import { AlertCircleIcon, CheckCircle2Icon } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
   Popover,
   PopoverContent,
@@ -183,6 +182,10 @@ export function WorkflowEditor({
     () => (selectedNode ? getAvailableVariables(draft, selectedNode.id, nodeSpecs) : []),
     [draft, nodeSpecs, selectedNode]
   )
+
+  useEffect(() => {
+    onDefinitionChange(toApiDefinition(draft) as AIWorkflowDefinition)
+  }, [draft, onDefinitionChange])
 
   useEffect(() => {
     onDefinitionChange(toApiDefinition(draft) as AIWorkflowDefinition)
@@ -361,7 +364,7 @@ export function WorkflowEditor({
         </aside>
       </ResizablePanel>
       <ResizableHandle withHandle />
-      <ResizablePanel defaultSize="56%" minSize="30%" className="min-h-0">
+      <ResizablePanel defaultSize={selectedNode ? "56%" : "82%"} minSize="30%" className="min-h-0">
         <section
           data-workflow-canvas
           ref={canvasRef}
@@ -382,7 +385,12 @@ export function WorkflowEditor({
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onInit={setFlowInstance}
-            onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+            onNodeClick={(event, node) => {
+              event.stopPropagation()
+              setSelectedNodeId(node.id)
+            }}
+            onEdgeClick={() => setSelectedNodeId(null)}
+            onPaneClick={() => setSelectedNodeId(null)}
             fitView
             fitViewOptions={fitViewOptions}
             minZoom={0.45}
@@ -406,36 +414,31 @@ export function WorkflowEditor({
           ) : null}
         </section>
       </ResizablePanel>
-      <ResizableHandle withHandle />
-      <ResizablePanel defaultSize="26%" minSize="18%" maxSize="40%" className="min-h-0">
-        <aside className="h-full min-h-0 overflow-y-auto bg-muted/10">
-          <NodeConfigPanel
-            node={selectedNode}
-            nodeSpec={selectedNodeSpec}
-            availableVariables={availableVariables}
-            onChange={updateNodeData}
-          />
-          {!validation.valid ? (
-            <div className="border-t p-4">
-              <div className="mb-2 text-sm font-medium">流程检查</div>
-              <ul className="space-y-1 text-xs text-destructive">
-                {validation.errors.map((error) => (
-                  <li key={error}>{error}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          <div className="border-t p-4">
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => onDefinitionChange(toApiDefinition(toDraft(nodes, edges)) as AIWorkflowDefinition)}
-            >
-              同步当前流程
-            </Button>
-          </div>
-        </aside>
-      </ResizablePanel>
+      {selectedNode ? (
+        <>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize="26%" minSize="18%" maxSize="40%" className="min-h-0">
+            <aside className="h-full min-h-0 overflow-y-auto bg-muted/10">
+              <NodeConfigPanel
+                node={selectedNode}
+                nodeSpec={selectedNodeSpec}
+                availableVariables={availableVariables}
+                onChange={updateNodeData}
+              />
+              {!validation.valid ? (
+                <div className="border-t p-4">
+                  <div className="mb-2 text-sm font-medium">流程检查</div>
+                  <ul className="space-y-1 text-xs text-destructive">
+                    {validation.errors.map((error) => (
+                      <li key={error}>{error}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </aside>
+          </ResizablePanel>
+        </>
+      ) : null}
     </ResizablePanelGroup>
   )
 }
