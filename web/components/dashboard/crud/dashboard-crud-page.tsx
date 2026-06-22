@@ -1,7 +1,7 @@
 "use client"
 
 import type { ReactNode } from "react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import {
   closestCenter,
   DndContext,
@@ -264,6 +264,12 @@ export function DashboardCrudPage<TItem, TPayload>({
     setEditingItem(null)
     setDialogOpen(true)
   }, [onCreateItem])
+  const loadDataRef = useRef(loadData)
+  const openCreateDialogRef = useRef(openCreateDialog)
+  loadDataRef.current = loadData
+  openCreateDialogRef.current = openCreateDialog
+  const actionRefresh = useCallback(() => void loadDataRef.current(), [])
+  const actionCreate = useCallback(() => openCreateDialogRef.current(), [])
 
   function openEditDialog(item: TItem) {
     setEditingItem(item)
@@ -272,11 +278,11 @@ export function DashboardCrudPage<TItem, TPayload>({
 
   useEffect(() => {
     onActionStateChange?.({
-      onRefresh: () => void loadData(),
-      onCreate: openCreateDialog,
+      onRefresh: actionRefresh,
+      onCreate: actionCreate,
       loading,
     })
-  }, [loadData, loading, onActionStateChange, openCreateDialog])
+  }, [actionCreate, actionRefresh, loading, onActionStateChange])
 
   function handleDialogOpenChange(open: boolean) {
     if (saving) return
