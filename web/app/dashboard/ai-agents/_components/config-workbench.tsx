@@ -147,8 +147,6 @@ export function AIAgentConfigWorkbench({
   const [selectedSkillIds, setSelectedSkillIds] = useState<number[]>([])
   const [directTools, setDirectTools] = useState<DirectToolItem[]>([])
 
-  const [workflowName, setWorkflowName] = useState("")
-  const [workflowDescription, setWorkflowDescription] = useState("")
   const [definition, setDefinition] = useState<AIWorkflowDefinition>(emptyDefinition)
 
   const [aiConfigs, setAIConfigs] = useState<AIConfig[]>([])
@@ -214,8 +212,6 @@ export function AIAgentConfigWorkbench({
         setSelectedTeamIds([])
         setSelectedSkillIds([])
         setDirectTools([])
-        setWorkflowName("新建 Agent 会话流程")
-        setWorkflowDescription("")
         setDefinition(emptyDefinition)
         setValidation(null)
         return
@@ -242,8 +238,6 @@ export function AIAgentConfigWorkbench({
       setSelectedTeamIds((agentDetail.teams ?? []).map((team) => team.id))
       setSelectedSkillIds(agentDetail.skillIds ?? [])
       setDirectTools(agentDetail.directTools ?? [])
-      setWorkflowName(workflowDetail.name || `${agentDetail.name} 会话流程`)
-      setWorkflowDescription(workflowDetail.description || "")
       setDefinition(workflowDetail.draftDefinition ?? emptyDefinition)
       setValidation(null)
     } catch (error) {
@@ -420,8 +414,8 @@ export function AIAgentConfigWorkbench({
     try {
       const saved = await saveAIAgentWorkflow({
         agentId: currentAgentId,
-        name: workflowName,
-        description: workflowDescription,
+        name: "",
+        description: "",
         definition,
       })
       setWorkflow(saved)
@@ -454,8 +448,8 @@ export function AIAgentConfigWorkbench({
     try {
       await saveAIAgentWorkflow({
         agentId: currentAgentId,
-        name: workflowName,
-        description: workflowDescription,
+        name: "",
+        description: "",
         definition,
       })
       const version = await publishAIAgentWorkflow(currentAgentId, definition)
@@ -725,9 +719,11 @@ export function AIAgentConfigWorkbench({
               {activeSection === "workflow" ? (
                 <div className="flex h-full min-h-0 flex-col">
                   <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
-                    <div className="grid min-w-0 flex-1 grid-cols-2 gap-3">
-                      <Input value={workflowName} onChange={(event) => setWorkflowName(event.target.value)} />
-                      <Input value={workflowDescription} placeholder="流程描述" onChange={(event) => setWorkflowDescription(event.target.value)} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium">主会话流程</div>
+                      <div className="mt-1 truncate text-xs text-muted-foreground">
+                        当前 Agent 只维护一个主流程，发布后作为会话运行入口。
+                      </div>
                     </div>
                     <div className="ml-3 flex items-center gap-2">
                       {validation ? (
