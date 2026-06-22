@@ -21,7 +21,7 @@ import {
   AIProvider,
 } from "@/lib/generated/enums"
 import { useI18n } from "@/i18n/provider"
-import { OptionCombobox } from "./option-combobox"
+import { OptionCombobox } from "@/components/option-combobox"
 
 type AIConfigEditDialogProps = {
   open: boolean
