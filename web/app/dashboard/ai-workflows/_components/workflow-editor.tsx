@@ -36,11 +36,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable"
+import { cn } from "@/lib/utils"
 import type { AIWorkflowDefinition, AIWorkflowNodeSpec } from "@/lib/api/admin"
 import {
   applyAutoInputMappings,
@@ -167,9 +163,12 @@ export function WorkflowEditor({
   const [nodeLibraryCollapsed, setNodeLibraryCollapsed] = useState(false)
   const [nodeLibraryRendered, setNodeLibraryRendered] = useState(true)
   const [nodeLibraryVisible, setNodeLibraryVisible] = useState(true)
+  const [nodeLibraryWidth, setNodeLibraryWidth] = useState(260)
+  const [nodeLibraryResizing, setNodeLibraryResizing] = useState(false)
   const [pendingNodeDrag, setPendingNodeDrag] = useState<PendingNodeDrag | null>(null)
   const [propertyPanelNode, setPropertyPanelNode] = useState<WorkflowFlowNode | null>(null)
   const [propertyPanelVisible, setPropertyPanelVisible] = useState(false)
+  const editorRef = useRef<HTMLDivElement | null>(null)
   const canvasRef = useRef<HTMLElement | null>(null)
   const pendingNodeDragRef = useRef<PendingNodeDrag | null>(null)
   const suppressNextClickRef = useRef(false)
@@ -206,13 +205,15 @@ export function WorkflowEditor({
   useEffect(() => {
     if (!nodeLibraryCollapsed) {
       setNodeLibraryRendered(true)
-      window.setTimeout(() => setNodeLibraryVisible(true), 0)
-      return
+      const timer = window.setTimeout(() => {
+        setNodeLibraryVisible(true)
+      }, 0)
+      return () => window.clearTimeout(timer)
     }
 
     setNodeLibraryVisible(false)
-    const timer = window.setTimeout(() => setNodeLibraryRendered(false), 220)
-    return () => window.clearTimeout(timer)
+    const unmountTimer = window.setTimeout(() => setNodeLibraryRendered(false), 220)
+    return () => window.clearTimeout(unmountTimer)
   }, [nodeLibraryCollapsed])
 
   useEffect(() => {
@@ -364,11 +365,49 @@ export function WorkflowEditor({
     )
   }
 
+  const clampNodeLibraryWidth = useCallback((width: number) => {
+    const containerWidth = editorRef.current?.getBoundingClientRect().width ?? 0
+    const maxWidth = containerWidth > 0 ? containerWidth * 0.34 : 520
+    return Math.min(maxWidth, Math.max(192, width))
+  }, [])
+
+  const onNodeLibraryResizePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) {
+      return
+    }
+    event.preventDefault()
+    const startX = event.clientX
+    const startWidth = nodeLibraryWidth
+    setNodeLibraryResizing(true)
+
+    const handlePointerMove = (event: PointerEvent) => {
+      setNodeLibraryWidth(clampNodeLibraryWidth(startWidth + event.clientX - startX))
+    }
+
+    const handlePointerUp = () => {
+      window.removeEventListener("pointermove", handlePointerMove)
+      window.removeEventListener("pointerup", handlePointerUp)
+      setNodeLibraryResizing(false)
+    }
+
+    window.addEventListener("pointermove", handlePointerMove)
+    window.addEventListener("pointerup", handlePointerUp)
+  }
+
   return (
-    <ResizablePanelGroup orientation="horizontal" className="h-full min-h-0">
+    <div ref={editorRef} className="flex h-full min-h-0 w-full">
       {nodeLibraryRendered ? (
         <>
-          <ResizablePanel defaultSize="18%" minSize="12%" maxSize="34%" className="min-h-0">
+          <div
+            className={cn(
+              "h-full min-h-0 shrink-0 overflow-hidden transition-[width,opacity,transform] duration-200 ease-out",
+              nodeLibraryResizing && "transition-none",
+              nodeLibraryVisible
+                ? "translate-x-0 opacity-100"
+                : "-translate-x-3 opacity-0"
+            )}
+            style={{ width: nodeLibraryVisible ? nodeLibraryWidth : 0 }}
+          >
             <aside
               className={[
                 "h-full min-h-0 bg-muted/20 transition-all duration-200 ease-out",
@@ -423,15 +462,22 @@ export function WorkflowEditor({
                 </div>
               </ScrollArea>
             </aside>
-          </ResizablePanel>
-          <ResizableHandle withHandle />
+          </div>
+          <div
+            className={cn(
+              "relative flex w-1.5 shrink-0 cursor-col-resize items-center justify-center bg-transparent transition-opacity duration-200 ease-out hover:bg-primary/20",
+              nodeLibraryVisible ? "opacity-100" : "pointer-events-none opacity-0"
+            )}
+            onPointerDown={onNodeLibraryResizePointerDown}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="调整节点库宽度"
+          >
+            <div className="z-10 flex h-6 w-1 shrink-0 rounded-lg bg-border" />
+          </div>
         </>
       ) : null}
-      <ResizablePanel
-        defaultSize={nodeLibraryCollapsed ? "100%" : "82%"}
-        minSize="30%"
-        className="min-h-0"
-      >
+      <div className="min-h-0 min-w-0 flex-1">
         <section
           data-workflow-canvas
           ref={canvasRef}
@@ -521,8 +567,8 @@ export function WorkflowEditor({
             </div>
           ) : null}
         </section>
-      </ResizablePanel>
-    </ResizablePanelGroup>
+      </div>
+    </div>
   )
 }
 
