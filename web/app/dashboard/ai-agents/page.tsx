@@ -1,16 +1,17 @@
 "use client";
 
 import { BotMessageSquareIcon, GitBranchIcon, PowerIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import {
   DashboardCrudPage,
+  type DashboardCrudActionState,
   createDashboardStatusColumn,
   createDashboardStatusToggleAction,
   type DashboardCrudColumn,
   type DashboardCrudFilter,
 } from "@/components/dashboard/crud";
+import { ProjectDialog } from "@/components/project-dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   createAIAgent,
@@ -24,6 +25,7 @@ import {
 } from "@/lib/api/admin";
 import { IMConversationServiceMode, Status } from "@/lib/generated/enums";
 import { useI18n } from "@/i18n/provider";
+import { AIAgentConfigWorkbench } from "./_components/config-workbench";
 import { EditDialog } from "./_components/edit";
 
 type TFunction = (key: string, values?: Record<string, string | number>) => string;
@@ -63,8 +65,9 @@ function getNextStatus(item: AIAgent) {
 
 export default function DashboardAIAgentsPage() {
   const t = useI18n();
-  const router = useRouter();
   const statusOptions = useMemo(() => getStatusOptions(t), [t]);
+  const [configAgentId, setConfigAgentId] = useState<number | null>(null);
+  const [crudActions, setCrudActions] = useState<DashboardCrudActionState | null>(null);
 
   const filters = useMemo<DashboardCrudFilter[]>(
     () => [
@@ -221,7 +224,8 @@ export default function DashboardAIAgentsPage() {
   );
 
   return (
-    <DashboardCrudPage<AIAgent, CreateAIAgentPayload>
+    <>
+      <DashboardCrudPage<AIAgent, CreateAIAgentPayload>
       filters={filters}
       columns={columns}
       fetchList={(query) =>
@@ -235,7 +239,7 @@ export default function DashboardAIAgentsPage() {
       getItemId={(item) => item.id}
       createItem={createAIAgent}
       updateItem={(item, payload) => updateAIAgent({ id: item.id, ...payload })}
-      onEditItem={(item) => router.push(`/dashboard/ai-agents/config?agentId=${item.id}`)}
+      onEditItem={(item) => setConfigAgentId(item.id)}
       deleteItem={(item) => deleteAIAgent(item.id)}
       rowActions={[
         {
@@ -243,7 +247,7 @@ export default function DashboardAIAgentsPage() {
           icon: <GitBranchIcon />,
           label: t("aiAgent.configure"),
           run: ({ item }) => {
-            router.push(`/dashboard/ai-agents/config?agentId=${item.id}`);
+            setConfigAgentId(item.id);
           },
         },
         createDashboardStatusToggleAction<AIAgent, number>({
@@ -280,6 +284,7 @@ export default function DashboardAIAgentsPage() {
           onSubmit={onSubmit}
         />
       )}
+      onActionStateChange={setCrudActions}
       labels={{
         refresh: t("aiAgent.refresh"),
         create: t("aiAgent.new"),
@@ -298,6 +303,28 @@ export default function DashboardAIAgentsPage() {
         updated: (_item, payload) => t("aiAgent.updated", { name: payload.name }),
         deleted: (item) => t("aiAgent.deleted", { name: item.name }),
       }}
-    />
+      />
+      <ProjectDialog
+        open={configAgentId !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfigAgentId(null);
+        }}
+        title={t("aiAgent.configure")}
+        size="xxl"
+        allowFullscreen
+        defaultFullscreen
+        bodyScrollable={false}
+        contentClassName="h-[calc(100vh-40px)] max-h-[calc(100vh-40px)]"
+        headerClassName="sr-only"
+      >
+        {configAgentId ? (
+          <AIAgentConfigWorkbench
+            agentId={configAgentId}
+            onClose={() => setConfigAgentId(null)}
+            onAgentSaved={() => crudActions?.onRefresh()}
+          />
+        ) : null}
+      </ProjectDialog>
+    </>
   );
 }
