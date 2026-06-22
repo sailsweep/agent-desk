@@ -472,21 +472,32 @@ export function AIAgentConfigWorkbench({
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-[240px_minmax(0,1fr)]">
-        <aside className="min-h-0 overflow-y-auto border-r bg-muted/20 p-3">
-          <div className="space-y-1">
+        <aside className="min-h-0 overflow-y-auto border-r bg-muted/30 p-3">
+          <div className="space-y-1.5">
             {sections.map((section) => (
               <button
                 key={section.key}
                 type="button"
                 onClick={() => setActiveSection(section.key)}
-                className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm ${
+                className={`group relative flex h-10 w-full items-center gap-3 rounded-md border px-3 text-left text-sm transition-colors ${
                   activeSection === section.key
-                    ? "bg-background font-medium shadow-xs"
-                    : "text-muted-foreground hover:bg-background/70 hover:text-foreground"
+                    ? "border-primary/25 bg-primary/10 font-medium text-foreground shadow-xs"
+                    : "border-transparent text-muted-foreground hover:border-border hover:bg-background hover:text-foreground"
                 }`}
               >
-                <span className="size-4">{section.icon}</span>
-                <span>{section.title}</span>
+                {activeSection === section.key ? (
+                  <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-primary" />
+                ) : null}
+                <span
+                  className={`flex size-6 shrink-0 items-center justify-center rounded-sm ${
+                    activeSection === section.key
+                      ? "bg-primary/15 text-primary"
+                      : "text-muted-foreground group-hover:bg-muted group-hover:text-foreground"
+                  }`}
+                >
+                  {section.icon}
+                </span>
+                <span className="min-w-0 flex-1 truncate leading-none">{section.title}</span>
               </button>
             ))}
           </div>
