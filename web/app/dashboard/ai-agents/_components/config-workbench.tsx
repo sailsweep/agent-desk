@@ -516,17 +516,15 @@ export function AIAgentConfigWorkbench({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
-      <div className="flex shrink-0 items-center justify-between gap-4 border-b px-5 py-3 pr-28">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-md bg-muted text-muted-foreground">
-            <BotMessageSquareIcon className="size-5" />
+      <div className="flex shrink-0 items-center justify-between gap-4 border-b px-5 py-2 pr-28">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className="flex size-8 items-center justify-center rounded-md bg-muted text-muted-foreground">
+            <BotMessageSquareIcon className="size-4" />
           </div>
-          <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-2">
             <h1 className="truncate text-base font-semibold">{agent?.name ?? "新建 AI Agent"}</h1>
-            <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-              {agent?.statusName ? <Badge variant="secondary">{agent.statusName}</Badge> : null}
-              {agent?.workflowVersionId ? <Badge>已发布流程</Badge> : <Badge variant="outline">草稿流程</Badge>}
-            </div>
+            {agent?.statusName ? <Badge variant="secondary">{agent.statusName}</Badge> : null}
+            {agent?.workflowVersionId ? <Badge>已发布</Badge> : <Badge variant="outline">草稿</Badge>}
           </div>
         </div>
         <div className="flex items-center gap-2">

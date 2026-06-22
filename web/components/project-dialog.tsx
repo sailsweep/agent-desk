@@ -114,7 +114,7 @@ function ProjectDialog({
         className={cn(
           "flex max-h-[calc(100vh-2rem)] flex-col gap-0 overflow-hidden p-0",
           fullscreen
-            ? "top-5 left-5 h-[calc(100vh-40px)] max-h-[calc(100vh-40px)] w-[calc(100vw-40px)] max-w-[calc(100vw-40px)] translate-x-0 translate-y-0 rounded-xl sm:max-w-[calc(100vw-40px)]"
+            ? "top-2 left-2 h-[calc(100vh-16px)] max-h-[calc(100vh-16px)] w-[calc(100vw-16px)] max-w-[calc(100vw-16px)] translate-x-0 translate-y-0 rounded-xl sm:max-w-[calc(100vw-16px)]"
             : dialogSizeClassName[size],
           contentClassName,
         )}
