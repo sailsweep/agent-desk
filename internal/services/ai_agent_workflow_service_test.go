@@ -1,8 +1,10 @@
 package services
 
 import (
+	"encoding/json"
 	"testing"
 
+	"agent-desk/internal/ai/workflow/dsl"
 	"agent-desk/internal/models"
 	"agent-desk/internal/pkg/dto"
 	"agent-desk/internal/pkg/dto/request"
@@ -13,52 +15,89 @@ import (
 	"gorm.io/gorm"
 )
 
-func TestAIAgentServiceSavesWorkflowBinding(t *testing.T) {
+func TestAIAgentServiceCreatesDefaultWorkflow(t *testing.T) {
 	setupAIAgentWorkflowTestDB(t)
 	operator := aiAgentWorkflowTestOperator()
 	aiConfigID := createAIAgentWorkflowTestConfig(t)
 	knowledgeID := createAIAgentWorkflowTestKnowledgeBase(t)
-	versionID := createAIAgentWorkflowVersion(t)
 
 	item, err := AIAgentService.CreateAIAgent(request.CreateAIAgentRequest{
-		Name:              "workflow agent",
-		AIConfigID:        aiConfigID,
-		ServiceMode:       enums.IMConversationServiceModeAIOnly,
-		HandoffMode:       enums.AIAgentHandoffModeWaitPool,
-		FallbackMode:      enums.AIAgentFallbackModeNoAnswer,
-		KnowledgeIDs:      []int64{knowledgeID},
-		RuntimeMode:       enums.AIAgentRuntimeModeWorkflow,
-		WorkflowVersionID: versionID,
+		Name:         "workflow agent",
+		AIConfigID:   aiConfigID,
+		ServiceMode:  enums.IMConversationServiceModeAIOnly,
+		HandoffMode:  enums.AIAgentHandoffModeWaitPool,
+		FallbackMode: enums.AIAgentFallbackModeNoAnswer,
+		KnowledgeIDs: []int64{knowledgeID},
 	}, operator)
 	if err != nil {
 		t.Fatalf("CreateAIAgent() error = %v", err)
 	}
 
-	if item.RuntimeMode != enums.AIAgentRuntimeModeWorkflow {
-		t.Fatalf("expected workflow runtime mode, got %d", item.RuntimeMode)
+	workflow, err := AIWorkflowService.GetOrCreateAgentWorkflow(item.ID, operator)
+	if err != nil {
+		t.Fatalf("GetOrCreateAgentWorkflow() error = %v", err)
 	}
-	if item.WorkflowVersionID != versionID {
-		t.Fatalf("expected workflow version %d, got %d", versionID, item.WorkflowVersionID)
+	if workflow.AgentID != item.ID {
+		t.Fatalf("expected workflow agent id %d, got %d", item.ID, workflow.AgentID)
+	}
+	if workflow.Name != item.Name+" 会话流程" {
+		t.Fatalf("unexpected workflow name: %s", workflow.Name)
+	}
+	var stored dsl.Definition
+	if err := json.Unmarshal([]byte(workflow.DraftDefinition), &stored); err != nil {
+		t.Fatalf("unmarshal draft definition: %v", err)
+	}
+	if stored.EntryNodeID == "" {
+		t.Fatalf("expected default draft definition")
 	}
 }
 
-func TestAIAgentServiceRejectsWorkflowModeWithoutVersion(t *testing.T) {
+func TestAIWorkflowServicePublishAgentWorkflowBindsAgentVersion(t *testing.T) {
 	setupAIAgentWorkflowTestDB(t)
 	operator := aiAgentWorkflowTestOperator()
 	aiConfigID := createAIAgentWorkflowTestConfig(t)
 	knowledgeID := createAIAgentWorkflowTestKnowledgeBase(t)
 
-	_, err := AIAgentService.CreateAIAgent(request.CreateAIAgentRequest{
+	agent, err := AIAgentService.CreateAIAgent(request.CreateAIAgentRequest{
 		Name:         "workflow agent without version",
 		AIConfigID:   aiConfigID,
 		ServiceMode:  enums.IMConversationServiceModeAIOnly,
 		HandoffMode:  enums.AIAgentHandoffModeWaitPool,
 		FallbackMode: enums.AIAgentFallbackModeNoAnswer,
 		KnowledgeIDs: []int64{knowledgeID},
-		RuntimeMode:  enums.AIAgentRuntimeModeWorkflow,
 	}, operator)
-	if err == nil {
-		t.Fatalf("expected workflow runtime without version to fail")
+	if err != nil {
+		t.Fatalf("CreateAIAgent() error = %v", err)
+	}
+	workflow, err := AIWorkflowService.SaveAgentWorkflow(request.SaveAIWorkflowRequest{
+		AgentID:     agent.ID,
+		Name:        "After sales flow",
+		Description: "Support workflow",
+		Definition:  validAIWorkflowDefinition(),
+	}, operator)
+	if err != nil {
+		t.Fatalf("SaveAgentWorkflow() error = %v", err)
+	}
+
+	version, err := AIWorkflowService.PublishAgentWorkflow(request.PublishAIWorkflowRequest{
+		AgentID:    agent.ID,
+		Definition: validAIWorkflowDefinition(),
+	}, operator)
+	if err != nil {
+		t.Fatalf("PublishAgentWorkflow() error = %v", err)
+	}
+	if version.WorkflowID != workflow.ID {
+		t.Fatalf("expected version workflow id %d, got %d", workflow.ID, version.WorkflowID)
+	}
+	storedAgent := AIAgentService.Get(agent.ID)
+	if storedAgent == nil {
+		t.Fatalf("expected stored agent")
+	}
+	if storedAgent.RuntimeMode != enums.AIAgentRuntimeModeWorkflow {
+		t.Fatalf("expected agent runtime workflow, got %d", storedAgent.RuntimeMode)
+	}
+	if storedAgent.WorkflowVersionID != version.ID {
+		t.Fatalf("expected agent workflow version %d, got %d", version.ID, storedAgent.WorkflowVersionID)
 	}
 }
 
@@ -105,10 +144,9 @@ func createAIAgentWorkflowTestKnowledgeBase(t *testing.T) int64 {
 func createAIAgentWorkflowVersion(t *testing.T) int64 {
 	t.Helper()
 	workflow := &models.AIWorkflow{
-		Name:      "workflow-test",
-		OwnerType: "ai_agent",
-		OwnerID:   1,
-		Status:    enums.StatusOk,
+		Name:    "workflow-test",
+		AgentID: 1,
+		Status:  enums.StatusOk,
 	}
 	if err := sqls.DB().Create(workflow).Error; err != nil {
 		t.Fatalf("create workflow: %v", err)

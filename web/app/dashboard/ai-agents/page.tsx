@@ -1,6 +1,7 @@
 "use client";
 
-import { BotMessageSquareIcon, PowerIcon } from "lucide-react";
+import { BotMessageSquareIcon, GitBranchIcon, PowerIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 
 import {
@@ -62,6 +63,7 @@ function getNextStatus(item: AIAgent) {
 
 export default function DashboardAIAgentsPage() {
   const t = useI18n();
+  const router = useRouter();
   const statusOptions = useMemo(() => getStatusOptions(t), [t]);
 
   const filters = useMemo<DashboardCrudFilter[]>(
@@ -235,6 +237,14 @@ export default function DashboardAIAgentsPage() {
       updateItem={(item, payload) => updateAIAgent({ id: item.id, ...payload })}
       deleteItem={(item) => deleteAIAgent(item.id)}
       rowActions={[
+        {
+          key: "workflow",
+          icon: <GitBranchIcon />,
+          label: t("aiAgent.workflow"),
+          run: ({ item }) => {
+            router.push(`/dashboard/ai-agents/workflow?agentId=${item.id}`);
+          },
+        },
         createDashboardStatusToggleAction<AIAgent, number>({
           icon: <PowerIcon />,
           label: (item) =>

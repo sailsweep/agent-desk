@@ -14,7 +14,6 @@ import {
   TagsIcon,
   UserCogIcon,
   UsersIcon,
-  WorkflowIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -192,12 +191,6 @@ export const dashboardNavSections: DashboardNavSectionConfig[] = [
         titleKey: "nav.aiAgents",
         url: "/dashboard/ai-agents",
         icon: <MessageSquareMoreIcon />,
-        requiredPermission: "aiAgent.view",
-      },
-      {
-        titleKey: "nav.aiWorkflows",
-        url: "/dashboard/ai-workflows",
-        icon: <WorkflowIcon />,
         requiredPermission: "aiAgent.view",
       },
       {

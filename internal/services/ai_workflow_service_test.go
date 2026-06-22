@@ -8,6 +8,7 @@ import (
 	"agent-desk/internal/models"
 	"agent-desk/internal/pkg/dto"
 	"agent-desk/internal/pkg/dto/request"
+	"agent-desk/internal/pkg/enums"
 	"agent-desk/internal/repositories"
 
 	"github.com/glebarez/sqlite"
@@ -45,8 +46,7 @@ func TestAIWorkflowServicePublishCreatesImmutableVersion(t *testing.T) {
 	workflow, err := AIWorkflowService.CreateWorkflow(request.CreateAIWorkflowRequest{
 		Name:        "support flow",
 		Description: "customer service flow",
-		OwnerType:   "ai_agent",
-		OwnerID:     12,
+		AgentID:     12,
 		Definition:  validAIWorkflowDefinition(),
 	}, operator)
 	if err != nil {
@@ -88,8 +88,7 @@ func TestAIWorkflowServicePublishIncrementsVersion(t *testing.T) {
 	operator := aiWorkflowTestOperator()
 	workflow, err := AIWorkflowService.CreateWorkflow(request.CreateAIWorkflowRequest{
 		Name:       "support flow versions",
-		OwnerType:  "ai_agent",
-		OwnerID:    99,
+		AgentID:    99,
 		Definition: validAIWorkflowDefinition(),
 	}, operator)
 	if err != nil {
@@ -121,8 +120,7 @@ func TestAIWorkflowServicePublishRejectsInvalidDSL(t *testing.T) {
 	operator := aiWorkflowTestOperator()
 	workflow, err := AIWorkflowService.CreateWorkflow(request.CreateAIWorkflowRequest{
 		Name:       "invalid publish flow",
-		OwnerType:  "ai_agent",
-		OwnerID:    23,
+		AgentID:    23,
 		Definition: validAIWorkflowDefinition(),
 	}, operator)
 	if err != nil {
@@ -159,10 +157,15 @@ func setupAIWorkflowTestDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open sqlite db: %v", err)
 	}
-	if err := db.AutoMigrate(&models.AIWorkflow{}, &models.AIWorkflowVersion{}, &models.AIWorkflowRun{}, &models.AIWorkflowNodeRun{}); err != nil {
+	if err := db.AutoMigrate(&models.AIAgent{}, &models.AIWorkflow{}, &models.AIWorkflowVersion{}, &models.AIWorkflowRun{}, &models.AIWorkflowNodeRun{}); err != nil {
 		t.Fatalf("auto migrate: %v", err)
 	}
 	sqls.SetDB(db)
+	for _, id := range []int64{12, 23, 99} {
+		if err := sqls.DB().Create(&models.AIAgent{ID: id, Name: "agent", Status: enums.StatusOk}).Error; err != nil {
+			t.Fatalf("create ai agent: %v", err)
+		}
+	}
 }
 
 func validAIWorkflowDefinition() dsl.Definition {

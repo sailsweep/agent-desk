@@ -75,7 +75,13 @@ func (s *aIAgentService) CreateAIAgent(req request.CreateAIAgentRequest, operato
 	item.Status = enums.StatusOk
 	item.SortNo = 0
 	item.AuditFields = utils.BuildAuditFields(operator)
-	if err := repositories.AIAgentRepository.Create(sqls.DB(), item); err != nil {
+	if err := sqls.WithTransaction(func(ctx *sqls.TxContext) error {
+		if err := repositories.AIAgentRepository.Create(ctx.Tx, item); err != nil {
+			return err
+		}
+		_, err := AIWorkflowService.createDefaultAgentWorkflow(ctx.Tx, item, operator)
+		return err
+	}); err != nil {
 		return nil, err
 	}
 	return item, nil
@@ -108,8 +114,6 @@ func (s *aIAgentService) UpdateAIAgent(req request.UpdateAIAgentRequest, operato
 		"skill_ids":             item.SkillIDs,
 		"allowed_mcp_tools":     item.AllowedMCPTools,
 		"allowed_graph_tools":   item.AllowedGraphTools,
-		"runtime_mode":          item.RuntimeMode,
-		"workflow_version_id":   item.WorkflowVersionID,
 		"update_user_id":        operator.UserID,
 		"update_user_name":      operator.Username,
 		"updated_at":            time.Now(),
@@ -193,10 +197,6 @@ func (s *aIAgentService) buildAIAgentModel(id int64, req request.CreateAIAgentRe
 	if err != nil {
 		return nil, err
 	}
-	runtimeMode, workflowVersionID, err := s.normalizeRuntimeMode(req.RuntimeMode, req.WorkflowVersionID)
-	if err != nil {
-		return nil, err
-	}
 	directToolsJSON := ""
 	if len(directTools) > 0 {
 		buf, marshalErr := json.Marshal(directTools)
@@ -229,8 +229,8 @@ func (s *aIAgentService) buildAIAgentModel(id int64, req request.CreateAIAgentRe
 		SkillIDs:            utils.JoinInt64s(skillIDs),
 		AllowedMCPTools:     directToolsJSON,
 		AllowedGraphTools:   graphToolsJSON,
-		RuntimeMode:         runtimeMode,
-		WorkflowVersionID:   workflowVersionID,
+		RuntimeMode:         enums.AIAgentRuntimeModeBuiltinGraph,
+		WorkflowVersionID:   0,
 	}, nil
 }
 

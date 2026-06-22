@@ -41,14 +41,12 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   fetchAIAgent,
   fetchAIConfigsAll,
-  fetchAIWorkflowVersions,
   fetchAgentTeamsAll,
   fetchKnowledgeBasesAll,
   fetchMCPCatalog,
   fetchSkillDefinitionsAll,
   type AIAgent,
   type AIConfig,
-  type AIWorkflowVersion,
   type AdminAgentTeam,
   type CreateAIAgentPayload,
   type KnowledgeBase,
@@ -96,8 +94,6 @@ type EditForm = {
   description: string;
   aiConfigId: string;
   serviceMode: string;
-  runtimeMode: string;
-  workflowVersionId: string;
   systemPrompt: string;
   welcomeMessage: string;
   replyTimeoutSeconds: number;
@@ -105,9 +101,6 @@ type EditForm = {
   fallbackMode: string;
   fallbackMessage: string;
 };
-
-const AI_AGENT_RUNTIME_MODE_BUILTIN_GRAPH = 1;
-const AI_AGENT_RUNTIME_MODE_WORKFLOW = 2;
 
 function getServiceModeOptions(t: TFunction) {
   return [
@@ -139,8 +132,6 @@ function buildForm(item: AIAgent | null): EditForm {
       description: "",
       aiConfigId: "",
       serviceMode: String(IMConversationServiceMode.AIFirst),
-      runtimeMode: String(AI_AGENT_RUNTIME_MODE_BUILTIN_GRAPH),
-      workflowVersionId: "",
       systemPrompt: "",
       welcomeMessage: "",
       replyTimeoutSeconds: 180,
@@ -154,8 +145,6 @@ function buildForm(item: AIAgent | null): EditForm {
     description: item.description || "",
     aiConfigId: item.aiConfigId > 0 ? String(item.aiConfigId) : "",
     serviceMode: String(item.serviceMode),
-    runtimeMode: String(item.runtimeMode || AI_AGENT_RUNTIME_MODE_BUILTIN_GRAPH),
-    workflowVersionId: item.workflowVersionId > 0 ? String(item.workflowVersionId) : "",
     systemPrompt: item.systemPrompt || "",
     welcomeMessage: item.welcomeMessage || "",
     replyTimeoutSeconds: item.replyTimeoutSeconds ?? 180,
@@ -178,11 +167,6 @@ function buildPayload(
     description: form.description.trim(),
     aiConfigId: Number(form.aiConfigId),
     serviceMode: Number(form.serviceMode),
-    runtimeMode: Number(form.runtimeMode),
-    workflowVersionId:
-      Number(form.runtimeMode) === AI_AGENT_RUNTIME_MODE_WORKFLOW
-        ? Number(form.workflowVersionId)
-        : 0,
     systemPrompt: form.systemPrompt.trim(),
     welcomeMessage: form.welcomeMessage.trim(),
     replyTimeoutSeconds: Number(form.replyTimeoutSeconds),
@@ -236,8 +220,6 @@ function EditDialogBody({
         description: z.string().trim(),
         aiConfigId: z.string().trim().regex(/^\d+$/, t("aiAgent.aiConfigRequired")),
         serviceMode: z.string().trim().min(1, t("aiAgent.serviceModeRequired")),
-        runtimeMode: z.string().trim().min(1, t("aiAgent.runtimeModeRequired")),
-        workflowVersionId: z.string().trim(),
         systemPrompt: z.string().trim(),
         welcomeMessage: z.string().trim(),
         replyTimeoutSeconds: z
@@ -246,18 +228,6 @@ function EditDialogBody({
         handoffMode: z.string().trim().min(1, t("aiAgent.handoffModeRequired")),
         fallbackMode: z.string().trim().min(1, t("aiAgent.fallbackModeRequired")),
         fallbackMessage: z.string().trim(),
-      }).check((ctx) => {
-        if (
-          ctx.value.runtimeMode === String(AI_AGENT_RUNTIME_MODE_WORKFLOW) &&
-          !/^\d+$/.test(ctx.value.workflowVersionId)
-        ) {
-          ctx.issues.push({
-            code: "custom",
-            input: ctx.value.workflowVersionId,
-            message: t("aiAgent.workflowVersionRequired"),
-            path: ["workflowVersionId"],
-          });
-        }
       }),
     [t],
   );
@@ -266,19 +236,6 @@ function EditDialogBody({
     [schema],
   );
   const serviceModeOptions = useMemo(() => getServiceModeOptions(t), [t]);
-  const runtimeModeOptions = useMemo(
-    () => [
-      {
-        value: String(AI_AGENT_RUNTIME_MODE_BUILTIN_GRAPH),
-        label: t("aiAgent.runtimeBuiltinGraph"),
-      },
-      {
-        value: String(AI_AGENT_RUNTIME_MODE_WORKFLOW),
-        label: t("aiAgent.runtimeWorkflow"),
-      },
-    ],
-    [t],
-  );
   const handoffModeOptions = useMemo(() => getHandoffModeOptions(t), [t]);
   const fallbackModeOptions = useMemo(() => getFallbackModeOptions(t), [t]);
   const form = useForm<EditForm>({
@@ -305,7 +262,6 @@ function EditDialogBody({
   const [directToolToAdd, setDirectToolToAdd] = useState("");
   const [graphToolToAdd, setGraphToolToAdd] = useState("");
   const [aiConfigs, setAIConfigs] = useState<AIConfig[]>([]);
-  const [workflowVersions, setWorkflowVersions] = useState<AIWorkflowVersion[]>([]);
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
   const [agentTeams, setAgentTeams] = useState<AdminAgentTeam[]>([]);
   const [skills, setSkills] = useState<SkillDefinition[]>([]);
@@ -388,23 +344,6 @@ function EditDialogBody({
       }
     }
     void loadAgentTeams();
-  }, [t]);
-
-  useEffect(() => {
-    async function loadWorkflowVersions() {
-      try {
-        const data = await fetchAIWorkflowVersions({
-          page: 1,
-          limit: 1000,
-        });
-        setWorkflowVersions(data.results ?? []);
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : t("aiAgent.loadWorkflowVersionsFailed"),
-        );
-      }
-    }
-    void loadWorkflowVersions();
   }, [t]);
 
   useEffect(() => {
@@ -495,15 +434,6 @@ function EditDialogBody({
         label: item.name,
       })),
     [agentTeams],
-  );
-
-  const workflowVersionOptions = useMemo(
-    () =>
-      workflowVersions.map((item) => ({
-        value: String(item.id),
-        label: `Workflow #${item.workflowId} · v${item.version}`,
-      })),
-    [workflowVersions],
   );
 
   const knowledgeOptions = useMemo(
@@ -626,7 +556,6 @@ function EditDialogBody({
   );
 
   const handoffMode = watch("handoffMode");
-  const runtimeMode = watch("runtimeMode");
   const selectedHandoffModeLabel =
     handoffModeOptions.find((item) => item.value === handoffMode)?.label ??
     t("aiAgent.notSelected");
@@ -814,56 +743,6 @@ function EditDialogBody({
                     )}
                   />
                   <FieldError errors={[errors.serviceMode]} />
-                </FieldContent>
-              </Field>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-              <Field data-invalid={!!errors.runtimeMode}>
-                <FieldLabel>{t("aiAgent.runtimeMode")}</FieldLabel>
-                <FieldContent>
-                  <Controller
-                    control={control}
-                    name="runtimeMode"
-                    render={({ field }) => (
-                      <OptionCombobox
-                        value={field.value}
-                        options={runtimeModeOptions}
-                        placeholder={t("aiAgent.selectRuntimeMode")}
-                        searchPlaceholder={t("aiAgent.searchRuntimeMode")}
-                        emptyText={t("aiAgent.emptyRuntimeMode")}
-                        onChange={field.onChange}
-                      />
-                    )}
-                  />
-                  <FieldError errors={[errors.runtimeMode]} />
-                </FieldContent>
-              </Field>
-
-              <Field
-                data-invalid={
-                  runtimeMode === String(AI_AGENT_RUNTIME_MODE_WORKFLOW) &&
-                  !!errors.workflowVersionId
-                }
-              >
-                <FieldLabel>{t("aiAgent.workflowVersion")}</FieldLabel>
-                <FieldContent>
-                  <Controller
-                    control={control}
-                    name="workflowVersionId"
-                    render={({ field }) => (
-                      <OptionCombobox
-                        value={field.value}
-                        options={workflowVersionOptions}
-                        placeholder={t("aiAgent.selectWorkflowVersion")}
-                        searchPlaceholder={t("aiAgent.searchWorkflowVersion")}
-                        emptyText={t("aiAgent.emptyWorkflowVersion")}
-                        disabled={runtimeMode !== String(AI_AGENT_RUNTIME_MODE_WORKFLOW)}
-                        onChange={field.onChange}
-                      />
-                    )}
-                  />
-                  <FieldError errors={[errors.workflowVersionId]} />
                 </FieldContent>
               </Field>
             </div>

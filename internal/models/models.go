@@ -538,8 +538,7 @@ type AIWorkflow struct {
 	ID                 int64        `gorm:"primaryKey;autoIncrement"`
 	Name               string       `gorm:"type:varchar(100);not null;default:'';index"`
 	Description        string       `gorm:"type:text"`
-	OwnerType          string       `gorm:"type:varchar(30);not null;default:'';index"`
-	OwnerID            int64        `gorm:"type:bigint;not null;default:0;index"`
+	AgentID            int64        `gorm:"type:bigint;not null;default:0;index"`
 	Status             enums.Status `gorm:"type:int;not null;default:0;index"`
 	DraftDefinition    string       `gorm:"type:longtext"`
 	PublishedVersionID int64        `gorm:"type:bigint;not null;default:0;index"`

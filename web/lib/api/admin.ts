@@ -275,8 +275,6 @@ export type CreateAIAgentPayload = {
     arguments?: Record<string, string>
   }[]
   graphTools: string[]
-  runtimeMode: number
-  workflowVersionId: number
 }
 
 export type UpdateAIAgentPayload = CreateAIAgentPayload & {
@@ -312,8 +310,7 @@ export type AIWorkflow = {
   id: number
   name: string
   description: string
-  ownerType: string
-  ownerId: number
+  agentId: number
   status: number
   draftDefinition: AIWorkflowDefinition
   publishedVersionId: number
@@ -358,13 +355,8 @@ export type AIWorkflowValidationResult = {
 export type CreateAIWorkflowPayload = {
   name: string
   description: string
-  ownerType: string
-  ownerId: number
+  agentId: number
   definition: AIWorkflowDefinition
-}
-
-export type UpdateAIWorkflowPayload = CreateAIWorkflowPayload & {
-  id: number
 }
 
 export type CreateAdminQuickReplyPayload = {
@@ -781,36 +773,14 @@ export function updateAIAgentStatus(id: number, status: number) {
   })
 }
 
-export function fetchAIWorkflows(
-  query?: Record<string, string | number | undefined>
-) {
-  return request<PageResult<AIWorkflow>>(
-    `/api/dashboard/ai-workflow/list${toQueryString(query)}`
-  )
+export function fetchAIAgentWorkflow(agentId: number) {
+  return request<AIWorkflow>(`/api/dashboard/ai-agent/${agentId}/workflow`)
 }
 
-export function fetchAIWorkflow(id: number) {
-  return request<AIWorkflow>(`/api/dashboard/ai-workflow/${id}`)
-}
-
-export function createAIWorkflow(payload: CreateAIWorkflowPayload) {
-  return request<AIWorkflow>("/api/dashboard/ai-workflow/create", {
+export function saveAIAgentWorkflow(payload: CreateAIWorkflowPayload) {
+  return request<AIWorkflow>("/api/dashboard/ai-agent/workflow/save", {
     method: "POST",
     body: JSON.stringify(payload),
-  })
-}
-
-export function updateAIWorkflow(payload: UpdateAIWorkflowPayload) {
-  return request<void>("/api/dashboard/ai-workflow/update", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  })
-}
-
-export function deleteAIWorkflow(id: number) {
-  return request<void>("/api/dashboard/ai-workflow/delete", {
-    method: "POST",
-    body: JSON.stringify({ id }),
   })
 }
 
@@ -819,29 +789,17 @@ export function fetchAIWorkflowNodeSpecs() {
 }
 
 export function validateAIWorkflow(definition: AIWorkflowDefinition) {
-  return request<AIWorkflowValidationResult>("/api/dashboard/ai-workflow/validate", {
+  return request<AIWorkflowValidationResult>("/api/dashboard/ai-agent/workflow/validate", {
     method: "POST",
     body: JSON.stringify({ definition }),
   })
 }
 
-export function publishAIWorkflow(workflowId: number, definition: AIWorkflowDefinition) {
-  return request<AIWorkflowVersion>("/api/dashboard/ai-workflow/publish", {
+export function publishAIAgentWorkflow(agentId: number, definition: AIWorkflowDefinition) {
+  return request<AIWorkflowVersion>("/api/dashboard/ai-agent/workflow/publish", {
     method: "POST",
-    body: JSON.stringify({ workflowId, definition }),
+    body: JSON.stringify({ agentId, definition }),
   })
-}
-
-export function fetchAIWorkflowVersions(
-  query?: Record<string, string | number | undefined>
-) {
-  return request<PageResult<AIWorkflowVersion>>(
-    `/api/dashboard/ai-workflow/version/list${toQueryString(query)}`
-  )
-}
-
-export function fetchAIWorkflowVersion(id: number) {
-  return request<AIWorkflowVersion>(`/api/dashboard/ai-workflow/version/${id}`)
 }
 
 export function fetchUsers(query?: Record<string, string | number | undefined>) {

@@ -58,8 +58,6 @@ type CreateAIAgentRequest struct {
 	SkillIDs            []int64                         `json:"skillIds"`
 	DirectTools         []AIAgentMCPToolRequest         `json:"directTools"`
 	GraphTools          []string                        `json:"graphTools"`
-	RuntimeMode         enums.AIAgentRuntimeMode        `json:"runtimeMode"`
-	WorkflowVersionID   int64                           `json:"workflowVersionId"`
 }
 
 type UpdateAIAgentRequest struct {
