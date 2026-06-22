@@ -165,7 +165,11 @@ export function WorkflowEditor({
   const [flowInstance, setFlowInstance] = useState<ReactFlowInstance<WorkflowFlowNode, WorkflowFlowEdge> | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [nodeLibraryCollapsed, setNodeLibraryCollapsed] = useState(false)
+  const [nodeLibraryRendered, setNodeLibraryRendered] = useState(true)
+  const [nodeLibraryVisible, setNodeLibraryVisible] = useState(true)
   const [pendingNodeDrag, setPendingNodeDrag] = useState<PendingNodeDrag | null>(null)
+  const [propertyPanelNode, setPropertyPanelNode] = useState<WorkflowFlowNode | null>(null)
+  const [propertyPanelVisible, setPropertyPanelVisible] = useState(false)
   const canvasRef = useRef<HTMLElement | null>(null)
   const pendingNodeDragRef = useRef<PendingNodeDrag | null>(null)
   const suppressNextClickRef = useRef(false)
@@ -182,13 +186,13 @@ export function WorkflowEditor({
     () => enrichNodesForRender(nodes, nodeSpecs),
     [nodes, nodeSpecs]
   )
-  const selectedNodeSpec = useMemo(
-    () => getNodeSpec(nodeSpecs, selectedNode?.data.nodeType ?? ""),
-    [nodeSpecs, selectedNode]
+  const propertyPanelNodeSpec = useMemo(
+    () => getNodeSpec(nodeSpecs, propertyPanelNode?.data.nodeType ?? ""),
+    [nodeSpecs, propertyPanelNode]
   )
-  const availableVariables = useMemo(
-    () => (selectedNode ? getAvailableVariables(draft, selectedNode.id, nodeSpecs) : []),
-    [draft, nodeSpecs, selectedNode]
+  const propertyPanelAvailableVariables = useMemo(
+    () => (propertyPanelNode ? getAvailableVariables(draft, propertyPanelNode.id, nodeSpecs) : []),
+    [draft, nodeSpecs, propertyPanelNode]
   )
 
   useEffect(() => {
@@ -198,6 +202,30 @@ export function WorkflowEditor({
   useEffect(() => {
     onDefinitionChange(toApiDefinition(draft) as AIWorkflowDefinition)
   }, [draft, onDefinitionChange])
+
+  useEffect(() => {
+    if (!nodeLibraryCollapsed) {
+      setNodeLibraryRendered(true)
+      window.setTimeout(() => setNodeLibraryVisible(true), 0)
+      return
+    }
+
+    setNodeLibraryVisible(false)
+    const timer = window.setTimeout(() => setNodeLibraryRendered(false), 220)
+    return () => window.clearTimeout(timer)
+  }, [nodeLibraryCollapsed])
+
+  useEffect(() => {
+    if (selectedNode) {
+      setPropertyPanelNode(selectedNode)
+      window.setTimeout(() => setPropertyPanelVisible(true), 0)
+      return
+    }
+
+    setPropertyPanelVisible(false)
+    const timer = window.setTimeout(() => setPropertyPanelNode(null), 220)
+    return () => window.clearTimeout(timer)
+  }, [selectedNode])
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -338,10 +366,17 @@ export function WorkflowEditor({
 
   return (
     <ResizablePanelGroup orientation="horizontal" className="h-full min-h-0">
-      {!nodeLibraryCollapsed ? (
+      {nodeLibraryRendered ? (
         <>
           <ResizablePanel defaultSize="18%" minSize="12%" maxSize="34%" className="min-h-0">
-            <aside className="h-full min-h-0 bg-muted/20">
+            <aside
+              className={[
+                "h-full min-h-0 bg-muted/20 transition-all duration-200 ease-out",
+                nodeLibraryVisible
+                  ? "translate-x-0 opacity-100"
+                  : "-translate-x-3 opacity-0",
+              ].join(" ")}
+            >
               <ScrollArea className="h-full min-h-0">
                 <div className="p-3">
                   <div className="mb-3 flex items-center justify-between gap-2">
@@ -445,13 +480,20 @@ export function WorkflowEditor({
             <MiniMap pannable zoomable />
           </ReactFlow>
           <WorkflowValidationBadge errors={validation.errors} valid={validation.valid} />
-          {selectedNode ? (
-            <aside className="absolute top-3 right-3 z-30 h-[calc(100%-1.5rem)] w-[min(380px,calc(100%-1.5rem))] overflow-hidden rounded-md border bg-background shadow-lg">
+          {propertyPanelNode ? (
+            <aside
+              className={[
+                "absolute top-3 right-3 z-30 h-[calc(100%-1.5rem)] w-[min(380px,calc(100%-1.5rem))] overflow-hidden rounded-md border bg-background shadow-lg transition-all duration-200 ease-out",
+                propertyPanelVisible
+                  ? "translate-x-0 scale-100 opacity-100"
+                  : "translate-x-3 scale-[0.98] opacity-0",
+              ].join(" ")}
+            >
               <ScrollArea className="h-full min-h-0">
                 <NodeConfigPanel
-                  node={selectedNode}
-                  nodeSpec={selectedNodeSpec}
-                  availableVariables={availableVariables}
+                  node={propertyPanelNode}
+                  nodeSpec={propertyPanelNodeSpec}
+                  availableVariables={propertyPanelAvailableVariables}
                   onChange={updateNodeData}
                 />
                 {!validation.valid ? (
