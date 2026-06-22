@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 
+import { ContentEditor } from "@/components/content-editor"
 import { OptionCombobox } from "@/components/option-combobox"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -594,7 +595,12 @@ export function AIAgentConfigWorkbench({
                     </FieldBlock>
                   </div>
                   <FieldBlock label="系统提示词">
-                    <Textarea rows={10} value={systemPrompt} onChange={(event) => setSystemPrompt(event.target.value)} />
+                    <ContentEditor
+                      value={{ mode: "markdown", raw: systemPrompt }}
+                      allowedModes={["markdown"]}
+                      height={360}
+                      onChange={(next) => setSystemPrompt(next.raw)}
+                    />
                   </FieldBlock>
                   <FieldBlock label="欢迎语">
                     <Textarea rows={5} value={welcomeMessage} onChange={(event) => setWelcomeMessage(event.target.value)} />
