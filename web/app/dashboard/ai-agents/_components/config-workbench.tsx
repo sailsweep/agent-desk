@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
 import {
   ArrowDownIcon,
-  ArrowLeftIcon,
   ArrowUpIcon,
   BotMessageSquareIcon,
   BrainCircuitIcon,
@@ -114,11 +113,9 @@ function uniqueNumbers(input: number[]) {
 
 export function AIAgentConfigWorkbench({
   agentId,
-  onClose,
   onAgentSaved,
 }: {
   agentId: number
-  onClose: () => void
   onAgentSaved?: () => void
 }) {
   const [activeSection, setActiveSection] = useState<SectionKey>("basic")
@@ -449,18 +446,14 @@ export function AIAgentConfigWorkbench({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
-      <div className="flex shrink-0 items-center justify-between border-b px-5 py-3">
+      <div className="flex shrink-0 items-center justify-between gap-4 border-b px-5 py-3 pr-28">
         <div className="flex min-w-0 items-center gap-3">
-          <Button variant="outline" size="icon-sm" onClick={onClose}>
-            <ArrowLeftIcon />
-          </Button>
           <div className="flex size-10 items-center justify-center rounded-md bg-muted text-muted-foreground">
             <BotMessageSquareIcon className="size-5" />
           </div>
           <div className="min-w-0">
             <h1 className="truncate text-base font-semibold">{agent?.name ?? "AI Agent 配置"}</h1>
             <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Agent #{agentId || "-"}</span>
               {agent?.statusName ? <Badge variant="secondary">{agent.statusName}</Badge> : null}
               {agent?.workflowVersionId ? <Badge>已发布流程</Badge> : <Badge variant="outline">草稿流程</Badge>}
             </div>
@@ -469,7 +462,7 @@ export function AIAgentConfigWorkbench({
         <div className="flex items-center gap-2">
           <Button variant="outline" disabled={savingAgent || loading} onClick={saveAgentSettings}>
             <SaveIcon className="size-4" />
-            保存 Agent
+            保存
           </Button>
           <Button disabled={savingWorkflow || loading} onClick={publishWorkflow}>
             <SendIcon className="size-4" />

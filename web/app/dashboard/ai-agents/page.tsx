@@ -320,7 +320,6 @@ export default function DashboardAIAgentsPage() {
         {configAgentId ? (
           <AIAgentConfigWorkbench
             agentId={configAgentId}
-            onClose={() => setConfigAgentId(null)}
             onAgentSaved={() => crudActions?.onRefresh()}
           />
         ) : null}
