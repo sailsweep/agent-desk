@@ -471,8 +471,8 @@ export function AIAgentConfigWorkbench({
         </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[240px_minmax(0,1fr)]">
-        <aside className="min-h-0 overflow-y-auto border-r bg-muted/30 p-3">
+      <div className="grid min-h-0 flex-1 grid-cols-[240px_minmax(0,1fr)] bg-muted/30">
+        <aside className="min-h-0 overflow-y-auto border-r bg-muted/50 p-3">
           <div className="space-y-1.5">
             {sections.map((section) => (
               <button
@@ -503,13 +503,13 @@ export function AIAgentConfigWorkbench({
           </div>
         </aside>
 
-        <main className="min-h-0 overflow-y-auto">
+        <main className="min-h-0 overflow-y-auto bg-background">
           {loading ? (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
               加载中...
             </div>
           ) : (
-            <div className={activeSection === "workflow" ? "h-full min-h-0" : "mx-auto max-w-5xl p-6"}>
+            <div className={activeSection === "workflow" ? "h-full min-h-0" : "w-full p-6"}>
               {activeSection === "basic" ? (
                 <ConfigSection title="基础信息" description="定义这个 Agent 在渠道和后台中的基础身份。">
                   <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

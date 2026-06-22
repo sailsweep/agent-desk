@@ -311,10 +311,8 @@ export default function DashboardAIAgentsPage() {
         }}
         title={t("aiAgent.configure")}
         size="xxl"
-        allowFullscreen
-        defaultFullscreen
         bodyScrollable={false}
-        contentClassName="h-[calc(100vh-40px)] max-h-[calc(100vh-40px)]"
+        contentClassName="top-5 left-5 h-[calc(100vh-40px)] max-h-[calc(100vh-40px)] w-[calc(100vw-40px)] max-w-[calc(100vw-40px)] translate-x-0 translate-y-0 sm:max-w-[calc(100vw-40px)]"
         headerClassName="sr-only"
       >
         {configAgentId ? (
