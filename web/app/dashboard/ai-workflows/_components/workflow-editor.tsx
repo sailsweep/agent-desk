@@ -21,7 +21,7 @@ import {
   type ReactFlowInstance,
 } from "@xyflow/react"
 import { AlertCircleIcon, CheckCircle2Icon, PlusIcon } from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -50,8 +50,6 @@ import {
 } from "./workflow-utils"
 import { NodeConfigPanel } from "./node-config-panel"
 
-const workflowDragType = "application/agent-desk-workflow-node"
-
 type WorkflowNodeData = Record<string, unknown> & {
   nodeType?: string
   name?: string
@@ -67,6 +65,15 @@ type WorkflowNodeData = Record<string, unknown> & {
 
 type WorkflowFlowNode = Node<WorkflowNodeData>
 type WorkflowFlowEdge = Edge
+
+type PendingNodeDrag = {
+  spec: AIWorkflowNodeSpec
+  startX: number
+  startY: number
+  x: number
+  y: number
+  active: boolean
+}
 
 const nodeTypes = {
   workflowNode: WorkflowCanvasNode,
@@ -151,6 +158,10 @@ export function WorkflowEditor({
   )
   const [flowInstance, setFlowInstance] = useState<ReactFlowInstance<WorkflowFlowNode, WorkflowFlowEdge> | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  const [pendingNodeDrag, setPendingNodeDrag] = useState<PendingNodeDrag | null>(null)
+  const canvasRef = useRef<HTMLElement | null>(null)
+  const pendingNodeDragRef = useRef<PendingNodeDrag | null>(null)
+  const suppressNextClickRef = useRef(false)
   const selectedNode = useMemo(
     () => nodes.find((node) => node.id === selectedNodeId) ?? null,
     [nodes, selectedNodeId]
@@ -232,37 +243,70 @@ export function WorkflowEditor({
     })
   }
 
-  const onNodeDragStart = (event: React.DragEvent<HTMLButtonElement>, spec: AIWorkflowNodeSpec) => {
-    event.dataTransfer.setData(workflowDragType, spec.type)
-    event.dataTransfer.effectAllowed = "copy"
-  }
+  const dropNodeOnCanvas = useCallback(
+    (spec: AIWorkflowNodeSpec, x: number, y: number) => {
+      if (!flowInstance || !canvasRef.current) {
+        return false
+      }
+      const rect = canvasRef.current.getBoundingClientRect()
+      if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+        return false
+      }
+      const position = flowInstance.screenToFlowPosition({ x, y })
+      setNodes((current) => [
+        ...current,
+        createWorkflowNodeFromSpec(spec, current, position) as WorkflowFlowNode,
+      ])
+      return true
+    },
+    [flowInstance, setNodes]
+  )
 
-  const onCanvasDragOver = (event: React.DragEvent) => {
-    if (!event.dataTransfer.types.includes(workflowDragType)) {
+  const onNodePointerDown = (event: React.PointerEvent<HTMLButtonElement>, spec: AIWorkflowNodeSpec) => {
+    if (event.button !== 0) {
       return
     }
-    event.preventDefault()
-    event.dataTransfer.dropEffect = "copy"
-  }
-
-  const onCanvasDrop = (event: React.DragEvent) => {
-    event.preventDefault()
-    const nodeType = event.dataTransfer.getData(workflowDragType)
-    if (!nodeType || !flowInstance) {
-      return
-    }
-    const spec = nodeSpecs.find((item) => item.type === nodeType)
-    if (!spec) {
-      return
-    }
-    const position = flowInstance.screenToFlowPosition({
+    const initialDrag = {
+      spec,
+      startX: event.clientX,
+      startY: event.clientY,
       x: event.clientX,
       y: event.clientY,
-    })
-    setNodes((current) => [
-      ...current,
-      createWorkflowNodeFromSpec(spec, current, position) as WorkflowFlowNode,
-    ])
+      active: false,
+    }
+    pendingNodeDragRef.current = initialDrag
+    setPendingNodeDrag(initialDrag)
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const current = pendingNodeDragRef.current
+      if (!current) {
+        return
+      }
+      const moved = Math.hypot(event.clientX - current.startX, event.clientY - current.startY)
+      const nextDrag = {
+        ...current,
+        x: event.clientX,
+        y: event.clientY,
+        active: current.active || moved > 6,
+      }
+      pendingNodeDragRef.current = nextDrag
+      setPendingNodeDrag(nextDrag)
+    }
+
+    const handlePointerUp = (event: PointerEvent) => {
+      window.removeEventListener("pointermove", handlePointerMove)
+      window.removeEventListener("pointerup", handlePointerUp)
+      const current = pendingNodeDragRef.current
+      pendingNodeDragRef.current = null
+      setPendingNodeDrag(null)
+      if (current?.active) {
+        suppressNextClickRef.current = true
+        dropNodeOnCanvas(current.spec, event.clientX, event.clientY)
+      }
+    }
+
+    window.addEventListener("pointermove", handlePointerMove)
+    window.addEventListener("pointerup", handlePointerUp)
   }
 
   const updateNodeData = (nodeId: string, data: WorkflowNodeData) => {
@@ -291,9 +335,14 @@ export function WorkflowEditor({
               <button
                 key={spec.type}
                 type="button"
-                draggable
-                onDragStart={(event) => onNodeDragStart(event, spec)}
-                onClick={() => addNode(spec)}
+                onPointerDown={(event) => onNodePointerDown(event, spec)}
+                onClick={() => {
+                  if (suppressNextClickRef.current) {
+                    suppressNextClickRef.current = false
+                    return
+                  }
+                  addNode(spec)
+                }}
                 className="flex w-full cursor-grab items-start gap-2 rounded-md border bg-background px-3 py-2 text-left text-sm hover:bg-muted active:cursor-grabbing"
               >
                 <PlusIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
@@ -316,9 +365,11 @@ export function WorkflowEditor({
       <ResizablePanel defaultSize="56%" minSize="30%" className="min-h-0">
         <section
           data-workflow-canvas
-          className="relative h-full min-h-0"
-          onDragOver={onCanvasDragOver}
-          onDrop={onCanvasDrop}
+          ref={canvasRef}
+          className={[
+            "relative h-full min-h-0",
+            pendingNodeDrag?.active ? "ring-2 ring-primary/30" : "",
+          ].join(" ")}
         >
           <ReactFlow
             nodes={renderedNodes}
@@ -346,6 +397,17 @@ export function WorkflowEditor({
           <div className="pointer-events-none absolute bottom-3 left-3 rounded-md border bg-background/95 px-3 py-2 text-xs text-muted-foreground shadow-sm">
             从节点右侧圆点拖到下一个节点，或依次点击两个连接点完成连线。
           </div>
+          {pendingNodeDrag?.active ? (
+            <div
+              className="pointer-events-none fixed z-50 rounded-md border bg-background px-3 py-2 text-sm font-medium shadow-lg"
+              style={{
+                left: pendingNodeDrag.x + 12,
+                top: pendingNodeDrag.y + 12,
+              }}
+            >
+              {pendingNodeDrag.spec.title}
+            </div>
+          ) : null}
         </section>
       </ResizablePanel>
       <ResizableHandle withHandle />
