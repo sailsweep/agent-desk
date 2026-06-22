@@ -482,7 +482,7 @@ export function AIAgentConfigWorkbench({
                 className={`group relative flex h-10 w-full items-center gap-3 rounded-md border px-3 text-left text-sm transition-colors ${
                   activeSection === section.key
                     ? "border-primary/25 bg-primary/10 font-medium text-foreground shadow-xs"
-                    : "border-transparent text-muted-foreground hover:border-border hover:bg-background hover:text-foreground"
+                    : "border-border/60 bg-background/55 text-muted-foreground shadow-xs hover:border-primary/20 hover:bg-background hover:text-foreground hover:shadow-sm"
                 }`}
               >
                 {activeSection === section.key ? (
@@ -492,7 +492,7 @@ export function AIAgentConfigWorkbench({
                   className={`flex size-6 shrink-0 items-center justify-center rounded-sm ${
                     activeSection === section.key
                       ? "bg-primary/15 text-primary"
-                      : "text-muted-foreground group-hover:bg-muted group-hover:text-foreground"
+                      : "bg-muted/80 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
                   }`}
                 >
                   {section.icon}
