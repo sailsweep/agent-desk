@@ -224,8 +224,9 @@ export function WorkflowEditor({
           </div>
         </section>
       </ResizablePanel>
+      <ResizableHandle withHandle />
       <ResizablePanel defaultSize="26%" minSize="18%" maxSize="40%" className="min-h-0">
-        <aside className="h-full min-h-0 overflow-y-auto border-l bg-muted/10">
+        <aside className="h-full min-h-0 overflow-y-auto bg-muted/10">
           <NodeConfigPanel node={selectedNode} onChange={updateNodeData} />
           {!validation.valid ? (
             <div className="border-t p-4">
