@@ -837,10 +837,6 @@ export function AIAgentConfigWorkbench({
                       <Badge variant="secondary">{agent?.statusName || "-"}</Badge>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">运行模式</span>
-                      <Badge variant="outline">{agent?.runtimeModeName || "-"}</Badge>
-                    </div>
-                    <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">生效流程版本</span>
                       <Badge variant={agent?.workflowVersionId ? "default" : "outline"}>
                         {agent?.workflowVersionId ? `#${agent.workflowVersionId}` : "未发布"}

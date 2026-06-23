@@ -189,8 +189,6 @@ func buildAIAgentResponseWithLocale(item *models.AIAgent, locale string) respons
 		Teams:               make([]response.AIAgentTeamResponse, 0),
 		DirectTools:         make([]response.AIAgentMCPToolResponse, 0),
 		GraphTools:          make([]string, 0),
-		RuntimeMode:         item.RuntimeMode,
-		RuntimeModeName:     enums.GetAIAgentRuntimeModeLabel(item.RuntimeMode),
 		WorkflowVersionID:   item.WorkflowVersionID,
 		SortNo:              item.SortNo,
 		CreatedAt:           item.CreatedAt.Format("2006-01-02 15:04:05"),

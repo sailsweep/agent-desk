@@ -229,7 +229,6 @@ func (s *aIAgentService) buildAIAgentModel(id int64, req request.CreateAIAgentRe
 		SkillIDs:            utils.JoinInt64s(skillIDs),
 		AllowedMCPTools:     directToolsJSON,
 		AllowedGraphTools:   graphToolsJSON,
-		RuntimeMode:         enums.AIAgentRuntimeModeBuiltinGraph,
 		WorkflowVersionID:   0,
 	}, nil
 }
@@ -355,26 +354,6 @@ func (s *aIAgentService) normalizeGraphTools(input []string) ([]string, error) {
 		ret = append(ret, toolCode)
 	}
 	return ret, nil
-}
-
-func (s *aIAgentService) normalizeRuntimeMode(input enums.AIAgentRuntimeMode, workflowVersionID int64) (enums.AIAgentRuntimeMode, int64, error) {
-	if input == 0 {
-		input = enums.AIAgentRuntimeModeBuiltinGraph
-	}
-	if !slices.Contains(enums.AIAgentRuntimeModeValues, input) {
-		return 0, 0, errorsx.InvalidParam("invalid ai agent runtime mode")
-	}
-	if input != enums.AIAgentRuntimeModeWorkflow {
-		return input, 0, nil
-	}
-	if workflowVersionID <= 0 {
-		return 0, 0, errorsx.InvalidParam("workflow version is required")
-	}
-	version := AIWorkflowService.GetVersion(workflowVersionID)
-	if version == nil || version.Status != enums.StatusOk {
-		return 0, 0, errorsx.InvalidParam("workflow version does not exist")
-	}
-	return input, workflowVersionID, nil
 }
 
 func (s *aIAgentService) UpdateSort(ids []int64) error {

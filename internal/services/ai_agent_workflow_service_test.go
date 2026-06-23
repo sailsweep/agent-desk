@@ -99,9 +99,6 @@ func TestAIWorkflowServicePublishAgentWorkflowBindsAgentVersion(t *testing.T) {
 	if storedAgent == nil {
 		t.Fatalf("expected stored agent")
 	}
-	if storedAgent.RuntimeMode != enums.AIAgentRuntimeModeWorkflow {
-		t.Fatalf("expected agent runtime workflow, got %d", storedAgent.RuntimeMode)
-	}
 	if storedAgent.WorkflowVersionID != version.ID {
 		t.Fatalf("expected agent workflow version %d, got %d", version.ID, storedAgent.WorkflowVersionID)
 	}

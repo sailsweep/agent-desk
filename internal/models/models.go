@@ -527,7 +527,6 @@ type AIAgent struct {
 	SkillIDs            string                          `gorm:"type:varchar(500);not null;default:''"`       // SkillIDs 为绑定的技能ID列表，按顺序表示允许路由的范围。
 	AllowedMCPTools     string                          `gorm:"type:text"`                                   // AllowedMCPTools 为允许 direct tool 路由的 MCP 工具白名单配置JSON。
 	AllowedGraphTools   string                          `gorm:"type:text"`                                   // AllowedGraphTools 为允许 Graph Tool 的白名单配置JSON。
-	RuntimeMode         enums.AIAgentRuntimeMode        `gorm:"type:int;not null;default:1;index"`           // RuntimeMode 为 Agent 执行模式，如内置 Graph 或发布的会话流程。
 	WorkflowVersionID   int64                           `gorm:"type:bigint;not null;default:0;index"`        // WorkflowVersionID 为绑定的已发布会话流程版本ID。
 	SortNo              int                             `gorm:"type:int;not null;default:0;index"`           // SortNo 为后台展示排序号。
 	AuditFields

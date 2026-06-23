@@ -31,24 +31,3 @@ var aiModelTypeLabelMap = map[AIModelType]string{
 func GetAIModelTypeLabel(modelType AIModelType) string {
 	return aiModelTypeLabelMap[modelType]
 }
-
-type AIAgentRuntimeMode int
-
-const (
-	AIAgentRuntimeModeBuiltinGraph AIAgentRuntimeMode = 1
-	AIAgentRuntimeModeWorkflow     AIAgentRuntimeMode = 2
-)
-
-var AIAgentRuntimeModeValues = []AIAgentRuntimeMode{
-	AIAgentRuntimeModeBuiltinGraph,
-	AIAgentRuntimeModeWorkflow,
-}
-
-var aiAgentRuntimeModeLabelMap = map[AIAgentRuntimeMode]string{
-	AIAgentRuntimeModeBuiltinGraph: "内置 Graph",
-	AIAgentRuntimeModeWorkflow:     "会话流程",
-}
-
-func GetAIAgentRuntimeModeLabel(mode AIAgentRuntimeMode) string {
-	return aiAgentRuntimeModeLabelMap[mode]
-}

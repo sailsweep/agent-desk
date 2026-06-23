@@ -85,7 +85,6 @@ func TestToolCatalogIncludesPublishedWorkflowGraphTools(t *testing.T) {
 
 	catalog := newToolCatalog()
 	ret := catalog.parseAgentAllowedToolCodes(models.AIAgent{
-		RuntimeMode:       enums.AIAgentRuntimeModeWorkflow,
 		WorkflowVersionID: version.ID,
 	})
 
@@ -94,7 +93,7 @@ func TestToolCatalogIncludesPublishedWorkflowGraphTools(t *testing.T) {
 	assertContainsToolCode(t, ret, toolx.GraphHandoffConversation.Code)
 }
 
-func TestApplyWorkflowInstructionAppendsPublishedWorkflow(t *testing.T) {
+func TestPrepareWorkflowAgentAppendsPublishedWorkflow(t *testing.T) {
 	setupWorkflowRuntimeTestDB(t)
 	version := createWorkflowRuntimeTestVersion(t, dsl.Definition{
 		SchemaVersion: 1,
@@ -105,16 +104,51 @@ func TestApplyWorkflowInstructionAppendsPublishedWorkflow(t *testing.T) {
 		},
 	})
 
-	agent := applyWorkflowInstruction(models.AIAgent{
+	agent, err := prepareWorkflowAgent(models.AIAgent{
 		SystemPrompt:      "Base prompt.",
-		RuntimeMode:       enums.AIAgentRuntimeModeWorkflow,
 		WorkflowVersionID: version.ID,
 	})
+	if err != nil {
+		t.Fatalf("prepare workflow agent: %v", err)
+	}
 	if agent.SystemPrompt == "Base prompt." {
 		t.Fatalf("expected workflow appendix to be appended")
 	}
 	if !strings.Contains(agent.SystemPrompt, "Published customer-service workflow") {
 		t.Fatalf("missing workflow appendix: %s", agent.SystemPrompt)
+	}
+}
+
+func TestPrepareWorkflowAgentRejectsMissingPublishedWorkflow(t *testing.T) {
+	_, err := prepareWorkflowAgent(models.AIAgent{})
+	if err == nil {
+		t.Fatalf("expected missing workflow version error")
+	}
+	if !strings.Contains(err.Error(), "workflow version is required") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestPrepareWorkflowAgentRejectsDeletedPublishedWorkflow(t *testing.T) {
+	setupWorkflowRuntimeTestDB(t)
+	version := createWorkflowRuntimeTestVersion(t, dsl.Definition{
+		SchemaVersion: 1,
+		EntryNodeID:   "start",
+		Nodes: []dsl.Node{
+			{ID: "start", Type: workflowregistry.NodeTypeStart, Name: "Start"},
+			{ID: "end", Type: workflowregistry.NodeTypeEnd, Name: "End"},
+		},
+	})
+	if err := sqls.DB().Model(&models.AIWorkflowVersion{}).Where("id = ?", version.ID).Update("status", enums.StatusDeleted).Error; err != nil {
+		t.Fatalf("delete workflow version: %v", err)
+	}
+
+	_, err := prepareWorkflowAgent(models.AIAgent{WorkflowVersionID: version.ID})
+	if err == nil {
+		t.Fatalf("expected invalid workflow version error")
+	}
+	if !strings.Contains(err.Error(), "workflow version does not exist") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 

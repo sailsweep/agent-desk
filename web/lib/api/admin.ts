@@ -242,8 +242,6 @@ export type AIAgent = {
     arguments?: Record<string, string>
   }[]
   graphTools: string[]
-  runtimeMode: number
-  runtimeModeName: string
   workflowVersionId: number
   sortNo: number
   createdAt: string

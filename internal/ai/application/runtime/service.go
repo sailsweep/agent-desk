@@ -24,7 +24,11 @@ func NewService() *Service {
 
 func (s *Service) Run(ctx context.Context, req Request) (*Summary, error) {
 	req.UserMessage.Content = utils.BuildRuntimeMessageText(req.UserMessage.MessageType, req.UserMessage.Content)
-	req.AIAgent = applyWorkflowInstruction(req.AIAgent)
+	aiAgent, err := prepareWorkflowAgent(req.AIAgent)
+	if err != nil {
+		return nil, err
+	}
+	req.AIAgent = aiAgent
 	toolSet, err := s.prepare.prepareToolsForRun(req)
 	if err != nil {
 		return nil, err
@@ -45,7 +49,11 @@ func (s *Service) Run(ctx context.Context, req Request) (*Summary, error) {
 }
 
 func (s *Service) Resume(ctx context.Context, req ResumeRequest) (*Summary, error) {
-	req.AIAgent = applyWorkflowInstruction(req.AIAgent)
+	aiAgent, err := prepareWorkflowAgent(req.AIAgent)
+	if err != nil {
+		return nil, err
+	}
+	req.AIAgent = aiAgent
 	toolSet, err := s.prepare.prepareToolsForResume(req)
 	if err != nil {
 		return nil, err

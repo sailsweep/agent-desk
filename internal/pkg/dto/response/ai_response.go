@@ -91,8 +91,6 @@ type AIAgentResponse struct {
 	Skills              []AIAgentSkillResponse          `json:"skills"`
 	DirectTools         []AIAgentMCPToolResponse        `json:"directTools"`
 	GraphTools          []string                        `json:"graphTools"`
-	RuntimeMode         enums.AIAgentRuntimeMode        `json:"runtimeMode"`
-	RuntimeModeName     string                          `json:"runtimeModeName"`
 	WorkflowVersionID   int64                           `json:"workflowVersionId"`
 	SortNo              int                             `json:"sortNo"`
 	CreatedAt           string                          `json:"createdAt"`

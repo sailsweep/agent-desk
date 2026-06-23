@@ -301,7 +301,6 @@ func (s *aiWorkflowService) PublishAgentWorkflow(req request.PublishAIWorkflowRe
 			return err
 		}
 		return repositories.AIAgentRepository.Updates(ctx.Tx, req.AgentID, map[string]any{
-			"runtime_mode":        enums.AIAgentRuntimeModeWorkflow,
 			"workflow_version_id": version.ID,
 			"update_user_id":      operator.UserID,
 			"update_user_name":    operator.Username,
