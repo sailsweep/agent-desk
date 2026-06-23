@@ -207,11 +207,6 @@ export function AIAgentConfigWorkbench({
   const [directToolGroupToAdd, setDirectToolGroupToAdd] = useState("")
   const [directToolToAdd, setDirectToolToAdd] = useState("")
 
-  const editorKey = useMemo(
-    () => `${workflow?.id ?? "new"}-${workflow?.updatedAt ?? ""}`,
-    [workflow?.id, workflow?.updatedAt]
-  )
-
   useEffect(() => {
     setCurrentAgentId(agentId ?? null)
   }, [agentId])
@@ -500,15 +495,32 @@ export function AIAgentConfigWorkbench({
     if (!currentAgentId) return
     setSavingWorkflow(true)
     try {
-      await saveAIAgentWorkflow({
+      const saved = await saveAIAgentWorkflow({
         agentId: currentAgentId,
         name: "",
         description: "",
         definition,
       })
+      setWorkflow(saved)
       const version = await publishAIAgentWorkflow(currentAgentId, definition)
       toast.success(`Published version ${version.version}`)
-      await loadData()
+      setAgent((current) =>
+        current ? { ...current, workflowVersionId: version.id } : current
+      )
+      setWorkflow((current) =>
+        current ? { ...current, publishedVersionId: version.id } : saved
+      )
+      if (saved.id > 0) {
+        const versionPage = await fetchAIWorkflowVersions({
+          workflowId: saved.id,
+          limit: 20,
+        })
+        setWorkflowVersions(versionPage.results ?? [])
+      } else {
+        setWorkflowVersions((current) =>
+          current.some((item) => item.id === version.id) ? current : [version, ...current]
+        )
+      }
       onAgentSaved?.()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to publish workflow")
@@ -553,26 +565,49 @@ export function AIAgentConfigWorkbench({
                   {validation.valid ? "校验通过" : `${validation.errors.length} 个问题`}
                 </Badge>
               ) : null}
-              <Button variant="outline" disabled={savingWorkflow || loading || !currentAgentId} onClick={validateWorkflowDraft}>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={savingWorkflow || loading || !currentAgentId}
+                onClick={validateWorkflowDraft}
+              >
                 <CheckCircle2Icon className="size-4" />
                 校验
               </Button>
-              <Button variant="outline" disabled={savingWorkflow || loading || !currentAgentId} onClick={saveWorkflowDraft}>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={savingWorkflow || loading || !currentAgentId}
+                onClick={saveWorkflowDraft}
+              >
                 <SaveIcon className="size-4" />
                 保存草稿
               </Button>
-              <Button disabled={savingWorkflow || loading || !currentAgentId} onClick={publishWorkflow}>
+              <Button
+                type="button"
+                disabled={savingWorkflow || loading || !currentAgentId}
+                onClick={publishWorkflow}
+              >
                 <SendIcon className="size-4" />
                 发布流程
               </Button>
             </>
           ) : (
             <>
-              <Button variant="outline" disabled={savingAgent || loading} onClick={saveAgentSettings}>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={savingAgent || loading}
+                onClick={saveAgentSettings}
+              >
                 <SaveIcon className="size-4" />
                 保存
               </Button>
-              <Button disabled={savingWorkflow || loading || !currentAgentId} onClick={publishWorkflow}>
+              <Button
+                type="button"
+                disabled={savingWorkflow || loading || !currentAgentId}
+                onClick={publishWorkflow}
+              >
                 <SendIcon className="size-4" />
                 发布流程
               </Button>
@@ -695,10 +730,17 @@ export function AIAgentConfigWorkbench({
                         <div key={option.value} className="flex items-center gap-2">
                           <Badge variant="secondary" className="min-w-8 justify-center">{index + 1}</Badge>
                           <div className="flex-1 text-sm">{option.label}</div>
-                          <Button variant="outline" size="icon-sm" disabled={index === 0} onClick={() => moveKnowledge(index, -1)}>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon-sm"
+                            disabled={index === 0}
+                            onClick={() => moveKnowledge(index, -1)}
+                          >
                             <ArrowUpIcon />
                           </Button>
                           <Button
+                            type="button"
                             variant="outline"
                             size="icon-sm"
                             disabled={index === selectedKnowledgeOptions.length - 1}
@@ -707,6 +749,7 @@ export function AIAgentConfigWorkbench({
                             <ArrowDownIcon />
                           </Button>
                           <Button
+                            type="button"
                             variant="outline"
                             size="icon-sm"
                             onClick={() => setSelectedKnowledgeIds((current) => current.filter((id) => id !== Number(option.value)))}
@@ -761,7 +804,12 @@ export function AIAgentConfigWorkbench({
                         addDirectTool(value)
                       }}
                     />
-                    <Button variant="outline" disabled={!directToolToAdd} onClick={() => addDirectTool(directToolToAdd)}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={!directToolToAdd}
+                      onClick={() => addDirectTool(directToolToAdd)}
+                    >
                       添加
                     </Button>
                   </div>
@@ -791,7 +839,6 @@ export function AIAgentConfigWorkbench({
 
               {activeSection === "workflow" ? (
                 <WorkflowEditor
-                  key={editorKey}
                   definition={definition}
                   nodeSpecs={nodeSpecs}
                   onDefinitionChange={setDefinition}
@@ -849,9 +896,9 @@ export function AIAgentConfigWorkbench({
                   <div className="space-y-3">
                     <div>
                       <h3 className="text-sm font-medium">版本记录</h3>
-                      <p className="mt-1 text-xs text-muted-foreground">
+                      {/* <p className="mt-1 text-xs text-muted-foreground">
                         仅展示已发布的不可变流程版本，当前页面暂不支持切换或回滚版本。
-                      </p>
+                      </p> */}
                     </div>
                     <div className="overflow-hidden rounded-md border">
                       {workflowVersions.length > 0 ? (
