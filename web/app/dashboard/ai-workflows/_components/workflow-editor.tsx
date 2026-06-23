@@ -629,10 +629,10 @@ export function WorkflowEditor({
             maxZoom={1.35}
           >
             <Background
-              gap={18}
-              size={1}
-              color="hsl(var(--muted-foreground) / 0.09)"
-              className="bg-[radial-gradient(circle_at_20%_10%,hsl(var(--primary)/0.045),transparent_30%),linear-gradient(180deg,hsl(var(--background)),hsl(var(--muted)/0.16))]"
+              gap={24}
+              size={0.8}
+              color="hsl(var(--muted-foreground) / 0.035)"
+              className="bg-[radial-gradient(circle_at_20%_10%,hsl(var(--primary)/0.02),transparent_30%),linear-gradient(180deg,hsl(var(--background)),hsl(var(--muted)/0.08))]"
             />
             <Controls
               className="!bottom-4 !left-4 overflow-hidden !rounded-xl !border !border-border/70 !bg-background/95 !shadow-lg"
