@@ -183,7 +183,6 @@ export function WorkflowEditor({
     toFlowEdges(definition)
   )
   const [flowInstance, setFlowInstance] = useState<ReactFlowInstance<WorkflowFlowNode, WorkflowFlowEdge> | null>(null)
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [nodeLibraryCollapsed, setNodeLibraryCollapsed] = useState(false)
   const [nodeLibraryRendered, setNodeLibraryRendered] = useState(true)
   const [nodeLibraryVisible, setNodeLibraryVisible] = useState(true)
@@ -198,14 +197,8 @@ export function WorkflowEditor({
   const canvasRef = useRef<HTMLElement | null>(null)
   const pendingNodeDragRef = useRef<PendingNodeDrag | null>(null)
   const suppressNextClickRef = useRef(false)
-  const selectedNode = useMemo(
-    () => nodes.find((node) => node.id === selectedNodeId) ?? null,
-    [nodes, selectedNodeId]
-  )
-  const selectedEdge = useMemo(
-    () => edges.find((edge) => edge.id === selectedEdgeId) ?? null,
-    [edges, selectedEdgeId]
-  )
+  const nodeLibraryAnimationTimerRef = useRef<number | null>(null)
+  const propertyPanelAnimationTimerRef = useRef<number | null>(null)
   const draft = useMemo(() => toDraft(nodes, edges), [nodes, edges])
   const validation = useMemo(
     () => validateWorkflowDraft(draft, nodeSpecs),
@@ -237,40 +230,75 @@ export function WorkflowEditor({
   }, [draft, onDefinitionChange])
 
   useEffect(() => {
-    if (!nodeLibraryCollapsed) {
-      setNodeLibraryRendered(true)
-      const timer = window.setTimeout(() => {
-        setNodeLibraryVisible(true)
-      }, 0)
-      return () => window.clearTimeout(timer)
+    return () => {
+      if (nodeLibraryAnimationTimerRef.current !== null) {
+        window.clearTimeout(nodeLibraryAnimationTimerRef.current)
+      }
+      if (propertyPanelAnimationTimerRef.current !== null) {
+        window.clearTimeout(propertyPanelAnimationTimerRef.current)
+      }
     }
+  }, [])
 
+  const showNodeLibrary = useCallback(() => {
+    if (nodeLibraryAnimationTimerRef.current !== null) {
+      window.clearTimeout(nodeLibraryAnimationTimerRef.current)
+    }
+    setNodeLibraryCollapsed(false)
+    setNodeLibraryRendered(true)
+    nodeLibraryAnimationTimerRef.current = window.setTimeout(() => {
+      setNodeLibraryVisible(true)
+      nodeLibraryAnimationTimerRef.current = null
+    }, 0)
+  }, [])
+
+  const hideNodeLibrary = useCallback(() => {
+    if (nodeLibraryAnimationTimerRef.current !== null) {
+      window.clearTimeout(nodeLibraryAnimationTimerRef.current)
+    }
+    setNodeLibraryCollapsed(true)
     setNodeLibraryVisible(false)
-    const unmountTimer = window.setTimeout(() => setNodeLibraryRendered(false), 220)
-    return () => window.clearTimeout(unmountTimer)
-  }, [nodeLibraryCollapsed])
-
-  useEffect(() => {
-    if (selectedNode) {
-      setPropertyPanelNode(selectedNode)
-      setPropertyPanelEdge(null)
-      window.setTimeout(() => setPropertyPanelVisible(true), 0)
-      return
-    }
-    if (selectedEdge) {
-      setPropertyPanelEdge(selectedEdge)
-      setPropertyPanelNode(null)
-      window.setTimeout(() => setPropertyPanelVisible(true), 0)
-      return
-    }
-
-    setPropertyPanelVisible(false)
-    const timer = window.setTimeout(() => {
-      setPropertyPanelNode(null)
-      setPropertyPanelEdge(null)
+    nodeLibraryAnimationTimerRef.current = window.setTimeout(() => {
+      setNodeLibraryRendered(false)
+      nodeLibraryAnimationTimerRef.current = null
     }, 220)
-    return () => window.clearTimeout(timer)
-  }, [selectedNode, selectedEdge])
+  }, [])
+
+  const showPropertyPanelNode = useCallback((node: WorkflowFlowNode) => {
+    if (propertyPanelAnimationTimerRef.current !== null) {
+      window.clearTimeout(propertyPanelAnimationTimerRef.current)
+    }
+    setPropertyPanelNode(node)
+    setPropertyPanelEdge(null)
+    propertyPanelAnimationTimerRef.current = window.setTimeout(() => {
+      setPropertyPanelVisible(true)
+      propertyPanelAnimationTimerRef.current = null
+    }, 0)
+  }, [])
+
+  const showPropertyPanelEdge = useCallback((edge: WorkflowFlowEdge) => {
+    if (propertyPanelAnimationTimerRef.current !== null) {
+      window.clearTimeout(propertyPanelAnimationTimerRef.current)
+    }
+    setPropertyPanelEdge(edge)
+    setPropertyPanelNode(null)
+    propertyPanelAnimationTimerRef.current = window.setTimeout(() => {
+      setPropertyPanelVisible(true)
+      propertyPanelAnimationTimerRef.current = null
+    }, 0)
+  }, [])
+
+  const hidePropertyPanel = useCallback(() => {
+    if (propertyPanelAnimationTimerRef.current !== null) {
+      window.clearTimeout(propertyPanelAnimationTimerRef.current)
+    }
+    setPropertyPanelVisible(false)
+    propertyPanelAnimationTimerRef.current = window.setTimeout(() => {
+      setPropertyPanelNode(null)
+      setPropertyPanelEdge(null)
+      propertyPanelAnimationTimerRef.current = null
+    }, 220)
+  }, [])
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -437,25 +465,38 @@ export function WorkflowEditor({
   }
 
   const updateNodeData = (nodeId: string, data: WorkflowNodeData) => {
+    const nextData = {
+      ...data,
+      label: data.name ?? data.nodeType ?? nodeId,
+    }
     setNodes((current) =>
       current.map((node) =>
         node.id === nodeId
           ? {
               ...node,
-              data: {
-                ...data,
-                label: data.name ?? data.nodeType ?? node.id,
-              },
+              data: nextData,
             }
           : node
       )
     )
+    setPropertyPanelNode((current) =>
+      current?.id === nodeId
+        ? {
+            ...current,
+            data: nextData,
+          }
+        : current
+    )
   }
 
   const selectEdge = useCallback((edgeId: string) => {
-    setSelectedNodeId(null)
+    const edge = edges.find((item) => item.id === edgeId)
+    if (!edge) {
+      return
+    }
     setSelectedEdgeId(edgeId)
-  }, [])
+    showPropertyPanelEdge(edge)
+  }, [edges, showPropertyPanelEdge])
 
   const renderedEdges = useMemo(
     () =>
@@ -475,16 +516,20 @@ export function WorkflowEditor({
   )
 
   const updateEdgeCondition = (edgeId: string, condition?: WorkflowEdgeCondition) => {
+    const updateEdge = (edge: WorkflowFlowEdge) => ({
+      ...edge,
+      label: condition ? "条件" : undefined,
+      data: condition ? { ...(edge.data as object), condition } : undefined,
+    })
     setEdges((current) =>
       current.map((edge) =>
         edge.id === edgeId
-          ? {
-              ...edge,
-              label: condition ? "条件" : undefined,
-              data: condition ? { ...(edge.data as object), condition } : undefined,
-            }
+          ? updateEdge(edge)
           : edge
       )
+    )
+    setPropertyPanelEdge((current) =>
+      current?.id === edgeId ? updateEdge(current) : current
     )
   }
 
@@ -548,7 +593,7 @@ export function WorkflowEditor({
                       variant="ghost"
                       size="icon"
                       className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
-                      onClick={() => setNodeLibraryCollapsed(true)}
+                      onClick={hideNodeLibrary}
                       aria-label="折叠节点库"
                     >
                       <PanelLeftCloseIcon className="size-3.5" />
@@ -615,7 +660,7 @@ export function WorkflowEditor({
               variant="outline"
               size="icon"
               className="absolute top-12 left-3 z-20 size-7 rounded-full bg-background/95 text-muted-foreground shadow-sm hover:text-foreground"
-              onClick={() => setNodeLibraryCollapsed(false)}
+              onClick={showNodeLibrary}
               aria-label="展开节点库"
             >
               <PanelLeftOpenIcon className="size-3.5" />
@@ -637,16 +682,16 @@ export function WorkflowEditor({
             onInit={setFlowInstance}
             onNodeClick={(event, node) => {
               event.stopPropagation()
-              setSelectedNodeId(node.id)
               setSelectedEdgeId(null)
+              showPropertyPanelNode(node)
             }}
             onEdgeClick={(event, edge) => {
               event.stopPropagation()
               selectEdge(edge.id)
             }}
             onPaneClick={() => {
-              setSelectedNodeId(null)
               setSelectedEdgeId(null)
+              hidePropertyPanel()
             }}
             fitView
             fitViewOptions={fitViewOptions}
