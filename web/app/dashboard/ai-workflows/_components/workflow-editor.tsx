@@ -25,6 +25,7 @@ import {
   CheckCircle2Icon,
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
+  PlusIcon,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
@@ -855,6 +856,13 @@ function WorkflowCanvasNode({ data, selected }: NodeProps<WorkflowFlowNode>) {
   const missingInputs = data.missingInputs ?? []
   const hasIssue = missingInputs.length > 0
   const isConditionNode = data.nodeType === "condition"
+  const handleClassName = cn(
+    "!size-4 !rounded-full !border-0 !bg-primary !text-primary-foreground !shadow-md",
+    "flex items-center justify-center opacity-0 transition-all duration-150",
+    selected
+      ? "pointer-events-auto opacity-100"
+      : "pointer-events-none group-hover/node:pointer-events-auto group-hover/node:opacity-100"
+  )
   if (isConditionNode) {
     return (
       <div className="group/node relative flex size-36 items-center justify-center">
@@ -868,8 +876,10 @@ function WorkflowCanvasNode({ data, selected }: NodeProps<WorkflowFlowNode>) {
         <Handle
           type="target"
           position={Position.Left}
-          className="!left-1 !size-2 !border !border-background !bg-muted-foreground/70 transition-colors group-hover/node:!bg-primary"
-        />
+          className={cn("!left-0", handleClassName)}
+        >
+          <PlusIcon className="size-2.5" />
+        </Handle>
         <div className="relative z-10 flex max-w-24 flex-col items-center text-center">
           {hasIssue ? (
             <AlertCircleIcon className="mb-1 size-4 text-destructive" />
@@ -882,8 +892,10 @@ function WorkflowCanvasNode({ data, selected }: NodeProps<WorkflowFlowNode>) {
         <Handle
           type="source"
           position={Position.Right}
-          className="!right-1 !size-2 !border !border-background !bg-muted-foreground/70 transition-colors group-hover/node:!bg-primary"
-        />
+          className={cn("!right-0", handleClassName)}
+        >
+          <PlusIcon className="size-2.5" />
+        </Handle>
       </div>
     )
   }
@@ -898,8 +910,10 @@ function WorkflowCanvasNode({ data, selected }: NodeProps<WorkflowFlowNode>) {
       <Handle
         type="target"
         position={Position.Left}
-        className="!size-2 !border !border-background !bg-muted-foreground/70 transition-colors group-hover/node:!bg-primary"
-      />
+        className={cn("!-left-2.5", handleClassName)}
+      >
+        <PlusIcon className="size-2.5" />
+      </Handle>
       <div className="flex items-start gap-2 border-b px-2.5 py-2">
         {hasIssue ? (
           <AlertCircleIcon className="mt-0.5 size-4 shrink-0 text-destructive" />
@@ -929,8 +943,10 @@ function WorkflowCanvasNode({ data, selected }: NodeProps<WorkflowFlowNode>) {
       <Handle
         type="source"
         position={Position.Right}
-        className="!size-2 !border !border-background !bg-muted-foreground/70 transition-colors group-hover/node:!bg-primary"
-      />
+        className={cn("!-right-2.5", handleClassName)}
+      >
+        <PlusIcon className="size-2.5" />
+      </Handle>
     </div>
   )
 }
