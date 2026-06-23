@@ -805,6 +805,39 @@ function normalizeConditionRight(value: string) {
 function WorkflowCanvasNode({ data, selected }: NodeProps<WorkflowFlowNode>) {
   const missingInputs = data.missingInputs ?? []
   const hasIssue = missingInputs.length > 0
+  const isConditionNode = data.nodeType === "condition"
+  if (isConditionNode) {
+    return (
+      <div className="group/node relative flex size-36 items-center justify-center">
+        <div
+          className={[
+            "absolute inset-4 rotate-45 rounded-sm border bg-background shadow-sm",
+            selected ? "ring-2 ring-ring" : "",
+            hasIssue ? "border-destructive/70" : "border-border",
+          ].join(" ")}
+        />
+        <Handle
+          type="target"
+          position={Position.Left}
+          className="!left-1 !size-2 !border !border-background !bg-muted-foreground/70 transition-colors group-hover/node:!bg-primary"
+        />
+        <div className="relative z-10 flex max-w-24 flex-col items-center text-center">
+          {hasIssue ? (
+            <AlertCircleIcon className="mb-1 size-4 text-destructive" />
+          ) : (
+            <CheckCircle2Icon className="mb-1 size-4 text-emerald-600" />
+          )}
+          <div className="line-clamp-2 text-sm font-medium leading-tight">{data.name ?? data.title}</div>
+          <div className="mt-1 text-[11px] text-muted-foreground">分支</div>
+        </div>
+        <Handle
+          type="source"
+          position={Position.Right}
+          className="!right-1 !size-2 !border !border-background !bg-muted-foreground/70 transition-colors group-hover/node:!bg-primary"
+        />
+      </div>
+    )
+  }
   return (
     <div
       className={[
