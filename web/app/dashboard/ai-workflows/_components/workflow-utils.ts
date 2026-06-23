@@ -3,6 +3,34 @@ export type WorkflowNodePosition = {
   y: number
 }
 
+export type WorkflowHelperLineNode = {
+  id: string
+  position: WorkflowNodePosition
+  width?: number | null
+  height?: number | null
+  measured?: {
+    width?: number | null
+    height?: number | null
+  }
+}
+
+export type WorkflowHelperLine = {
+  horizontal?: {
+    y: number
+    left: number
+    width: number
+  }
+  vertical?: {
+    x: number
+    top: number
+    height: number
+  }
+}
+
+export type WorkflowHelperLineResult = WorkflowHelperLine & {
+  position: WorkflowNodePosition
+}
+
 export type WorkflowEditorNode = {
   id: string
   type?: string
@@ -101,6 +129,193 @@ export type WorkflowVariableRef = {
 export type WorkflowDraftValidation = {
   valid: boolean
   errors: string[]
+}
+
+export type WorkflowHistory<T> = {
+  past: T[]
+  future: T[]
+  limit: number
+}
+
+export type WorkflowHistoryChange<T> = {
+  history: WorkflowHistory<T>
+  snapshot: T
+}
+
+const helperLineAlignmentThreshold = 6
+const defaultWorkflowHistoryLimit = 50
+
+function cloneHistorySnapshot<T>(snapshot: T): T {
+  return JSON.parse(JSON.stringify(snapshot)) as T
+}
+
+export function createWorkflowHistory<T>(limit = defaultWorkflowHistoryLimit): WorkflowHistory<T> {
+  return {
+    past: [],
+    future: [],
+    limit,
+  }
+}
+
+export function pushWorkflowHistory<T>(
+  history: WorkflowHistory<T>,
+  snapshot: T
+): WorkflowHistory<T> {
+  const past = [...history.past, cloneHistorySnapshot(snapshot)]
+  return {
+    past: past.slice(Math.max(0, past.length - history.limit)),
+    future: [],
+    limit: history.limit,
+  }
+}
+
+export function undoWorkflowHistory<T>(
+  history: WorkflowHistory<T>,
+  current: T
+): WorkflowHistoryChange<T> | null {
+  const snapshot = history.past.at(-1)
+  if (!snapshot) {
+    return null
+  }
+  return {
+    snapshot: cloneHistorySnapshot(snapshot),
+    history: {
+      past: history.past.slice(0, -1),
+      future: [cloneHistorySnapshot(current), ...history.future],
+      limit: history.limit,
+    },
+  }
+}
+
+export function redoWorkflowHistory<T>(
+  history: WorkflowHistory<T>,
+  current: T
+): WorkflowHistoryChange<T> | null {
+  const snapshot = history.future[0]
+  if (!snapshot) {
+    return null
+  }
+  const past = [...history.past, cloneHistorySnapshot(current)]
+  return {
+    snapshot: cloneHistorySnapshot(snapshot),
+    history: {
+      past: past.slice(Math.max(0, past.length - history.limit)),
+      future: history.future.slice(1),
+      limit: history.limit,
+    },
+  }
+}
+
+function getNodeSize(node: WorkflowHelperLineNode) {
+  return {
+    width: node.measured?.width ?? node.width ?? 0,
+    height: node.measured?.height ?? node.height ?? 0,
+  }
+}
+
+function getNodeAnchorValues(node: WorkflowHelperLineNode) {
+  const size = getNodeSize(node)
+  return {
+    x: [
+      node.position.x,
+      node.position.x + size.width / 2,
+      node.position.x + size.width,
+    ],
+    y: [
+      node.position.y,
+      node.position.y + size.height / 2,
+      node.position.y + size.height,
+    ],
+  }
+}
+
+function getNearestAlignment(
+  axis: "x" | "y",
+  nodes: WorkflowHelperLineNode[],
+  draggingNode: WorkflowHelperLineNode
+) {
+  const draggingAnchors = getNodeAnchorValues(draggingNode)[axis]
+  let nearest:
+    | {
+        diff: number
+        targetValue: number
+        candidate: WorkflowHelperLineNode
+      }
+    | undefined
+
+  for (const candidate of nodes) {
+    if (candidate.id === draggingNode.id) {
+      continue
+    }
+    const candidateAnchors = getNodeAnchorValues(candidate)[axis]
+    for (const draggingAnchor of draggingAnchors) {
+      for (const candidateAnchor of candidateAnchors) {
+        const diff = candidateAnchor - draggingAnchor
+        if (Math.abs(diff) > helperLineAlignmentThreshold) {
+          continue
+        }
+        if (!nearest || Math.abs(diff) < Math.abs(nearest.diff)) {
+          nearest = {
+            diff,
+            targetValue: candidateAnchor,
+            candidate,
+          }
+        }
+      }
+    }
+  }
+
+  return nearest
+}
+
+export function calculateWorkflowHelperLines(
+  nodes: WorkflowHelperLineNode[],
+  draggingNode: WorkflowHelperLineNode
+): WorkflowHelperLineResult {
+  const xAlignment = getNearestAlignment("x", nodes, draggingNode)
+  const yAlignment = getNearestAlignment("y", nodes, draggingNode)
+  const position = {
+    x: draggingNode.position.x + (xAlignment?.diff ?? 0),
+    y: draggingNode.position.y + (yAlignment?.diff ?? 0),
+  }
+  const draggingSize = getNodeSize(draggingNode)
+  const snappedDraggingNode = {
+    ...draggingNode,
+    position,
+  }
+  const result: WorkflowHelperLineResult = {
+    position,
+  }
+
+  if (yAlignment) {
+    const candidateSize = getNodeSize(yAlignment.candidate)
+    const left = Math.min(snappedDraggingNode.position.x, yAlignment.candidate.position.x)
+    const right = Math.max(
+      snappedDraggingNode.position.x + draggingSize.width,
+      yAlignment.candidate.position.x + candidateSize.width
+    )
+    result.horizontal = {
+      y: yAlignment.targetValue,
+      left,
+      width: right - left,
+    }
+  }
+
+  if (xAlignment) {
+    const candidateSize = getNodeSize(xAlignment.candidate)
+    const top = Math.min(snappedDraggingNode.position.y, xAlignment.candidate.position.y)
+    const bottom = Math.max(
+      snappedDraggingNode.position.y + draggingSize.height,
+      xAlignment.candidate.position.y + candidateSize.height
+    )
+    result.vertical = {
+      x: xAlignment.targetValue,
+      top,
+      height: bottom - top,
+    }
+  }
+
+  return result
 }
 
 export function validateWorkflowDraft(

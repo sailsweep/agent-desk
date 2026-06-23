@@ -14,14 +14,18 @@ import {
   MarkerType,
   Position,
   ReactFlow,
+  ViewportPortal,
   useEdgesState,
   useNodesState,
   type Connection,
   type ConnectionLineComponentProps,
   type Edge,
+  type EdgeChange,
   type EdgeProps,
   type FinalConnectionState,
   type Node,
+  type NodeChange,
+  type OnNodeDrag,
   type NodeProps,
   type ReactFlowInstance,
 } from "@xyflow/react"
@@ -31,6 +35,8 @@ import {
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
   PlusIcon,
+  Redo2Icon,
+  Undo2Icon,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
@@ -49,17 +55,24 @@ import { cn } from "@/lib/utils"
 import type { AIWorkflowDefinition, AIWorkflowNodeSpec } from "@/lib/api/admin"
 import {
   applyAutoInputMappings,
+  calculateWorkflowHelperLines,
+  createWorkflowHistory,
   createWorkflowNodeFromSpec,
   fromApiDefinition,
   getAvailableVariables,
   getNodeSpec,
   getRequiredInputs,
+  pushWorkflowHistory,
+  redoWorkflowHistory,
   toApiDefinition,
+  undoWorkflowHistory,
   validateWorkflowDraft,
   type WorkflowVariableRef,
   type WorkflowVariableSelector,
   type WorkflowEditorEdge,
   type WorkflowEditorNode,
+  type WorkflowHistory,
+  type WorkflowHelperLine,
 } from "./workflow-utils"
 import { NodeConfigPanel, type WorkflowBranchSummary } from "./node-config-panel"
 import { VariableSelector } from "./variable-selector"
@@ -81,6 +94,10 @@ type WorkflowNodeData = Record<string, unknown> & {
 
 type WorkflowFlowNode = Node<WorkflowNodeData>
 type WorkflowFlowEdge = Edge
+type WorkflowEditorSnapshot = {
+  nodes: WorkflowFlowNode[]
+  edges: WorkflowFlowEdge[]
+}
 type WorkflowEdgeCondition = NonNullable<WorkflowEditorEdge["data"]>["condition"]
 type WorkflowEdgeRenderData = WorkflowEditorEdge["data"] & {
   active?: boolean
@@ -193,6 +210,7 @@ export function WorkflowEditor({
   const [nodeLibraryWidth, setNodeLibraryWidth] = useState(260)
   const [nodeLibraryResizing, setNodeLibraryResizing] = useState(false)
   const [pendingNodeDrag, setPendingNodeDrag] = useState<PendingNodeDrag | null>(null)
+  const [helperLines, setHelperLines] = useState<WorkflowHelperLine>({})
   const [propertyPanelNode, setPropertyPanelNode] = useState<WorkflowFlowNode | null>(null)
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
   const [propertyPanelEdge, setPropertyPanelEdge] = useState<WorkflowFlowEdge | null>(null)
@@ -200,10 +218,16 @@ export function WorkflowEditor({
   const editorRef = useRef<HTMLDivElement | null>(null)
   const canvasRef = useRef<HTMLElement | null>(null)
   const pendingNodeDragRef = useRef<PendingNodeDrag | null>(null)
+  const historyRef = useRef<WorkflowHistory<WorkflowEditorSnapshot>>(createWorkflowHistory())
+  const dragStartSnapshotRef = useRef<WorkflowEditorSnapshot | null>(null)
   const suppressNextClickRef = useRef(false)
   const nodeLibraryAnimationTimerRef = useRef<number | null>(null)
   const propertyPanelAnimationTimerRef = useRef<number | null>(null)
   const draft = useMemo(() => toDraft(nodes, edges), [nodes, edges])
+  const [historyAvailability, setHistoryAvailability] = useState({
+    canUndo: false,
+    canRedo: false,
+  })
   const validation = useMemo(
     () => validateWorkflowDraft(draft, nodeSpecs),
     [draft, nodeSpecs]
@@ -224,10 +248,6 @@ export function WorkflowEditor({
     () => (propertyPanelEdge ? getEdgeConditionVariables(draft, propertyPanelEdge.source, nodeSpecs) : []),
     [draft, nodeSpecs, propertyPanelEdge]
   )
-
-  useEffect(() => {
-    onDefinitionChange(toApiDefinition(draft) as AIWorkflowDefinition)
-  }, [draft, onDefinitionChange])
 
   useEffect(() => {
     onDefinitionChange(toApiDefinition(draft) as AIWorkflowDefinition)
@@ -304,11 +324,103 @@ export function WorkflowEditor({
     }, 220)
   }, [])
 
+  const syncHistoryAvailability = useCallback(() => {
+    setHistoryAvailability({
+      canUndo: historyRef.current.past.length > 0,
+      canRedo: historyRef.current.future.length > 0,
+    })
+  }, [])
+
+  const getCurrentSnapshot = useCallback((): WorkflowEditorSnapshot => ({
+    nodes,
+    edges,
+  }), [edges, nodes])
+
+  const pushSnapshotToHistory = useCallback(
+    (snapshot: WorkflowEditorSnapshot) => {
+      historyRef.current = pushWorkflowHistory(historyRef.current, snapshot)
+      syncHistoryAvailability()
+    },
+    [syncHistoryAvailability]
+  )
+
+  const pushCurrentSnapshotToHistory = useCallback(() => {
+    pushSnapshotToHistory(getCurrentSnapshot())
+  }, [getCurrentSnapshot, pushSnapshotToHistory])
+
+  const applySnapshot = useCallback(
+    (snapshot: WorkflowEditorSnapshot) => {
+      setNodes(snapshot.nodes)
+      setEdges(snapshot.edges)
+      setHelperLines({})
+      setSelectedEdgeId((current) =>
+        current && snapshot.edges.some((edge) => edge.id === current) ? current : null
+      )
+      setPropertyPanelNode((current) =>
+        current ? snapshot.nodes.find((node) => node.id === current.id) ?? null : null
+      )
+      setPropertyPanelEdge((current) =>
+        current ? snapshot.edges.find((edge) => edge.id === current.id) ?? null : null
+      )
+    },
+    [setEdges, setNodes]
+  )
+
+  const undoWorkflowEdit = useCallback(() => {
+    const result = undoWorkflowHistory(historyRef.current, getCurrentSnapshot())
+    if (!result) {
+      return
+    }
+    historyRef.current = result.history
+    applySnapshot(result.snapshot)
+    syncHistoryAvailability()
+  }, [applySnapshot, getCurrentSnapshot, syncHistoryAvailability])
+
+  const redoWorkflowEdit = useCallback(() => {
+    const result = redoWorkflowHistory(historyRef.current, getCurrentSnapshot())
+    if (!result) {
+      return
+    }
+    historyRef.current = result.history
+    applySnapshot(result.snapshot)
+    syncHistoryAvailability()
+  }, [applySnapshot, getCurrentSnapshot, syncHistoryAvailability])
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!event.metaKey && !event.ctrlKey) {
+        return
+      }
+      if (isEditableKeyboardTarget(event.target)) {
+        return
+      }
+      const key = event.key.toLowerCase()
+      if (key === "z" && event.shiftKey) {
+        event.preventDefault()
+        redoWorkflowEdit()
+        return
+      }
+      if (key === "y") {
+        event.preventDefault()
+        redoWorkflowEdit()
+        return
+      }
+      if (key === "z") {
+        event.preventDefault()
+        undoWorkflowEdit()
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [redoWorkflowEdit, undoWorkflowEdit])
+
   const onConnect = useCallback(
     (connection: Connection) => {
       if (!connection.source || !connection.target) {
         return
       }
+      pushCurrentSnapshotToHistory()
       const edge = {
         ...connection,
         id: uniqueEdgeId(edges, connection.source, connection.target),
@@ -338,7 +450,7 @@ export function WorkflowEditor({
         })
       })
     },
-    [edges, nodeSpecs, setEdges, setNodes]
+    [edges, nodeSpecs, pushCurrentSnapshotToHistory, setEdges, setNodes]
   )
 
   const connectToNode = useCallback(
@@ -382,7 +494,73 @@ export function WorkflowEditor({
     [connectToNode]
   )
 
+  const onWorkflowNodesChange = useCallback(
+    (changes: NodeChange<WorkflowFlowNode>[]) => {
+      if (changes.some((change) => change.type === "remove")) {
+        pushCurrentSnapshotToHistory()
+      }
+      onNodesChange(changes)
+    },
+    [onNodesChange, pushCurrentSnapshotToHistory]
+  )
+
+  const onWorkflowEdgesChange = useCallback(
+    (changes: EdgeChange<WorkflowFlowEdge>[]) => {
+      if (changes.some((change) => change.type === "remove")) {
+        pushCurrentSnapshotToHistory()
+      }
+      onEdgesChange(changes)
+    },
+    [onEdgesChange, pushCurrentSnapshotToHistory]
+  )
+
+  const onNodeDragStart = useCallback<OnNodeDrag<WorkflowFlowNode>>(() => {
+    dragStartSnapshotRef.current = getCurrentSnapshot()
+  }, [getCurrentSnapshot])
+
+  const onNodeDrag = useCallback<OnNodeDrag<WorkflowFlowNode>>(
+    (_event, node) => {
+      const nextHelperLines = calculateWorkflowHelperLines(nodes, node)
+      setHelperLines({
+        horizontal: nextHelperLines.horizontal,
+        vertical: nextHelperLines.vertical,
+      })
+      if (
+        nextHelperLines.position.x === node.position.x &&
+        nextHelperLines.position.y === node.position.y
+      ) {
+        return
+      }
+      setNodes((current) =>
+        current.map((item) =>
+          item.id === node.id
+            ? {
+                ...item,
+                position: nextHelperLines.position,
+              }
+            : item
+        )
+      )
+    },
+    [nodes, setNodes]
+  )
+
+  const onNodeDragStop = useCallback<OnNodeDrag<WorkflowFlowNode>>((_event, node) => {
+    setHelperLines({})
+    const startSnapshot = dragStartSnapshotRef.current
+    dragStartSnapshotRef.current = null
+    const startNode = startSnapshot?.nodes.find((item) => item.id === node.id)
+    if (
+      startSnapshot &&
+      startNode &&
+      (startNode.position.x !== node.position.x || startNode.position.y !== node.position.y)
+    ) {
+      pushSnapshotToHistory(startSnapshot)
+    }
+  }, [pushSnapshotToHistory])
+
   const addNode = (spec: AIWorkflowNodeSpec) => {
+    pushCurrentSnapshotToHistory()
     setNodes((current) => {
       const node = createWorkflowNodeFromSpec(
         spec,
@@ -403,6 +581,7 @@ export function WorkflowEditor({
 
   const addNodeAfter = useCallback(
     (sourceNodeId: string, spec: AIWorkflowNodeSpec) => {
+      pushCurrentSnapshotToHistory()
       setNodes((current) => {
         const sourceNode = current.find((node) => node.id === sourceNodeId)
         const nextPosition = sourceNode
@@ -427,7 +606,7 @@ export function WorkflowEditor({
         return [...current, nextNode]
       })
     },
-    [setEdges, setNodes]
+    [pushCurrentSnapshotToHistory, setEdges, setNodes]
   )
 
   const renderedNodes = useMemo(
@@ -452,6 +631,7 @@ export function WorkflowEditor({
       if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
         return false
       }
+      pushCurrentSnapshotToHistory()
       const position = flowInstance.screenToFlowPosition({ x, y })
       setNodes((current) => [
         ...current,
@@ -459,7 +639,7 @@ export function WorkflowEditor({
       ])
       return true
     },
-    [flowInstance, setNodes]
+    [flowInstance, pushCurrentSnapshotToHistory, setNodes]
   )
 
   const onNodePointerDown = (event: React.PointerEvent<HTMLButtonElement>, spec: AIWorkflowNodeSpec) => {
@@ -510,6 +690,7 @@ export function WorkflowEditor({
   }
 
   const updateNodeData = (nodeId: string, data: WorkflowNodeData) => {
+    pushCurrentSnapshotToHistory()
     const nextData = {
       ...data,
       label: data.name ?? data.nodeType ?? nodeId,
@@ -561,6 +742,7 @@ export function WorkflowEditor({
   )
 
   const updateEdgeCondition = (edgeId: string, condition?: WorkflowEdgeCondition) => {
+    pushCurrentSnapshotToHistory()
     const updateEdge = (edge: WorkflowFlowEdge) => ({
       ...edge,
       label: condition ? "条件" : undefined,
@@ -721,10 +903,13 @@ export function WorkflowEditor({
             connectionMode={ConnectionMode.Loose}
             connectionRadius={34}
             connectOnClick
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
+            onNodesChange={onWorkflowNodesChange}
+            onEdgesChange={onWorkflowEdgesChange}
             onConnect={onConnect}
             onConnectEnd={onConnectEnd}
+            onNodeDragStart={onNodeDragStart}
+            onNodeDrag={onNodeDrag}
+            onNodeDragStop={onNodeDragStop}
             onInit={setFlowInstance}
             onNodeClick={(event, node) => {
               event.stopPropagation()
@@ -754,8 +939,17 @@ export function WorkflowEditor({
               className="!bottom-4 !left-4 overflow-hidden !rounded-xl !border !border-border/70 !bg-background/95 !shadow-lg"
               showInteractive={false}
             />
+            <WorkflowHelperLines lines={helperLines} />
           </ReactFlow>
-          <WorkflowValidationBadge errors={validation.errors} valid={validation.valid} />
+          <div className="absolute left-3 top-3 z-20 flex items-center gap-2">
+            <WorkflowValidationBadge errors={validation.errors} valid={validation.valid} />
+            <WorkflowHistoryControls
+              canUndo={historyAvailability.canUndo}
+              canRedo={historyAvailability.canRedo}
+              onUndo={undoWorkflowEdit}
+              onRedo={redoWorkflowEdit}
+            />
+          </div>
           {propertyPanelNode || propertyPanelEdge ? (
             <aside
               className={[
@@ -1033,6 +1227,16 @@ function getEventClientPoint(event: MouseEvent | TouchEvent) {
     return touch ? { x: touch.clientX, y: touch.clientY } : null
   }
   return { x: event.clientX, y: event.clientY }
+}
+
+function isEditableKeyboardTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) {
+    return false
+  }
+  if (target.isContentEditable) {
+    return true
+  }
+  return Boolean(target.closest("input, textarea, select, [contenteditable='true']"))
 }
 
 function getEdgeEndpointOffset(position: Position, amount: number) {
@@ -1372,7 +1576,7 @@ function WorkflowValidationBadge({
   valid: boolean
 }) {
   return (
-    <div className="absolute left-3 top-3 flex gap-2">
+    <div className="flex gap-2">
       {valid ? (
         <Badge variant="default">流程可发布</Badge>
       ) : (
@@ -1402,5 +1606,77 @@ function WorkflowValidationBadge({
         </Popover>
       )}
     </div>
+  )
+}
+
+function WorkflowHistoryControls({
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
+}: {
+  canUndo: boolean
+  canRedo: boolean
+  onUndo: () => void
+  onRedo: () => void
+}) {
+  return (
+    <div className="flex overflow-hidden rounded-md border bg-background/95 shadow-sm">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="size-7 rounded-none text-muted-foreground hover:text-foreground"
+        onClick={onUndo}
+        disabled={!canUndo}
+        aria-label="撤销"
+        title="撤销"
+      >
+        <Undo2Icon className="size-3.5" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="size-7 rounded-none border-l text-muted-foreground hover:text-foreground"
+        onClick={onRedo}
+        disabled={!canRedo}
+        aria-label="反撤销"
+        title="反撤销"
+      >
+        <Redo2Icon className="size-3.5" />
+      </Button>
+    </div>
+  )
+}
+
+function WorkflowHelperLines({ lines }: { lines: WorkflowHelperLine }) {
+  if (!lines.horizontal && !lines.vertical) {
+    return null
+  }
+
+  return (
+    <ViewportPortal>
+      {lines.horizontal ? (
+        <div
+          className="pointer-events-none absolute z-10 h-px bg-primary/70 shadow-[0_0_0_1px_hsl(var(--primary)/0.18)]"
+          style={{
+            left: lines.horizontal.left,
+            top: lines.horizontal.y,
+            width: lines.horizontal.width,
+          }}
+        />
+      ) : null}
+      {lines.vertical ? (
+        <div
+          className="pointer-events-none absolute z-10 w-px bg-primary/70 shadow-[0_0_0_1px_hsl(var(--primary)/0.18)]"
+          style={{
+            left: lines.vertical.x,
+            top: lines.vertical.top,
+            height: lines.vertical.height,
+          }}
+        />
+      ) : null}
+    </ViewportPortal>
   )
 }

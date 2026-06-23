@@ -179,6 +179,86 @@ describe("createWorkflowNodeFromSpec", () => {
   })
 })
 
+describe("calculateWorkflowHelperLines", () => {
+  it("snaps dragged node to a nearby horizontal alignment", async () => {
+    const { calculateWorkflowHelperLines } = await loadModule()
+
+    const result = calculateWorkflowHelperLines(
+      [
+        { id: "start_1", position: { x: 100, y: 120 }, width: 220, height: 84 },
+        { id: "reply_1", position: { x: 392, y: 124 }, width: 220, height: 84 },
+      ],
+      { id: "reply_1", position: { x: 392, y: 124 }, width: 220, height: 84 }
+    )
+
+    assert.deepEqual(plain(result), {
+      position: { x: 392, y: 120 },
+      horizontal: { y: 120, left: 100, width: 512 },
+    })
+  })
+
+  it("does not show helper lines outside the alignment threshold", async () => {
+    const { calculateWorkflowHelperLines } = await loadModule()
+
+    const result = calculateWorkflowHelperLines(
+      [
+        { id: "start_1", position: { x: 100, y: 120 }, width: 220, height: 84 },
+        { id: "reply_1", position: { x: 392, y: 132 }, width: 220, height: 84 },
+      ],
+      { id: "reply_1", position: { x: 392, y: 132 }, width: 220, height: 84 }
+    )
+
+    assert.deepEqual(plain(result), {
+      position: { x: 392, y: 132 },
+    })
+  })
+})
+
+describe("workflow history", () => {
+  it("undoes and redoes snapshots while clearing redo after a new edit", async () => {
+    const {
+      createWorkflowHistory,
+      pushWorkflowHistory,
+      undoWorkflowHistory,
+      redoWorkflowHistory,
+    } = await loadModule()
+
+    const first = {
+      nodes: [{ id: "start_1", position: { x: 0, y: 0 } }],
+      edges: [],
+    }
+    const second = {
+      nodes: [{ id: "start_1", position: { x: 100, y: 0 } }],
+      edges: [],
+    }
+    const third = {
+      nodes: [{ id: "start_1", position: { x: 200, y: 0 } }],
+      edges: [],
+    }
+    const branch = {
+      nodes: [{ id: "start_1", position: { x: 300, y: 0 } }],
+      edges: [],
+    }
+
+    let history = createWorkflowHistory()
+    history = pushWorkflowHistory(history, first)
+    history = pushWorkflowHistory(history, second)
+
+    const undone = undoWorkflowHistory(history, third)
+    assert.deepEqual(plain(undone.snapshot), second)
+    assert.equal(undone.history.past.length, 1)
+    assert.equal(undone.history.future.length, 1)
+
+    const redone = redoWorkflowHistory(undone.history, undone.snapshot)
+    assert.deepEqual(plain(redone.snapshot), third)
+    assert.equal(redone.history.past.length, 2)
+    assert.equal(redone.history.future.length, 0)
+
+    const branched = pushWorkflowHistory(undone.history, branch)
+    assert.equal(branched.future.length, 0)
+  })
+})
+
 describe("getAvailableVariables", () => {
   it("exposes start outputs to retrieve node", async () => {
     const { getAvailableVariables } = await loadModule()
