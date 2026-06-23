@@ -630,9 +630,9 @@ export function WorkflowEditor({
           >
             <Background
               gap={18}
-              size={1.4}
-              color="hsl(var(--muted-foreground) / 0.18)"
-              className="bg-[radial-gradient(circle_at_20%_10%,hsl(var(--primary)/0.08),transparent_28%),linear-gradient(180deg,hsl(var(--background)),hsl(var(--muted)/0.24))]"
+              size={1}
+              color="hsl(var(--muted-foreground) / 0.09)"
+              className="bg-[radial-gradient(circle_at_20%_10%,hsl(var(--primary)/0.045),transparent_30%),linear-gradient(180deg,hsl(var(--background)),hsl(var(--muted)/0.16))]"
             />
             <Controls
               className="!bottom-4 !left-4 overflow-hidden !rounded-xl !border !border-border/70 !bg-background/95 !shadow-lg"
@@ -968,7 +968,7 @@ function WorkflowCanvasEdge({
         markerEnd={markerEnd}
         className={cn(
           "!stroke-[1.8px] transition-colors",
-          selected ? "!stroke-primary" : "!stroke-border"
+          selected ? "!stroke-primary" : "!stroke-muted-foreground/45"
         )}
       />
       {condition ? (
