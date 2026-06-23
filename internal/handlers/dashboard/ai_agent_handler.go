@@ -31,7 +31,7 @@ func AIAgentAnyList(ctx *gin.Context) {
 		params.QueryFilter{ParamName: "status"},
 		params.QueryFilter{ParamName: "name", Op: params.Like},
 		params.QueryFilter{ParamName: "code", Op: params.Like},
-	).Desc("sort_no").Desc("id")
+	).Asc("sort_no").Desc("id")
 	list, paging := services.AIAgentService.FindPageByCnd(cnd)
 	results := make([]response.AIAgentResponse, 0, len(list))
 	for _, item := range list {
