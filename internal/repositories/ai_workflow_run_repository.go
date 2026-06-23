@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"agent-desk/internal/models"
+	"agent-desk/internal/pkg/httpx/params"
 
 	"github.com/mlogclub/simple/sqls"
 	"gorm.io/gorm"
@@ -25,6 +26,21 @@ func (r *aiWorkflowRunRepository) Get(db *gorm.DB, id int64) *models.AIWorkflowR
 
 func (r *aiWorkflowRunRepository) Find(db *gorm.DB, cnd *sqls.Cnd) (list []models.AIWorkflowRun) {
 	cnd.Find(db, &list)
+	return
+}
+
+func (r *aiWorkflowRunRepository) FindPageByParams(db *gorm.DB, params *params.QueryParams) (list []models.AIWorkflowRun, paging *sqls.Paging) {
+	return r.FindPageByCnd(db, &params.Cnd)
+}
+
+func (r *aiWorkflowRunRepository) FindPageByCnd(db *gorm.DB, cnd *sqls.Cnd) (list []models.AIWorkflowRun, paging *sqls.Paging) {
+	cnd.Find(db, &list)
+	count := cnd.Count(db, &models.AIWorkflowRun{})
+	paging = &sqls.Paging{
+		Page:  cnd.Paging.Page,
+		Limit: cnd.Paging.Limit,
+		Total: count,
+	}
 	return
 }
 

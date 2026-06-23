@@ -227,3 +227,37 @@ func AIWorkflowGetVersionBy(ctx *gin.Context) {
 	}
 	httpx.WriteJSON(ctx, builders.BuildAIWorkflowVersion(item))
 }
+
+func AIWorkflowAnyRunList(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionAIAgentView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
+	}
+	cnd := params.NewPagedSqlCnd(ctx,
+		params.QueryFilter{ParamName: "workflowId"},
+		params.QueryFilter{ParamName: "workflowVersionId"},
+		params.QueryFilter{ParamName: "conversationId"},
+		params.QueryFilter{ParamName: "aiAgentId"},
+		params.QueryFilter{ParamName: "messageId"},
+		params.QueryFilter{ParamName: "status"},
+	).Desc("id")
+	list, paging := services.AIWorkflowService.FindRunPageByCnd(cnd)
+	httpx.WriteJSON(ctx, &web.PageResult{Results: builders.BuildAIWorkflowRunList(list), Page: paging})
+}
+
+func AIWorkflowGetRunBy(ctx *gin.Context) {
+	id, ok := httpx.GetPathInt64(ctx, "id")
+	if !ok {
+		return
+	}
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionAIAgentView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
+	}
+	item, nodes := services.AIWorkflowService.GetRunDetail(id)
+	if item == nil {
+		httpx.WriteJSON(ctx, httpx.JsonErrorMsg(ctx, "error.e0002"))
+		return
+	}
+	httpx.WriteJSON(ctx, builders.BuildAIWorkflowRunDetail(item, nodes))
+}

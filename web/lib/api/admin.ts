@@ -545,6 +545,40 @@ export type AgentRunLog = {
   createdAt: string
 }
 
+export type AIWorkflowNodeRun = {
+  id: number
+  workflowRunId: number
+  nodeId: string
+  nodeType: string
+  status: number
+  statusName: string
+  inputPreview: string
+  outputPreview: string
+  errorMessage: string
+  startedAt: string
+  endedAt: string
+  durationMs: number
+}
+
+export type AIWorkflowRun = {
+  id: number
+  workflowId: number
+  workflowVersionId: number
+  conversationId: number
+  aiAgentId: number
+  messageId: number
+  status: number
+  statusName: string
+  startedAt: string
+  endedAt: string
+  interruptType: string
+  interruptNodeId: string
+  errorMessage: string
+  createdAt: string
+  updatedAt: string
+  nodes?: AIWorkflowNodeRun[]
+}
+
 export type AdminAgentProfile = {
   id: number
   userId: number
@@ -1106,6 +1140,18 @@ export function fetchAgentRunLogs(
 
 export function fetchAgentRunLog(id: number) {
   return request<AgentRunLog>(`/api/dashboard/agent-run-log/${id}`)
+}
+
+export function fetchAIWorkflowRuns(
+  query?: Record<string, string | number | undefined>
+) {
+  return request<PageResult<AIWorkflowRun>>(
+    `/api/dashboard/ai-workflow/run/list${toQueryString(query)}`
+  )
+}
+
+export function fetchAIWorkflowRun(id: number) {
+  return request<AIWorkflowRun>(`/api/dashboard/ai-workflow/run/${id}`)
 }
 
 export function updateSkillDefinitionStatus(id: number, status: number) {

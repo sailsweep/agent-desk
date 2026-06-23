@@ -41,6 +41,8 @@ func TestNewServerRegistersGinRoutes(t *testing.T) {
 		http.MethodGet + " /api/dashboard/user/:id",
 		http.MethodPost + " /api/dashboard/user/create",
 		http.MethodPost + " /api/dashboard/conversation/send_message",
+		http.MethodGet + " /api/dashboard/ai-workflow/run/list",
+		http.MethodGet + " /api/dashboard/ai-workflow/run/:id",
 		http.MethodGet + " /api/ws/dashboard",
 		http.MethodGet + " /api/ws/open",
 	}

@@ -57,6 +57,22 @@ func (s *aiWorkflowService) FindVersionPageByParams(params *params.QueryParams) 
 	return repositories.AIWorkflowVersionRepository.FindPageByParams(sqls.DB(), params)
 }
 
+func (s *aiWorkflowService) FindRunPageByCnd(cnd *sqls.Cnd) (list []models.AIWorkflowRun, paging *sqls.Paging) {
+	return repositories.AIWorkflowRunRepository.FindPageByCnd(sqls.DB(), cnd)
+}
+
+func (s *aiWorkflowService) GetRunDetail(id int64) (*models.AIWorkflowRun, []models.AIWorkflowNodeRun) {
+	if id <= 0 {
+		return nil, nil
+	}
+	run := repositories.AIWorkflowRunRepository.Get(sqls.DB(), id)
+	if run == nil {
+		return nil, nil
+	}
+	nodes := repositories.AIWorkflowNodeRunRepository.Find(sqls.DB(), sqls.NewCnd().Eq("workflow_run_id", id).Asc("id"))
+	return run, nodes
+}
+
 func (s *aiWorkflowService) GetByAgentID(agentID int64) *models.AIWorkflow {
 	if agentID <= 0 {
 		return nil

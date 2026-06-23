@@ -3,6 +3,7 @@ package services
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"agent-desk/internal/ai/workflow/dsl"
 	"agent-desk/internal/models"
@@ -148,6 +149,77 @@ func TestAIWorkflowServicePublishRejectsInvalidDSL(t *testing.T) {
 	}
 	if versions := repositories.AIWorkflowVersionRepository.Find(sqls.DB(), sqls.NewCnd().Eq("workflow_id", workflow.ID)); len(versions) != 0 {
 		t.Fatalf("expected no versions after invalid publish, got %d", len(versions))
+	}
+}
+
+func TestAIWorkflowServiceRunListAndDetail(t *testing.T) {
+	setupAIWorkflowTestDB(t)
+	now := time.Now()
+	run := models.AIWorkflowRun{
+		WorkflowID:        101,
+		WorkflowVersionID: 202,
+		ConversationID:    303,
+		AIAgentID:         12,
+		MessageID:         404,
+		Status:            1,
+		StartedAt:         now,
+		EndedAt:           &now,
+	}
+	if err := sqls.DB().Create(&run).Error; err != nil {
+		t.Fatalf("create workflow run: %v", err)
+	}
+	otherRun := models.AIWorkflowRun{
+		WorkflowID:        101,
+		WorkflowVersionID: 202,
+		ConversationID:    999,
+		AIAgentID:         12,
+		MessageID:         505,
+		Status:            1,
+		StartedAt:         now,
+	}
+	if err := sqls.DB().Create(&otherRun).Error; err != nil {
+		t.Fatalf("create other workflow run: %v", err)
+	}
+	nodes := []models.AIWorkflowNodeRun{
+		{
+			WorkflowRunID: run.ID,
+			NodeID:        "start_1",
+			NodeType:      "start",
+			Status:        1,
+			InputPreview:  `{"inputs":{}}`,
+			OutputPreview: `{"messageId":404}`,
+			StartedAt:     now,
+			EndedAt:       &now,
+		},
+		{
+			WorkflowRunID: run.ID,
+			NodeID:        "reply_1",
+			NodeType:      "llm_reply",
+			Status:        1,
+			OutputPreview: `{"replyText":"hello"}`,
+			StartedAt:     now,
+			EndedAt:       &now,
+			DurationMS:    8,
+		},
+	}
+	if err := sqls.DB().Create(&nodes).Error; err != nil {
+		t.Fatalf("create workflow node runs: %v", err)
+	}
+
+	list, paging := AIWorkflowService.FindRunPageByCnd(sqls.NewCnd().Eq("conversation_id", 303).Desc("id").Page(1, 20))
+	if paging.Total != 1 || len(list) != 1 || list[0].ID != run.ID {
+		t.Fatalf("unexpected run list: total=%d list=%#v", paging.Total, list)
+	}
+
+	detail, nodeRuns := AIWorkflowService.GetRunDetail(run.ID)
+	if detail == nil || detail.ID != run.ID {
+		t.Fatalf("unexpected detail run: %#v", detail)
+	}
+	if len(nodeRuns) != 2 || nodeRuns[0].NodeID != "start_1" || nodeRuns[1].NodeID != "reply_1" {
+		t.Fatalf("unexpected detail nodes: %#v", nodeRuns)
+	}
+	if missing, missingNodes := AIWorkflowService.GetRunDetail(999999); missing != nil || len(missingNodes) != 0 {
+		t.Fatalf("expected missing detail to be empty, got run=%#v nodes=%#v", missing, missingNodes)
 	}
 }
 

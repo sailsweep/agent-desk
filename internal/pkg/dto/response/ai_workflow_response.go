@@ -53,3 +53,37 @@ type AIWorkflowNodeSpecResponse struct {
 	OutputSchema                    []workflowregistry.VariableSpec `json:"outputSchema,omitempty"`
 	DefaultInputs                   map[string]dsl.VariableSelector `json:"defaultInputs,omitempty"`
 }
+
+type AIWorkflowRunResponse struct {
+	ID                int64                       `json:"id"`
+	WorkflowID        int64                       `json:"workflowId"`
+	WorkflowVersionID int64                       `json:"workflowVersionId"`
+	ConversationID    int64                       `json:"conversationId"`
+	AIAgentID         int64                       `json:"aiAgentId"`
+	MessageID         int64                       `json:"messageId"`
+	Status            int                         `json:"status"`
+	StatusName        string                      `json:"statusName"`
+	StartedAt         string                      `json:"startedAt"`
+	EndedAt           string                      `json:"endedAt"`
+	InterruptType     string                      `json:"interruptType"`
+	InterruptNodeID   string                      `json:"interruptNodeId"`
+	ErrorMessage      string                      `json:"errorMessage"`
+	CreatedAt         string                      `json:"createdAt"`
+	UpdatedAt         string                      `json:"updatedAt"`
+	Nodes             []AIWorkflowNodeRunResponse `json:"nodes,omitempty"`
+}
+
+type AIWorkflowNodeRunResponse struct {
+	ID            int64  `json:"id"`
+	WorkflowRunID int64  `json:"workflowRunId"`
+	NodeID        string `json:"nodeId"`
+	NodeType      string `json:"nodeType"`
+	Status        int    `json:"status"`
+	StatusName    string `json:"statusName"`
+	InputPreview  string `json:"inputPreview"`
+	OutputPreview string `json:"outputPreview"`
+	ErrorMessage  string `json:"errorMessage"`
+	StartedAt     string `json:"startedAt"`
+	EndedAt       string `json:"endedAt"`
+	DurationMS    int    `json:"durationMs"`
+}
