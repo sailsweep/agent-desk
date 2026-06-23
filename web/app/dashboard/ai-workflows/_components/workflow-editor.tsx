@@ -81,6 +81,10 @@ type WorkflowNodeData = Record<string, unknown> & {
 type WorkflowFlowNode = Node<WorkflowNodeData>
 type WorkflowFlowEdge = Edge
 type WorkflowEdgeCondition = NonNullable<WorkflowEditorEdge["data"]>["condition"]
+type WorkflowEdgeRenderData = WorkflowEditorEdge["data"] & {
+  active?: boolean
+  onSelect?: (edgeId: string) => void
+}
 
 type PendingNodeDrag = {
   spec: AIWorkflowNodeSpec
@@ -448,6 +452,28 @@ export function WorkflowEditor({
     )
   }
 
+  const selectEdge = useCallback((edgeId: string) => {
+    setSelectedNodeId(null)
+    setSelectedEdgeId(edgeId)
+  }, [])
+
+  const renderedEdges = useMemo(
+    () =>
+      edges.map((edge) => {
+        const active = edge.id === selectedEdgeId
+        return {
+          ...edge,
+          selected: active,
+          data: {
+            ...((edge.data ?? {}) as WorkflowEditorEdge["data"]),
+            active,
+            onSelect: selectEdge,
+          } satisfies WorkflowEdgeRenderData,
+        }
+      }),
+    [edges, selectedEdgeId, selectEdge]
+  )
+
   const updateEdgeCondition = (edgeId: string, condition?: WorkflowEdgeCondition) => {
     setEdges((current) =>
       current.map((edge) =>
@@ -597,7 +623,7 @@ export function WorkflowEditor({
           ) : null}
           <ReactFlow
             nodes={renderedNodes}
-            edges={edges}
+            edges={renderedEdges}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             defaultEdgeOptions={defaultEdgeOptions}
@@ -616,8 +642,7 @@ export function WorkflowEditor({
             }}
             onEdgeClick={(event, edge) => {
               event.stopPropagation()
-              setSelectedNodeId(null)
-              setSelectedEdgeId(edge.id)
+              selectEdge(edge.id)
             }}
             onPaneClick={() => {
               setSelectedNodeId(null)
@@ -959,6 +984,8 @@ function WorkflowCanvasEdge({
     curvature: 0.18,
   })
   const condition = (data as WorkflowEditorEdge["data"] | undefined)?.condition
+  const edgeData = data as WorkflowEdgeRenderData | undefined
+  const active = selected || edgeData?.active
 
   return (
     <>
@@ -967,16 +994,36 @@ function WorkflowCanvasEdge({
         path={edgePath}
         markerEnd={markerEnd}
         className={cn(
-          "!stroke-[1.8px] transition-colors",
-          selected ? "!stroke-primary" : "!stroke-muted-foreground/45"
+          "transition-all",
+          active ? "!stroke-primary !stroke-[2.4px]" : "!stroke-muted-foreground/45 !stroke-[1.8px]"
         )}
       />
       {condition ? (
         <EdgeLabelRenderer>
           <div
-            className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full border bg-background/95 px-2 py-0.5 text-[10px] font-medium text-muted-foreground shadow-sm"
+            role="button"
+            tabIndex={0}
+            aria-label="选择条件连接线"
+            className={cn(
+              "nodrag nopan pointer-events-auto absolute inline-flex -translate-x-1/2 -translate-y-1/2 cursor-pointer select-none items-center rounded-md border px-2 py-1 text-[11px] font-medium shadow-sm backdrop-blur transition-all",
+              active
+                ? "border-primary bg-primary text-primary-foreground shadow-md"
+                : "border-border/80 bg-background/95 text-muted-foreground hover:border-primary/60 hover:text-foreground"
+            )}
             style={{
               transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+            }}
+            onClick={(event) => {
+              event.stopPropagation()
+              edgeData?.onSelect?.(id)
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter" && event.key !== " ") {
+                return
+              }
+              event.preventDefault()
+              event.stopPropagation()
+              edgeData?.onSelect?.(id)
             }}
           >
             条件
