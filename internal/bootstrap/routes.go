@@ -308,11 +308,6 @@ func registerDashboardKnowledgeRetrieveLogRoutes(group *gin.RouterGroup) {
 	group.Any("/list", dashboard.KnowledgeRetrieveLogAnyList)
 }
 
-func registerDashboardAgentRunLogRoutes(group *gin.RouterGroup) {
-	group.GET("/:id", dashboard.AgentRunLogGetBy)
-	group.Any("/list", dashboard.AgentRunLogAnyList)
-}
-
 func registerDashboardSkillDefinitionRoutes(group *gin.RouterGroup) {
 	group.GET("/:id", dashboard.SkillDefinitionGetBy)
 	group.POST("/create", dashboard.SkillDefinitionPostCreate)

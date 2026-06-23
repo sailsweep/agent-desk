@@ -195,7 +195,6 @@ func addRouter(app *gin.Engine) {
 	registerDashboardKnowledgeFAQRoutes(dashboardGroup.Group("/knowledge-faq"))
 	registerDashboardKnowledgeRetrieveRoutes(dashboardGroup.Group("/knowledge-retrieve"))
 	registerDashboardKnowledgeRetrieveLogRoutes(dashboardGroup.Group("/knowledge-retrieve-log"))
-	registerDashboardAgentRunLogRoutes(dashboardGroup.Group("/agent-run-log"))
 	registerDashboardSkillDefinitionRoutes(dashboardGroup.Group("/skill-definition"))
 	registerDashboardMCPRoutes(dashboardGroup.Group("/mcp"))
 

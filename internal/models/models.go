@@ -57,7 +57,6 @@ var Models = []any{
 	&KnowledgeFeedback{},
 	&SkillDefinition{},
 	&SkillRunLog{},
-	&AgentRunLog{},
 	&AIWorkflow{},
 	&AIWorkflowVersion{},
 	&AIWorkflowRun{},
@@ -910,36 +909,6 @@ type SkillRunLog struct {
 	ErrorMessage      string           `gorm:"type:text"`                             // ErrorMessage 为运行过程中的错误信息。
 	TraceData         string           `gorm:"type:text"`                             // TraceData 为 Skill 执行链路追踪数据JSON。
 	CreatedAt         time.Time        `gorm:"type:datetime;not null;index"`          // CreatedAt 为运行日志创建时间。
-}
-
-// AgentRunLog 表示一次客服 Agent 自动运行的总链路日志。
-type AgentRunLog struct {
-	ID               int64     `gorm:"primaryKey;autoIncrement"`
-	ConversationID   int64     `gorm:"type:bigint;not null;default:0;index"`
-	MessageID        int64     `gorm:"type:bigint;not null;default:0;index"`
-	RequestID        string    `gorm:"type:varchar(128);not null;default:'';index"`
-	AIAgentID        int64     `gorm:"type:bigint;not null;default:0;index"`
-	AIConfigID       int64     `gorm:"type:bigint;not null;default:0;index"`
-	UserMessage      string    `gorm:"type:longtext"`
-	PlannedAction    string    `gorm:"type:varchar(30);not null;default:'';index"`
-	PlannedSkillID   int64     `gorm:"type:bigint;not null;default:0;index"`
-	PlannedSkillName string    `gorm:"type:varchar(100);not null;default:''"`
-	SkillRouteTrace  string    `gorm:"type:text"`
-	ToolSearchTrace  string    `gorm:"type:text"`
-	GraphToolTrace   string    `gorm:"type:text"`
-	GraphToolCode    string    `gorm:"type:varchar(200);not null;default:'';index"`
-	HandoffReason    string    `gorm:"type:varchar(500);not null;default:''"`
-	PlannedToolCode  string    `gorm:"type:varchar(200);not null;default:'';index"`
-	PlanReason       string    `gorm:"type:varchar(500);not null;default:''"`
-	InterruptType    string    `gorm:"type:varchar(50);not null;default:'';index"`
-	ResumeSource     string    `gorm:"type:varchar(50);not null;default:'';index"`
-	FinalAction      string    `gorm:"type:varchar(30);not null;default:'';index"`
-	FinalStatus      string    `gorm:"type:varchar(30);not null;default:'';index"`
-	ReplyText        string    `gorm:"type:longtext"`
-	ErrorMessage     string    `gorm:"type:text"`
-	LatencyMs        int64     `gorm:"type:bigint;not null;default:0"`
-	TraceData        string    `gorm:"type:text"`
-	CreatedAt        time.Time `gorm:"type:datetime;not null;index"`
 }
 
 // ConversationInterrupt 表示会话级待恢复中断记录。

@@ -38,38 +38,3 @@ type SkillDebugRunResponse struct {
 	ConversationID    int64    `json:"conversationId"`
 	AIAgentID         int64    `json:"aiAgentId"`
 }
-
-type AgentRunLogResponse struct {
-	ID                int64  `json:"id"`
-	ConversationID    int64  `json:"conversationId"`
-	MessageID         int64  `json:"messageId"`
-	RequestID         string `json:"requestId"`
-	AIAgentID         int64  `json:"aiAgentId"`
-	AIConfigID        int64  `json:"aiConfigId"`
-	UserMessage       string `json:"userMessage"`
-	PlannedAction     string `json:"plannedAction"`
-	PlannedSkillID    int64  `json:"plannedSkillId"`
-	PlannedSkillName  string `json:"plannedSkillName"`
-	SkillRouteTrace   string `json:"skillRouteTrace"`
-	ToolSearchTrace   string `json:"toolSearchTrace"`
-	GraphToolTrace    string `json:"graphToolTrace"`
-	GraphToolCode     string `json:"graphToolCode"`
-	RecommendedAction string `json:"recommendedAction"`
-	RiskLevel         string `json:"riskLevel"`
-	TicketDraftReady  bool   `json:"ticketDraftReady"`
-	HandoffReason     string `json:"handoffReason"`
-	PlannedToolCode   string `json:"plannedToolCode"`
-	PlanReason        string `json:"planReason"`
-	InterruptType     string `json:"interruptType"`
-	ResumeSource      string `json:"resumeSource"`
-	HitlStatus        string `json:"hitlStatus"`
-	HitlStatusName    string `json:"hitlStatusName"`
-	HitlSummary       string `json:"hitlSummary"`
-	FinalAction       string `json:"finalAction"`
-	FinalStatus       string `json:"finalStatus"`
-	ReplyText         string `json:"replyText"`
-	ErrorMessage      string `json:"errorMessage"`
-	LatencyMs         int64  `json:"latencyMs"`
-	TraceData         string `json:"traceData"`
-	CreatedAt         string `json:"createdAt"`
-}

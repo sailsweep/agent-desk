@@ -4,11 +4,9 @@ import (
 	"testing"
 	"time"
 
+	applicationruntime "agent-desk/internal/ai/application/runtime"
 	"agent-desk/internal/models"
 	"agent-desk/internal/pkg/enums"
-	"agent-desk/internal/pkg/toolx"
-
-	applicationruntime "agent-desk/internal/ai/application/runtime"
 )
 
 func TestReplyEligibilityCanReply(t *testing.T) {
@@ -67,59 +65,6 @@ func TestResolveReplyTimeout(t *testing.T) {
 	aiAgent.ReplyTimeoutSeconds = 999
 	if got := service.resolveReplyTimeout(aiAgent); got != 600*time.Second {
 		t.Fatalf("expected clamped timeout, got %v", got)
-	}
-}
-
-func TestBuildRunLogPlan(t *testing.T) {
-	summary := &applicationruntime.Summary{
-		PlannedSkillID: 44,
-		PlanReason:     "manual",
-	}
-	action, toolCode, reason := buildRunLogPlan(summary)
-	if action != "skill" || toolCode != "" || reason != "manual" {
-		t.Fatalf("unexpected skill plan result: action=%q toolCode=%q reason=%q", action, toolCode, reason)
-	}
-
-	summary = &applicationruntime.Summary{
-		Interrupted: true,
-		TraceData: `{
-			"graphTools": {
-				"items": [
-					{
-						"toolCode": "` + toolx.GraphTriageServiceRequest.Code + `",
-						"recommendedAction": "create_ticket",
-						"ticketDraftReady": true
-					}
-				]
-			}
-		}`,
-	}
-	action, toolCode, reason = buildRunLogPlan(summary)
-	if action != "graph" || toolCode != toolx.GraphTriageServiceRequest.Code || reason == "" {
-		t.Fatalf("unexpected graph interrupt result: action=%q toolCode=%q reason=%q", action, toolCode, reason)
-	}
-
-	summary = &applicationruntime.Summary{
-		InvokedToolCodes: []string{toolx.BuiltinToolSearch.Code},
-		TraceData: `{
-			"toolSearch": {
-				"items": [
-					{
-						"targetToolCode": "mcp/test/search"
-					}
-				]
-			}
-		}`,
-	}
-	action, toolCode, reason = buildRunLogPlan(summary)
-	if action != "tool" || toolCode != "mcp/test/search" || reason != "agent invoked dynamic tool via tool_search" {
-		t.Fatalf("unexpected dynamic tool result: action=%q toolCode=%q reason=%q", action, toolCode, reason)
-	}
-
-	summary = &applicationruntime.Summary{ReplyText: "done"}
-	action, toolCode, reason = buildRunLogPlan(summary)
-	if action != "reply" || toolCode != "" || reason != "agent replied directly" {
-		t.Fatalf("unexpected reply result: action=%q toolCode=%q reason=%q", action, toolCode, reason)
 	}
 }
 

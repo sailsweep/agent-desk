@@ -19,7 +19,6 @@ func newAIReplyService() *aiReplyService {
 		executor:    newRuntimeReplyExecutor(),
 		interrupts:  newReplyInterruptService(),
 		commit:      newReplyCommitService(),
-		runlog:      newReplyRunLogService(),
 	}
 }
 
@@ -28,7 +27,6 @@ type aiReplyService struct {
 	executor    *runtimeReplyExecutor
 	interrupts  *replyInterruptService
 	commit      *replyCommitService
-	runlog      *replyRunLogService
 }
 
 func firstInvokedToolCode(summary *applicationruntime.Summary) string {

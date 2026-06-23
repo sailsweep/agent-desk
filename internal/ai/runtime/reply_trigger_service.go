@@ -45,7 +45,6 @@ func (s *aiReplyService) TriggerReplyAsync(conversation models.Conversation, mes
 }
 
 func (s *aiReplyService) TriggerReply(ctx context.Context, conversation models.Conversation, message models.Message, aiAgent models.AIAgent) (retErr error) {
-	startedAt := time.Now()
 	trace := &aiReplyTraceData{Status: "started"}
 	var summary *applicationruntime.Summary
 	replyCtx := aiReplyContext{
@@ -61,18 +60,6 @@ func (s *aiReplyService) TriggerReply(ctx context.Context, conversation models.C
 	if s.eligibility != nil && !s.eligibility.CanReply(conversation, message, aiAgent) {
 		return nil
 	}
-	defer func() {
-		s.runlog.Write(replyRunLogInput{
-			StartedAt:    startedAt,
-			Message:      message,
-			Conversation: conversation,
-			AIAgent:      aiAgent,
-			Question:     message.Content,
-			RunErr:       retErr,
-			Trace:        trace,
-			Summary:      summary,
-		})
-	}()
 	if pendingInterrupt := svc.ConversationInterruptService.FindLatestPendingByConversationID(conversation.ID); pendingInterrupt != nil {
 		replyCtx.PendingInterrupt = pendingInterrupt
 		return s.resumePendingInterrupt(ctx, replyCtx)

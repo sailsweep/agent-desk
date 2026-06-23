@@ -95,7 +95,7 @@ func (e *runtimeReplyExecutor) fillTraceFromSummary(trace *aiReplyTraceData, sum
 		return
 	}
 	trace.Status = "runtime_prepared"
-	trace.FinalAction = toRunLogFinalAction(summary)
+	trace.FinalAction = runtimeTraceFinalAction(summary)
 	if summary != nil && strings.TrimSpace(summary.TraceData) != "" {
 		trace.Runtime = json.RawMessage(summary.TraceData)
 	}

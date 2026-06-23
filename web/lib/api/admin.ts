@@ -511,40 +511,6 @@ export type MCPToolCallResult = {
   structuredContent?: unknown
 }
 
-export type AgentRunLog = {
-  id: number
-  conversationId: number
-  messageId: number
-  aiAgentId: number
-  aiConfigId: number
-  userMessage: string
-  plannedAction: string
-  plannedSkillId: number
-  plannedSkillName: string
-  skillRouteTrace: string
-  toolSearchTrace: string
-  graphToolTrace: string
-  graphToolCode: string
-  recommendedAction: string
-  riskLevel: string
-  ticketDraftReady: boolean
-  handoffReason: string
-  plannedToolCode: string
-  planReason: string
-  interruptType: string
-  resumeSource: string
-  hitlStatus: string
-  hitlStatusName: string
-  hitlSummary: string
-  finalAction: string
-  finalStatus: string
-  replyText: string
-  errorMessage: string
-  latencyMs: number
-  traceData: string
-  createdAt: string
-}
-
 export type AIWorkflowNodeRun = {
   id: number
   workflowRunId: number
@@ -1128,18 +1094,6 @@ export function updateSkillDefinition(payload: UpdateSkillDefinitionPayload) {
     method: "POST",
     body: JSON.stringify(payload),
   })
-}
-
-export function fetchAgentRunLogs(
-  query?: Record<string, string | number | undefined>
-) {
-  return request<PageResult<AgentRunLog>>(
-    `/api/dashboard/agent-run-log/list${toQueryString(query)}`
-  )
-}
-
-export function fetchAgentRunLog(id: number) {
-  return request<AgentRunLog>(`/api/dashboard/agent-run-log/${id}`)
 }
 
 export function fetchAIWorkflowRuns(
