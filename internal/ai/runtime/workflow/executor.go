@@ -14,6 +14,8 @@ import (
 	"agent-desk/internal/ai/workflow/dsl"
 	workflowregistry "agent-desk/internal/ai/workflow/registry"
 	"agent-desk/internal/models"
+	"agent-desk/internal/pkg/dto"
+	"agent-desk/internal/pkg/dto/request"
 	"agent-desk/internal/pkg/utils"
 	"agent-desk/internal/services"
 )
@@ -36,6 +38,16 @@ type Result struct {
 	CompletionTokens int
 	RetrieverCount   int
 	TraceData        string
+	CheckPointID     string
+	CheckPointData   string
+	Interrupted      bool
+	Interrupts       []InterruptSummary
+}
+
+type InterruptSummary struct {
+	Type        string
+	ID          string
+	InfoPreview string
 }
 
 type Executor struct{}
@@ -52,12 +64,66 @@ type runState struct {
 	result    Result
 }
 
+type workflowCheckPoint struct {
+	Definition    dsl.Definition            `json:"definition"`
+	ConfirmNodeID string                    `json:"confirmNodeId"`
+	Vars          map[string]map[string]any `json:"vars"`
+}
+
 func (e *Executor) Execute(ctx context.Context, input Input) (*Result, error) {
 	state := newRunState(input)
 	currentID := strings.TrimSpace(input.Definition.EntryNodeID)
 	if currentID == "" {
 		return nil, fmt.Errorf("workflow entry node is required")
 	}
+	return e.executeFrom(ctx, state, currentID)
+}
+
+func (e *Executor) Resume(ctx context.Context, input Input, checkPointData string, resumeText string) (*Result, error) {
+	var checkpoint workflowCheckPoint
+	if err := json.Unmarshal([]byte(strings.TrimSpace(checkPointData)), &checkpoint); err != nil {
+		return nil, fmt.Errorf("invalid workflow checkpoint: %w", err)
+	}
+	if len(checkpoint.Definition.Nodes) > 0 {
+		input.Definition = checkpoint.Definition
+	}
+	state := newRunState(input)
+	state.vars = checkpoint.Vars
+	if state.vars == nil {
+		state.vars = make(map[string]map[string]any)
+	}
+	confirmNodeID := strings.TrimSpace(checkpoint.ConfirmNodeID)
+	if confirmNodeID == "" {
+		return nil, fmt.Errorf("workflow checkpoint confirm node is required")
+	}
+	decision := graphs.ParseConfirmationDecision(resumeText)
+	if decision == "" {
+		node, ok := state.nodesByID[confirmNodeID]
+		if !ok {
+			return nil, fmt.Errorf("workflow node does not exist: %s", confirmNodeID)
+		}
+		if err := e.executeHumanConfirm(state, node); err != nil {
+			return nil, err
+		}
+		state.result.Status = "interrupted"
+		return &state.result, nil
+	}
+	state.setNodeVars(confirmNodeID, map[string]any{
+		"confirmed":    decision == graphs.ConfirmationDecisionConfirm,
+		"responseText": strings.TrimSpace(resumeText),
+	})
+	nextID, ok, err := state.nextNodeID(confirmNodeID)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		state.result.Status = "completed"
+		return &state.result, nil
+	}
+	return e.executeFrom(ctx, state, nextID)
+}
+
+func (e *Executor) executeFrom(ctx context.Context, state *runState, currentID string) (*Result, error) {
 	for step := 0; step < maxWorkflowSteps; step++ {
 		node, ok := state.nodesByID[currentID]
 		if !ok {
@@ -66,6 +132,10 @@ func (e *Executor) Execute(ctx context.Context, input Input) (*Result, error) {
 		state.result.NodePath = append(state.result.NodePath, node.ID)
 		if err := e.executeNode(ctx, state, node); err != nil {
 			return nil, err
+		}
+		if state.result.Interrupted {
+			state.result.Status = "interrupted"
+			return &state.result, nil
 		}
 		if node.Type == workflowregistry.NodeTypeEnd {
 			state.result.Status = "completed"
@@ -127,6 +197,12 @@ func (e *Executor) executeNode(ctx context.Context, state *runState, node dsl.No
 		state.setNodeVars(node.ID, map[string]any{"matched": true})
 	case workflowregistry.NodeTypeAnalyzeConversation:
 		return e.executeAnalyzeConversation(ctx, state, node)
+	case workflowregistry.NodeTypePrepareTicketDraft:
+		return e.executePrepareTicketDraft(ctx, state, node)
+	case workflowregistry.NodeTypeHumanConfirm:
+		return e.executeHumanConfirm(state, node)
+	case workflowregistry.NodeTypeCreateTicket:
+		return e.executeCreateTicket(state, node)
 	case workflowregistry.NodeTypeLLMReply:
 		return e.executeLLMReply(ctx, state, node)
 	case workflowregistry.NodeTypeSendReply:
@@ -143,6 +219,125 @@ func (e *Executor) executeNode(ctx context.Context, state *runState, node dsl.No
 	default:
 		return fmt.Errorf("unsupported workflow node type: %s", node.Type)
 	}
+	return nil
+}
+
+func (e *Executor) executeCreateTicket(state *runState, node dsl.Node) error {
+	confirmed := truthy(state.resolveInput(node, "confirmed"))
+	if !confirmed {
+		state.setNodeVars(node.ID, map[string]any{
+			"ticketId": int64(0),
+			"created":  false,
+		})
+		return nil
+	}
+	draft := asMap(state.resolveInput(node, "ticketDraft"))
+	title := strings.TrimSpace(toString(draft["title"]))
+	description := strings.TrimSpace(toString(draft["description"]))
+	item, err := services.TicketService.CreateFromConversation(request.CreateTicketFromConversationRequest{
+		ConversationID: state.input.Conversation.ID,
+		Title:          title,
+		Description:    description,
+	}, workflowAIPrincipal(state.input.AIAgent))
+	if err != nil {
+		return err
+	}
+	state.setNodeVars(node.ID, map[string]any{
+		"ticketId": item.ID,
+		"ticketNo": item.TicketNo,
+		"created":  true,
+	})
+	return nil
+}
+
+func workflowAIPrincipal(aiAgent models.AIAgent) *dto.AuthPrincipal {
+	username := strings.TrimSpace(aiAgent.Name)
+	if username == "" {
+		username = "AI"
+	}
+	return &dto.AuthPrincipal{
+		UserID:   0,
+		Username: username,
+		Nickname: username,
+	}
+}
+
+func (e *Executor) executeHumanConfirm(state *runState, node dsl.Node) error {
+	prompt := strings.TrimSpace(toString(state.resolveInput(node, "prompt")))
+	if prompt == "" {
+		prompt = "请确认是否继续。"
+	}
+	infoPreview, err := json.Marshal(map[string]string{"message": prompt})
+	if err != nil {
+		return err
+	}
+	state.result.Interrupted = true
+	state.result.CheckPointID = buildWorkflowCheckPointID(state.input, node.ID)
+	checkpoint, err := json.Marshal(workflowCheckPoint{
+		Definition:    state.input.Definition,
+		ConfirmNodeID: node.ID,
+		Vars:          state.vars,
+	})
+	if err != nil {
+		return err
+	}
+	state.result.CheckPointData = string(checkpoint)
+	state.result.Interrupts = []InterruptSummary{
+		{
+			Type:        workflowregistry.NodeTypeHumanConfirm,
+			ID:          node.ID,
+			InfoPreview: string(infoPreview),
+		},
+	}
+	return nil
+}
+
+func buildWorkflowCheckPointID(input Input, nodeID string) string {
+	return fmt.Sprintf("workflow:%d:%d:%s", input.Conversation.ID, input.UserMessage.ID, strings.TrimSpace(nodeID))
+}
+
+func (e *Executor) executePrepareTicketDraft(ctx context.Context, state *runState, node dsl.Node) error {
+	issue := strings.TrimSpace(toString(state.resolveInput(node, "issue")))
+	input := graphs.PrepareTicketDraftInput{
+		Issue: issue,
+	}
+	if title := strings.TrimSpace(readStringConfig(node.Config, "title")); title != "" {
+		input.Title = title
+	}
+	if description := strings.TrimSpace(readStringConfig(node.Config, "description")); description != "" {
+		input.Description = description
+	}
+	if impact := strings.TrimSpace(readStringConfig(node.Config, "impact")); impact != "" {
+		input.Impact = impact
+	}
+	if expectedOutcome := strings.TrimSpace(readStringConfig(node.Config, "expectedOutcome")); expectedOutcome != "" {
+		input.ExpectedOutcome = expectedOutcome
+	}
+	if currentAttempt := strings.TrimSpace(readStringConfig(node.Config, "currentAttempt")); currentAttempt != "" {
+		input.CurrentAttempt = currentAttempt
+	}
+	args, err := json.Marshal(input)
+	if err != nil {
+		return err
+	}
+	raw, err := graphs.NewPrepareTicketDraftGraph(state.input.Conversation).Run(ctx, string(args))
+	if err != nil {
+		return err
+	}
+	var result graphs.PrepareTicketDraftResult
+	if err := json.Unmarshal([]byte(raw), &result); err != nil {
+		return err
+	}
+	state.setNodeVars(node.ID, map[string]any{
+		"ticketDraft": map[string]any{
+			"ready":             result.Ready,
+			"title":             strings.TrimSpace(result.Title),
+			"description":       strings.TrimSpace(result.Description),
+			"missingFields":     result.MissingFields,
+			"followUpQuestions": result.FollowUpQuestions,
+			"conversationFacts": result.ConversationFacts,
+		},
+	})
 	return nil
 }
 
@@ -443,6 +638,25 @@ func toFloat(value any) float64 {
 	default:
 		return 0
 	}
+}
+
+func asMap(value any) map[string]any {
+	switch v := value.(type) {
+	case map[string]any:
+		return v
+	case map[string]string:
+		ret := make(map[string]any, len(v))
+		for key, item := range v {
+			ret[key] = item
+		}
+		return ret
+	case string:
+		var ret map[string]any
+		if err := json.Unmarshal([]byte(strings.TrimSpace(v)), &ret); err == nil {
+			return ret
+		}
+	}
+	return map[string]any{}
 }
 
 func truthy(value any) bool {

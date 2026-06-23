@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"time"
 
 	"agent-desk/internal/ai/runtime/executor"
@@ -53,11 +54,23 @@ func (s *Service) Run(ctx context.Context, req Request) (*Summary, error) {
 }
 
 func (s *Service) Resume(ctx context.Context, req ResumeRequest) (*Summary, error) {
-	aiAgent, _, err := prepareWorkflowAgent(req.AIAgent)
+	aiAgent, workflow, err := prepareWorkflowAgent(req.AIAgent)
 	if err != nil {
 		return nil, err
 	}
 	req.AIAgent = aiAgent
+	if interrupt := repositories.ConversationInterruptRepository.GetByCheckPointID(sqls.DB(), req.CheckPointID); interrupt != nil && strings.TrimSpace(interrupt.RequestData) != "" {
+		workflowResult, err := workflowexecutor.NewExecutor().Resume(ctx, workflowexecutor.Input{
+			Definition:   workflow.Definition,
+			Conversation: req.Conversation,
+			AIAgent:      req.AIAgent,
+			AIConfig:     req.AIConfig,
+		}, interrupt.RequestData, firstWorkflowResumeText(req.ResumeData))
+		if err != nil {
+			return nil, err
+		}
+		return toWorkflowSummary(workflowResult, req.AIConfig.ModelName), nil
+	}
 	toolSet, err := s.prepare.prepareToolsForResume(req)
 	if err != nil {
 		return nil, err
@@ -77,6 +90,15 @@ func (s *Service) Resume(ctx context.Context, req ResumeRequest) (*Summary, erro
 	return toSummary(summary), nil
 }
 
+func firstWorkflowResumeText(data map[string]string) string {
+	for _, value := range data {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}
+
 func toWorkflowSummary(result *workflowexecutor.Result, modelName string) *Summary {
 	if result == nil {
 		return nil
@@ -94,7 +116,26 @@ func toWorkflowSummary(result *workflowexecutor.Result, modelName string) *Summa
 		CompletionTokens: result.CompletionTokens,
 		RetrieverCount:   result.RetrieverCount,
 		TraceData:        string(traceData),
+		CheckPointID:     result.CheckPointID,
+		CheckPointData:   result.CheckPointData,
+		Interrupted:      result.Interrupted,
+		Interrupts:       toWorkflowInterruptSummaries(result.Interrupts),
 	}
+}
+
+func toWorkflowInterruptSummaries(items []workflowexecutor.InterruptSummary) []InterruptContextSummary {
+	if len(items) == 0 {
+		return nil
+	}
+	ret := make([]InterruptContextSummary, 0, len(items))
+	for _, item := range items {
+		ret = append(ret, InterruptContextSummary{
+			Type:        item.Type,
+			ID:          item.ID,
+			InfoPreview: item.InfoPreview,
+		})
+	}
+	return ret
 }
 
 func writeWorkflowRun(req Request, workflow resolvedWorkflow, result *workflowexecutor.Result, errorMessage string) error {

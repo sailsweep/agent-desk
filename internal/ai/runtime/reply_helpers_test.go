@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	applicationruntime "agent-desk/internal/ai/application/runtime"
+	"agent-desk/internal/models"
 	"agent-desk/internal/pkg/toolx"
 )
 
@@ -66,6 +67,22 @@ func TestExtractInterruptMessageAndCheckpointError(t *testing.T) {
 	}
 }
 
+func TestBuildConversationInterruptStoresWorkflowCheckpointData(t *testing.T) {
+	item := buildConversationInterrupt(testConversation(1), testMessage(2), testAIAgent(3), &applicationruntime.Summary{
+		CheckPointData: `{"confirmNodeId":"confirm_1"}`,
+		Interrupted:    true,
+		Interrupts: []applicationruntime.InterruptContextSummary{
+			{Type: "human_confirm", ID: "confirm_1", InfoPreview: `{"message":"请确认"}`},
+		},
+	})
+	if item == nil {
+		t.Fatalf("expected interrupt item")
+	}
+	if item.RequestData != `{"confirmNodeId":"confirm_1"}` {
+		t.Fatalf("unexpected request data: %q", item.RequestData)
+	}
+}
+
 func TestGraphPlanReason(t *testing.T) {
 	summary := &applicationruntime.Summary{
 		TraceData: `{
@@ -108,4 +125,16 @@ type fakeErr string
 
 func (e fakeErr) Error() string {
 	return string(e)
+}
+
+func testConversation(id int64) models.Conversation {
+	return models.Conversation{ID: id}
+}
+
+func testMessage(id int64) models.Message {
+	return models.Message{ID: id}
+}
+
+func testAIAgent(id int64) models.AIAgent {
+	return models.AIAgent{ID: id}
 }

@@ -110,6 +110,131 @@ func TestExecutorAnalyzeConversationOutputsBranchVariables(t *testing.T) {
 	assertPath(t, result.NodePath, []string{"start_1", "analyze_1", "handoff_end"})
 }
 
+func TestExecutorPrepareTicketDraftOutputsDraftVariable(t *testing.T) {
+	db := setupWorkflowExecutorHandoffDB(t)
+	aiAgent := createWorkflowExecutorHandoffAIAgent(t, db, "1")
+	conversation := createWorkflowExecutorHandoffConversation(t, db, aiAgent.ID)
+	userMessage := createWorkflowExecutorCustomerMessage(t, db, conversation.ID, "订单支付失败，请帮我登记工单")
+
+	result, err := NewExecutor().Execute(context.Background(), Input{
+		Definition:   prepareTicketDraftWorkflowDefinition(),
+		Conversation: conversation,
+		UserMessage:  userMessage,
+		AIAgent:      aiAgent,
+	})
+	if err != nil {
+		t.Fatalf("execute workflow: %v", err)
+	}
+	assertPath(t, result.NodePath, []string{"start_1", "draft_1", "ready_end"})
+}
+
+func TestExecutorHumanConfirmInterruptsWithCheckpoint(t *testing.T) {
+	result, err := NewExecutor().Execute(context.Background(), Input{
+		Definition: humanConfirmWorkflowDefinition(),
+		Conversation: models.Conversation{
+			ID: 11,
+		},
+		UserMessage: models.Message{
+			ID:      22,
+			Content: "创建工单",
+		},
+		AIAgent: models.AIAgent{
+			ID: 33,
+		},
+	})
+	if err != nil {
+		t.Fatalf("execute workflow: %v", err)
+	}
+	if !result.Interrupted {
+		t.Fatalf("expected workflow to interrupt")
+	}
+	if result.CheckPointID == "" {
+		t.Fatalf("expected checkpoint id")
+	}
+	if len(result.Interrupts) != 1 {
+		t.Fatalf("expected one interrupt, got %#v", result.Interrupts)
+	}
+	if result.Interrupts[0].Type != "human_confirm" || result.Interrupts[0].ID != "confirm_1" {
+		t.Fatalf("unexpected interrupt summary: %#v", result.Interrupts[0])
+	}
+	if !strings.Contains(result.Interrupts[0].InfoPreview, "请确认创建工单") {
+		t.Fatalf("expected confirmation prompt, got %q", result.Interrupts[0].InfoPreview)
+	}
+	assertPath(t, result.NodePath, []string{"start_1", "prompt_1", "confirm_1"})
+}
+
+func TestExecutorResumeHumanConfirmContinuesWithConfirmedVariable(t *testing.T) {
+	executor := NewExecutor()
+	input := Input{
+		Definition: humanConfirmWorkflowDefinition(),
+		Conversation: models.Conversation{
+			ID: 11,
+		},
+		UserMessage: models.Message{
+			ID:      22,
+			Content: "创建工单",
+		},
+		AIAgent: models.AIAgent{
+			ID: 33,
+		},
+	}
+	interrupted, err := executor.Execute(context.Background(), input)
+	if err != nil {
+		t.Fatalf("execute workflow: %v", err)
+	}
+	result, err := executor.Resume(context.Background(), input, interrupted.CheckPointData, "确认")
+	if err != nil {
+		t.Fatalf("resume workflow: %v", err)
+	}
+	if result.Interrupted {
+		t.Fatalf("expected workflow resume to complete")
+	}
+	assertPath(t, result.NodePath, []string{"end_1"})
+}
+
+func TestExecutorResumeCreatesTicketAfterHumanConfirmation(t *testing.T) {
+	db := setupWorkflowExecutorHandoffDB(t)
+	aiAgent := createWorkflowExecutorHandoffAIAgent(t, db, "1")
+	conversation := createWorkflowExecutorHandoffConversation(t, db, aiAgent.ID)
+	userMessage := createWorkflowExecutorCustomerMessage(t, db, conversation.ID, "订单支付失败，请帮我登记工单")
+	executor := NewExecutor()
+
+	interrupted, err := executor.Execute(context.Background(), Input{
+		Definition:   createTicketWorkflowDefinition(),
+		Conversation: conversation,
+		UserMessage:  userMessage,
+		AIAgent:      aiAgent,
+	})
+	if err != nil {
+		t.Fatalf("execute workflow: %v", err)
+	}
+	if !interrupted.Interrupted {
+		t.Fatalf("expected workflow to interrupt before creating ticket")
+	}
+
+	result, err := executor.Resume(context.Background(), Input{
+		Definition:   createTicketWorkflowDefinition(),
+		Conversation: conversation,
+		UserMessage:  userMessage,
+		AIAgent:      aiAgent,
+	}, interrupted.CheckPointData, "确认")
+	if err != nil {
+		t.Fatalf("resume workflow: %v", err)
+	}
+	if result.Interrupted {
+		t.Fatalf("expected workflow to complete")
+	}
+	assertPath(t, result.NodePath, []string{"create_ticket_1", "end_1"})
+
+	var ticket models.Ticket
+	if err := db.First(&ticket, "conversation_id = ?", conversation.ID).Error; err != nil {
+		t.Fatalf("expected created ticket: %v", err)
+	}
+	if ticket.Title == "" || !strings.Contains(ticket.Description, "订单支付失败") {
+		t.Fatalf("unexpected ticket: %+v", ticket)
+	}
+}
+
 func conditionalReplyDefinition() dsl.Definition {
 	return dsl.Definition{
 		SchemaVersion: 1,
@@ -144,6 +269,103 @@ func conditionalReplyDefinition() dsl.Definition {
 			{ID: "edge_normal_send", Source: "normal_reply", Target: "send_normal"},
 			{ID: "edge_send_vip_end", Source: "send_vip", Target: "end_1"},
 			{ID: "edge_send_normal_end", Source: "send_normal", Target: "end_1"},
+		},
+	}
+}
+
+func createTicketWorkflowDefinition() dsl.Definition {
+	return dsl.Definition{
+		SchemaVersion: 1,
+		EntryNodeID:   "start_1",
+		Nodes: []dsl.Node{
+			{ID: "start_1", Type: workflowregistry.NodeTypeStart, Name: "Start"},
+			{ID: "draft_1", Type: workflowregistry.NodeTypePrepareTicketDraft, Name: "Draft", Inputs: map[string]dsl.VariableSelector{
+				"issue": {NodeID: "start_1", Field: "userMessage"},
+			}},
+			{ID: "prompt_1", Type: workflowregistry.NodeTypeLLMReply, Name: "Prompt", Config: []byte(`{"staticReply":"请确认创建工单"}`)},
+			{ID: "confirm_1", Type: workflowregistry.NodeTypeHumanConfirm, Name: "Confirm", Inputs: map[string]dsl.VariableSelector{
+				"prompt": {NodeID: "prompt_1", Field: "replyText"},
+			}},
+			{ID: "create_ticket_1", Type: workflowregistry.NodeTypeCreateTicket, Name: "Create Ticket", Inputs: map[string]dsl.VariableSelector{
+				"ticketDraft": {NodeID: "draft_1", Field: "ticketDraft"},
+				"confirmed":   {NodeID: "confirm_1", Field: "confirmed"},
+			}},
+			{ID: "end_1", Type: workflowregistry.NodeTypeEnd, Name: "End"},
+			{ID: "cancel_end", Type: workflowregistry.NodeTypeEnd, Name: "Cancel"},
+		},
+		Edges: []dsl.Edge{
+			{ID: "edge_start_draft", Source: "start_1", Target: "draft_1"},
+			{ID: "edge_draft_prompt", Source: "draft_1", Target: "prompt_1"},
+			{ID: "edge_prompt_confirm", Source: "prompt_1", Target: "confirm_1"},
+			{
+				ID:     "edge_confirm_create",
+				Source: "confirm_1",
+				Target: "create_ticket_1",
+				Condition: &dsl.Condition{
+					Left:     &dsl.VariableSelector{NodeID: "confirm_1", Field: "confirmed"},
+					Operator: "is_true",
+				},
+			},
+			{ID: "edge_confirm_cancel", Source: "confirm_1", Target: "cancel_end"},
+			{ID: "edge_create_end", Source: "create_ticket_1", Target: "end_1"},
+		},
+	}
+}
+
+func humanConfirmWorkflowDefinition() dsl.Definition {
+	return dsl.Definition{
+		SchemaVersion: 1,
+		EntryNodeID:   "start_1",
+		Nodes: []dsl.Node{
+			{ID: "start_1", Type: workflowregistry.NodeTypeStart, Name: "Start"},
+			{ID: "prompt_1", Type: workflowregistry.NodeTypeLLMReply, Name: "Prompt", Config: []byte(`{"staticReply":"请确认创建工单"}`)},
+			{ID: "confirm_1", Type: workflowregistry.NodeTypeHumanConfirm, Name: "Confirm", Inputs: map[string]dsl.VariableSelector{
+				"prompt": {NodeID: "prompt_1", Field: "replyText"},
+			}},
+			{ID: "end_1", Type: workflowregistry.NodeTypeEnd, Name: "End"},
+			{ID: "cancel_end", Type: workflowregistry.NodeTypeEnd, Name: "Cancel"},
+		},
+		Edges: []dsl.Edge{
+			{ID: "edge_start_prompt", Source: "start_1", Target: "prompt_1"},
+			{ID: "edge_prompt_confirm", Source: "prompt_1", Target: "confirm_1"},
+			{
+				ID:     "edge_confirm_yes",
+				Source: "confirm_1",
+				Target: "end_1",
+				Condition: &dsl.Condition{
+					Left:     &dsl.VariableSelector{NodeID: "confirm_1", Field: "confirmed"},
+					Operator: "is_true",
+				},
+			},
+			{ID: "edge_confirm_cancel", Source: "confirm_1", Target: "cancel_end"},
+		},
+	}
+}
+
+func prepareTicketDraftWorkflowDefinition() dsl.Definition {
+	return dsl.Definition{
+		SchemaVersion: 1,
+		EntryNodeID:   "start_1",
+		Nodes: []dsl.Node{
+			{ID: "start_1", Type: workflowregistry.NodeTypeStart, Name: "Start"},
+			{ID: "draft_1", Type: workflowregistry.NodeTypePrepareTicketDraft, Name: "Draft", Inputs: map[string]dsl.VariableSelector{
+				"issue": {NodeID: "start_1", Field: "userMessage"},
+			}},
+			{ID: "ready_end", Type: workflowregistry.NodeTypeEnd, Name: "Ready"},
+			{ID: "default_end", Type: workflowregistry.NodeTypeEnd, Name: "Default"},
+		},
+		Edges: []dsl.Edge{
+			{ID: "edge_start_draft", Source: "start_1", Target: "draft_1"},
+			{
+				ID:     "edge_draft_ready",
+				Source: "draft_1",
+				Target: "ready_end",
+				Condition: &dsl.Condition{
+					Left:     &dsl.VariableSelector{NodeID: "draft_1", Field: "ticketDraft"},
+					Operator: "exists",
+				},
+			},
+			{ID: "edge_draft_default", Source: "draft_1", Target: "default_end"},
 		},
 	}
 }
@@ -225,16 +447,23 @@ func setupWorkflowExecutorHandoffDB(t *testing.T) *gorm.DB {
 	})
 	if err := db.AutoMigrate(
 		&models.User{},
+		&models.Customer{},
+		&models.CustomerIdentity{},
 		&models.AIAgent{},
 		&models.AgentTeam{},
 		&models.AgentTeamSchedule{},
 		&models.AgentProfile{},
+		&models.Channel{},
 		&models.Conversation{},
 		&models.ConversationAssignment{},
 		&models.ConversationEventLog{},
 		&models.ConversationReadState{},
 		&models.Message{},
 		&models.ChannelMessageOutbox{},
+		&models.Ticket{},
+		&models.TicketNoSequence{},
+		&models.TicketTag{},
+		&models.TicketProgress{},
 	); err != nil {
 		t.Fatalf("auto migrate error = %v", err)
 	}
@@ -303,6 +532,13 @@ func createWorkflowExecutorHandoffAgentProfile(t *testing.T, db *gorm.DB, userID
 func createWorkflowExecutorHandoffConversation(t *testing.T, db *gorm.DB, aiAgentID int64) models.Conversation {
 	t.Helper()
 	now := time.Now()
+	if err := db.FirstOrCreate(&models.Customer{
+		ID:     1,
+		Name:   "测试访客",
+		Status: enums.StatusOk,
+	}).Error; err != nil {
+		t.Fatalf("create customer error = %v", err)
+	}
 	item := models.Conversation{
 		AIAgentID:     aiAgentID,
 		ChannelID:     1,

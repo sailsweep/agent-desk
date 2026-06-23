@@ -47,6 +47,7 @@ type Summary struct {
 	ToolCodes             []string
 	InvokedToolCodes      []string
 	CheckPointID          string
+	CheckPointData        string
 	Interrupted           bool
 	Interrupts            []InterruptContextSummary
 	TraceData             string

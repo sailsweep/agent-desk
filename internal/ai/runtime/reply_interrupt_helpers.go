@@ -34,6 +34,7 @@ func buildConversationInterrupt(conversation models.Conversation, message models
 	item.InterruptType = firstInterruptType(summary)
 	item.Status = "pending"
 	item.PromptText = resolveInterruptPrompt(summary)
+	item.RequestData = strings.TrimSpace(summary.CheckPointData)
 	item.UpdatedAt = now
 	return item
 }
