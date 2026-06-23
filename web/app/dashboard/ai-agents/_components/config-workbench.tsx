@@ -9,6 +9,7 @@ import {
   CheckCircle2Icon,
   DatabaseIcon,
   GitBranchIcon,
+  HistoryIcon,
   LifeBuoyIcon,
   PlugIcon,
   SaveIcon,
@@ -90,7 +91,7 @@ type SectionKey =
   | "tools"
   | "workflow"
   | "handoff"
-  | "publish"
+  | "versions"
 
 const emptyDefinition: AIWorkflowDefinition = {
   schemaVersion: 1,
@@ -537,7 +538,7 @@ export function AIAgentConfigWorkbench({
     { key: "tools", title: "MCP Tools", icon: <PlugIcon /> },
     { key: "workflow", title: "会话流程", icon: <GitBranchIcon /> },
     { key: "handoff", title: "转人工与兜底", icon: <LifeBuoyIcon /> },
-    { key: "publish", title: "版本记录", icon: <ShieldCheckIcon /> },
+    { key: "versions", title: "版本记录", icon: <HistoryIcon /> },
   ]
 
   const selectedKnowledgeOptions = selectedOptions(selectedKnowledgeIds, knowledgeOptions)
@@ -876,7 +877,7 @@ export function AIAgentConfigWorkbench({
                 </ConfigSection>
               ) : null}
 
-              {activeSection === "publish" ? (
+              {activeSection === "versions" ? (
                 <ConfigSection>
                   <div className="overflow-hidden rounded-md border">
                     {workflowVersions.length > 0 ? (
