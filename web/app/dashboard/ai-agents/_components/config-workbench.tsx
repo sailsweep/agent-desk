@@ -537,7 +537,7 @@ export function AIAgentConfigWorkbench({
     { key: "tools", title: "MCP Tools", icon: <PlugIcon /> },
     { key: "workflow", title: "会话流程", icon: <GitBranchIcon /> },
     { key: "handoff", title: "转人工与兜底", icon: <LifeBuoyIcon /> },
-    { key: "publish", title: "发布状态", icon: <ShieldCheckIcon /> },
+    { key: "publish", title: "版本记录", icon: <ShieldCheckIcon /> },
   ]
 
   const selectedKnowledgeOptions = selectedOptions(selectedKnowledgeIds, knowledgeOptions)
