@@ -996,13 +996,14 @@ function WorkflowConnectionLine({ fromX, fromY, toX, toY }: ConnectionLineCompon
     <g>
       <path
         fill="none"
-        stroke="hsl(var(--primary) / 0.72)"
+        stroke="var(--primary)"
+        opacity={0.72}
         strokeDasharray="6 5"
         strokeLinecap="round"
         strokeWidth={2}
         d={edgePath}
       />
-      <circle cx={toX} cy={toY} r={4} fill="hsl(var(--primary))" />
+      <circle cx={toX} cy={toY} r={4} fill="var(--primary)" />
     </g>
   )
 }
@@ -1217,7 +1218,7 @@ function WorkflowCanvasNode({ id, data, selected }: NodeProps<WorkflowFlowNode>)
   return (
     <div
       className={[
-        "group/node relative w-52 overflow-hidden rounded-xl border bg-background shadow-[0_12px_34px_rgba(15,23,42,0.08)] transition-all hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(15,23,42,0.12)]",
+        "group/node relative w-52 rounded-xl border bg-background shadow-[0_12px_34px_rgba(15,23,42,0.08)] transition-all hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(15,23,42,0.12)]",
         selected ? "border-primary ring-4 ring-primary/10" : "",
         hasIssue ? "border-destructive/70" : "border-border/70",
       ].join(" ")}
@@ -1227,45 +1228,47 @@ function WorkflowCanvasNode({ id, data, selected }: NodeProps<WorkflowFlowNode>)
       <WorkflowNodeHandle
         type="target"
         position={Position.Left}
-        className={cn("!-left-2.5", handleClassName)}
+        className={cn("!left-0", handleClassName)}
       />
-      <div className="flex items-start gap-2 border-b border-border/60 bg-muted/20 px-3 py-2.5">
-        <div
-          className={cn(
-            "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg",
-            hasIssue ? "bg-destructive/10 text-destructive" : "bg-emerald-500/10 text-emerald-700"
-          )}
-        >
+      <div className="overflow-hidden rounded-xl">
+        <div className="flex items-start gap-2 border-b border-border/60 bg-muted/20 px-3 py-2.5">
+          <div
+            className={cn(
+              "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg",
+              hasIssue ? "bg-destructive/10 text-destructive" : "bg-emerald-500/10 text-emerald-700"
+            )}
+          >
+            {hasIssue ? (
+              <AlertCircleIcon className="size-4" />
+            ) : (
+              <CheckCircle2Icon className="size-4" />
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-medium">{data.name ?? data.title}</div>
+            <div className="mt-0.5 truncate text-xs text-muted-foreground">{data.title}</div>
+          </div>
+        </div>
+        <div className="space-y-2 px-3 py-2.5 text-xs">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="rounded-full bg-muted px-2 py-0.5">输入 {data.inputCount ?? 0}</span>
+            <span className="rounded-full bg-muted px-2 py-0.5">输出 {data.outputCount ?? 0}</span>
+          </div>
           {hasIssue ? (
-            <AlertCircleIcon className="size-4" />
+            <div className="rounded-md bg-destructive/10 px-2 py-1.5 text-destructive">
+              缺少输入：{missingInputs.join("、")}
+            </div>
           ) : (
-            <CheckCircle2Icon className="size-4" />
+            <div className="rounded-md bg-emerald-500/10 px-2 py-1.5 text-emerald-700">
+              配置完整
+            </div>
           )}
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium">{data.name ?? data.title}</div>
-          <div className="mt-0.5 truncate text-xs text-muted-foreground">{data.title}</div>
-        </div>
-      </div>
-      <div className="space-y-2 px-3 py-2.5 text-xs">
-        <div className="flex items-center justify-between text-muted-foreground">
-          <span className="rounded-full bg-muted px-2 py-0.5">输入 {data.inputCount ?? 0}</span>
-          <span className="rounded-full bg-muted px-2 py-0.5">输出 {data.outputCount ?? 0}</span>
-        </div>
-        {hasIssue ? (
-          <div className="rounded-md bg-destructive/10 px-2 py-1.5 text-destructive">
-            缺少输入：{missingInputs.join("、")}
-          </div>
-        ) : (
-          <div className="rounded-md bg-emerald-500/10 px-2 py-1.5 text-emerald-700">
-            配置完整
-          </div>
-        )}
       </div>
       <WorkflowNodeHandle
         type="source"
         position={Position.Right}
-        className={cn("!-right-2.5", handleClassName)}
+        className={cn("!right-0", handleClassName)}
       />
       <WorkflowAddAfterButton
         nodeId={id}
