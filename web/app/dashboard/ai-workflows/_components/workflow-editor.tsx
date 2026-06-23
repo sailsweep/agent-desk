@@ -55,7 +55,7 @@ import {
   type WorkflowEditorEdge,
   type WorkflowEditorNode,
 } from "./workflow-utils"
-import { NodeConfigPanel } from "./node-config-panel"
+import { NodeConfigPanel, type WorkflowBranchSummary } from "./node-config-panel"
 import { VariableSelector } from "./variable-selector"
 
 type WorkflowNodeData = Record<string, unknown> & {
@@ -206,6 +206,10 @@ export function WorkflowEditor({
   const propertyPanelAvailableVariables = useMemo(
     () => (propertyPanelNode ? getAvailableVariables(draft, propertyPanelNode.id, nodeSpecs) : []),
     [draft, nodeSpecs, propertyPanelNode]
+  )
+  const propertyPanelBranchSummaries = useMemo(
+    () => (propertyPanelNode ? getBranchSummaries(nodes, edges, propertyPanelNode.id) : []),
+    [edges, nodes, propertyPanelNode]
   )
   const propertyPanelEdgeVariables = useMemo(
     () => (propertyPanelEdge ? getEdgeConditionVariables(draft, propertyPanelEdge.source, nodeSpecs) : []),
@@ -591,6 +595,7 @@ export function WorkflowEditor({
                     node={propertyPanelNode}
                     nodeSpec={propertyPanelNodeSpec}
                     availableVariables={propertyPanelAvailableVariables}
+                    branchSummaries={propertyPanelBranchSummaries}
                     onChange={updateNodeData}
                   />
                 ) : null}
@@ -702,6 +707,50 @@ const conditionOperators = [
   { value: "lt", label: "小于" },
   { value: "lte", label: "小于等于" },
 ]
+
+function getBranchSummaries(
+  nodes: WorkflowFlowNode[],
+  edges: WorkflowFlowEdge[],
+  nodeId: string
+): WorkflowBranchSummary[] {
+  return edges
+    .filter((edge) => edge.source === nodeId)
+    .map((edge) => {
+      const target = nodes.find((node) => node.id === edge.target)
+      const condition = (edge.data as WorkflowEditorEdge["data"] | undefined)?.condition
+      return {
+        edgeId: edge.id,
+        targetName: target?.data.name ?? target?.data.title ?? edge.target,
+        conditionLabel: condition ? formatConditionLabel(condition) : "无条件匹配",
+        isDefault: !condition,
+      }
+    })
+}
+
+function formatConditionLabel(condition: NonNullable<WorkflowEdgeCondition>) {
+  const left = condition.left?.nodeId && condition.left.field
+    ? `${condition.left.nodeId}.${condition.left.field}`
+    : "未选择变量"
+  const operator = conditionOperators.find((item) => item.value === condition.operator)?.label
+    ?? condition.operator
+    ?? "未选择判断方式"
+
+  if (["exists", "not_exists", "truthy", "falsy"].includes(condition.operator ?? "")) {
+    return `${left} ${operator}`
+  }
+
+  return `${left} ${operator} ${formatConditionRight(condition.right)}`
+}
+
+function formatConditionRight(value: unknown) {
+  if (value === undefined || value === null || value === "") {
+    return "未填写比较值"
+  }
+  if (typeof value === "object") {
+    return JSON.stringify(value)
+  }
+  return String(value)
+}
 
 function EdgeConditionPanel({
   edge,
