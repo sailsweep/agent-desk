@@ -67,6 +67,7 @@ func (e *runtimeReplyExecutor) ResumePendingInterrupt(ctx context.Context, input
 	}
 	summary, err := Service.Resume(ctx, applicationruntime.ResumeRequest{
 		Conversation: input.Conversation,
+		UserMessage:  input.Message,
 		AIAgent:      input.AIAgent,
 		AIConfig:     *aiConfig,
 		CheckPointID: strings.TrimSpace(input.PendingInterrupt.CheckPointID),

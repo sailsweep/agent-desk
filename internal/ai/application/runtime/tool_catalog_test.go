@@ -199,6 +199,19 @@ func TestServiceRunExecutesPublishedWorkflow(t *testing.T) {
 	if nodeRunCount != 4 {
 		t.Fatalf("expected four workflow node runs, got %d", nodeRunCount)
 	}
+	var replyNodeRun models.AIWorkflowNodeRun
+	if err := sqls.DB().First(&replyNodeRun, "node_id = ?", "reply_1").Error; err != nil {
+		t.Fatalf("find reply node run: %v", err)
+	}
+	if replyNodeRun.InputPreview == "" || replyNodeRun.OutputPreview == "" {
+		t.Fatalf("expected node input/output previews, got input=%q output=%q", replyNodeRun.InputPreview, replyNodeRun.OutputPreview)
+	}
+	if !strings.Contains(replyNodeRun.OutputPreview, "workflow reply") {
+		t.Fatalf("expected reply output preview, got %q", replyNodeRun.OutputPreview)
+	}
+	if replyNodeRun.DurationMS < 0 {
+		t.Fatalf("unexpected negative duration: %d", replyNodeRun.DurationMS)
+	}
 }
 
 func setupWorkflowRuntimeTestDB(t *testing.T) {

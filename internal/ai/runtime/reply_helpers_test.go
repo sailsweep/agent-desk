@@ -27,6 +27,10 @@ func TestSummaryPrimaryToolCodePrefersToolSearchTarget(t *testing.T) {
 }
 
 func TestToRunLogFinalAction(t *testing.T) {
+	if got := toRunLogFinalAction(&applicationruntime.Summary{WorkflowVersionID: 66, ReplyText: "ok"}); got != "workflow_reply" {
+		t.Fatalf("expected workflow_reply final action, got %q", got)
+	}
+
 	if got := toRunLogFinalAction(&applicationruntime.Summary{PlannedSkillID: 44, ReplyText: "ok"}); got != "skill" {
 		t.Fatalf("expected skill final action, got %q", got)
 	}
@@ -47,6 +51,22 @@ func TestToRunLogFinalAction(t *testing.T) {
 
 	if got := toRunLogFinalAction(&applicationruntime.Summary{Status: "fallback"}); got != "fallback" {
 		t.Fatalf("expected fallback final action, got %q", got)
+	}
+}
+
+func TestBuildRunLogPlanUsesWorkflowSummary(t *testing.T) {
+	plannedAction, plannedToolCode, planReason := buildRunLogPlan(&applicationruntime.Summary{
+		WorkflowVersionID: 66,
+		Status:            "completed",
+	})
+	if plannedAction != "workflow" {
+		t.Fatalf("expected workflow planned action, got %q", plannedAction)
+	}
+	if plannedToolCode != "workflow/66" {
+		t.Fatalf("expected workflow planned tool code, got %q", plannedToolCode)
+	}
+	if planReason == "" {
+		t.Fatalf("expected plan reason")
 	}
 }
 

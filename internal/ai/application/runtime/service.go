@@ -21,6 +21,12 @@ type Service struct {
 	prepare *prepareService
 }
 
+const (
+	workflowRunStatusCompleted   = 1
+	workflowRunStatusInterrupted = 2
+	workflowRunStatusFailed      = 3
+)
+
 func NewService() *Service {
 	catalog := newToolCatalog()
 	return &Service{
@@ -45,12 +51,16 @@ func (s *Service) Run(ctx context.Context, req Request) (*Summary, error) {
 		AIConfig:     req.AIConfig,
 	})
 	if err != nil {
+		if workflowResult != nil {
+			_, _ = writeWorkflowRun(req, workflow, workflowResult, err.Error())
+		}
 		return nil, err
 	}
-	if err := writeWorkflowRun(req, workflow, workflowResult, ""); err != nil {
+	workflowRunID, err := writeWorkflowRun(req, workflow, workflowResult, "")
+	if err != nil {
 		return nil, err
 	}
-	return toWorkflowSummary(workflowResult, req.AIConfig.ModelName), nil
+	return toWorkflowSummary(workflowResult, req.AIConfig.ModelName, workflow, workflowRunID), nil
 }
 
 func (s *Service) Resume(ctx context.Context, req ResumeRequest) (*Summary, error) {
@@ -67,9 +77,26 @@ func (s *Service) Resume(ctx context.Context, req ResumeRequest) (*Summary, erro
 			AIConfig:     req.AIConfig,
 		}, interrupt.RequestData, firstWorkflowResumeText(req.ResumeData))
 		if err != nil {
+			if workflowResult != nil {
+				_, _ = writeWorkflowRun(Request{
+					Conversation: req.Conversation,
+					UserMessage:  req.UserMessage,
+					AIAgent:      req.AIAgent,
+					AIConfig:     req.AIConfig,
+				}, workflow, workflowResult, err.Error())
+			}
 			return nil, err
 		}
-		return toWorkflowSummary(workflowResult, req.AIConfig.ModelName), nil
+		workflowRunID, err := writeWorkflowRun(Request{
+			Conversation: req.Conversation,
+			UserMessage:  req.UserMessage,
+			AIAgent:      req.AIAgent,
+			AIConfig:     req.AIConfig,
+		}, workflow, workflowResult, "")
+		if err != nil {
+			return nil, err
+		}
+		return toWorkflowSummary(workflowResult, req.AIConfig.ModelName, workflow, workflowRunID), nil
 	}
 	toolSet, err := s.prepare.prepareToolsForResume(req)
 	if err != nil {
@@ -99,27 +126,34 @@ func firstWorkflowResumeText(data map[string]string) string {
 	return ""
 }
 
-func toWorkflowSummary(result *workflowexecutor.Result, modelName string) *Summary {
+func toWorkflowSummary(result *workflowexecutor.Result, modelName string, workflow resolvedWorkflow, workflowRunID int64) *Summary {
 	if result == nil {
 		return nil
 	}
 	trace := map[string]any{
-		"status":   result.Status,
-		"nodePath": result.NodePath,
+		"status":            result.Status,
+		"workflowId":        workflow.WorkflowID,
+		"workflowVersionId": workflow.VersionID,
+		"workflowRunId":     workflowRunID,
+		"nodePath":          result.NodePath,
 	}
 	traceData, _ := json.Marshal(trace)
 	return &Summary{
-		Status:           result.Status,
-		ReplyText:        result.ReplyText,
-		ModelName:        modelName,
-		PromptTokens:     result.PromptTokens,
-		CompletionTokens: result.CompletionTokens,
-		RetrieverCount:   result.RetrieverCount,
-		TraceData:        string(traceData),
-		CheckPointID:     result.CheckPointID,
-		CheckPointData:   result.CheckPointData,
-		Interrupted:      result.Interrupted,
-		Interrupts:       toWorkflowInterruptSummaries(result.Interrupts),
+		Status:            result.Status,
+		ReplyText:         result.ReplyText,
+		ModelName:         modelName,
+		PromptTokens:      result.PromptTokens,
+		CompletionTokens:  result.CompletionTokens,
+		RetrieverCount:    result.RetrieverCount,
+		WorkflowID:        workflow.WorkflowID,
+		WorkflowVersionID: workflow.VersionID,
+		WorkflowRunID:     workflowRunID,
+		WorkflowNodePath:  append([]string(nil), result.NodePath...),
+		TraceData:         string(traceData),
+		CheckPointID:      result.CheckPointID,
+		CheckPointData:    result.CheckPointData,
+		Interrupted:       result.Interrupted,
+		Interrupts:        toWorkflowInterruptSummaries(result.Interrupts),
 	}
 }
 
@@ -138,9 +172,9 @@ func toWorkflowInterruptSummaries(items []workflowexecutor.InterruptSummary) []I
 	return ret
 }
 
-func writeWorkflowRun(req Request, workflow resolvedWorkflow, result *workflowexecutor.Result, errorMessage string) error {
+func writeWorkflowRun(req Request, workflow resolvedWorkflow, result *workflowexecutor.Result, errorMessage string) (int64, error) {
 	if result == nil {
-		return nil
+		return 0, nil
 	}
 	now := time.Now()
 	endedAt := now
@@ -148,29 +182,42 @@ func writeWorkflowRun(req Request, workflow resolvedWorkflow, result *workflowex
 	for _, node := range workflow.Definition.Nodes {
 		nodeTypes[node.ID] = node.Type
 	}
-	return sqls.WithTransaction(func(ctx *sqls.TxContext) error {
+	runStatus := workflowRunStatus(result.Status, errorMessage)
+	var runID int64
+	err := sqls.WithTransaction(func(ctx *sqls.TxContext) error {
 		run := &models.AIWorkflowRun{
 			WorkflowID:        workflow.WorkflowID,
 			WorkflowVersionID: workflow.VersionID,
 			ConversationID:    req.Conversation.ID,
 			AIAgentID:         req.AIAgent.ID,
 			MessageID:         req.UserMessage.ID,
-			Status:            1,
+			Status:            runStatus,
 			StartedAt:         now,
 			EndedAt:           &endedAt,
+			InterruptType:     firstWorkflowInterruptType(result),
+			InterruptNodeID:   firstWorkflowInterruptNodeID(result),
 			ErrorMessage:      errorMessage,
 		}
 		if err := repositories.AIWorkflowRunRepository.Create(ctx.Tx, run); err != nil {
 			return err
 		}
-		for _, nodeID := range result.NodePath {
+		runID = run.ID
+		nodeTraces := result.NodeTraces
+		if len(nodeTraces) == 0 {
+			nodeTraces = fallbackWorkflowNodeTraces(result.NodePath, nodeTypes, result.Status)
+		}
+		for _, nodeTrace := range nodeTraces {
 			nodeRun := &models.AIWorkflowNodeRun{
 				WorkflowRunID: run.ID,
-				NodeID:        nodeID,
-				NodeType:      nodeTypes[nodeID],
-				Status:        1,
+				NodeID:        nodeTrace.NodeID,
+				NodeType:      firstNonEmpty(nodeTrace.NodeType, nodeTypes[nodeTrace.NodeID]),
+				Status:        workflowRunStatus(nodeTrace.Status, nodeTrace.ErrorMessage),
+				InputPreview:  nodeTrace.InputPreview,
+				OutputPreview: nodeTrace.OutputPreview,
+				ErrorMessage:  nodeTrace.ErrorMessage,
 				StartedAt:     now,
 				EndedAt:       &endedAt,
+				DurationMS:    nodeTrace.DurationMS,
 			}
 			if err := repositories.AIWorkflowNodeRunRepository.Create(ctx.Tx, nodeRun); err != nil {
 				return err
@@ -178,4 +225,52 @@ func writeWorkflowRun(req Request, workflow resolvedWorkflow, result *workflowex
 		}
 		return nil
 	})
+	return runID, err
+}
+
+func workflowRunStatus(status string, errorMessage string) int {
+	if strings.TrimSpace(errorMessage) != "" || strings.TrimSpace(status) == "error" {
+		return workflowRunStatusFailed
+	}
+	switch strings.TrimSpace(status) {
+	case "interrupted":
+		return workflowRunStatusInterrupted
+	default:
+		return workflowRunStatusCompleted
+	}
+}
+
+func fallbackWorkflowNodeTraces(nodePath []string, nodeTypes map[string]string, status string) []workflowexecutor.NodeTrace {
+	ret := make([]workflowexecutor.NodeTrace, 0, len(nodePath))
+	for _, nodeID := range nodePath {
+		ret = append(ret, workflowexecutor.NodeTrace{
+			NodeID:   nodeID,
+			NodeType: nodeTypes[nodeID],
+			Status:   status,
+		})
+	}
+	return ret
+}
+
+func firstWorkflowInterruptType(result *workflowexecutor.Result) string {
+	if result == nil || len(result.Interrupts) == 0 {
+		return ""
+	}
+	return strings.TrimSpace(result.Interrupts[0].Type)
+}
+
+func firstWorkflowInterruptNodeID(result *workflowexecutor.Result) string {
+	if result == nil || len(result.Interrupts) == 0 {
+		return ""
+	}
+	return strings.TrimSpace(result.Interrupts[0].ID)
+}
+
+func firstNonEmpty(items ...string) string {
+	for _, item := range items {
+		if strings.TrimSpace(item) != "" {
+			return strings.TrimSpace(item)
+		}
+	}
+	return ""
 }

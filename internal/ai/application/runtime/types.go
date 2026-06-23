@@ -16,6 +16,7 @@ type Request struct {
 
 type ResumeRequest struct {
 	Conversation models.Conversation
+	UserMessage  models.Message
 	AIAgent      models.AIAgent
 	AIConfig     models.AIConfig
 	CheckPointID string
@@ -46,6 +47,10 @@ type Summary struct {
 	ToolCallCount         int
 	ToolCodes             []string
 	InvokedToolCodes      []string
+	WorkflowID            int64
+	WorkflowVersionID     int64
+	WorkflowRunID         int64
+	WorkflowNodePath      []string
 	CheckPointID          string
 	CheckPointData        string
 	Interrupted           bool

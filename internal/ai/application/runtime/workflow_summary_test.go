@@ -27,7 +27,7 @@ func TestToWorkflowSummaryPreservesInterruptCheckpoint(t *testing.T) {
 		Interrupts: []workflowexecutor.InterruptSummary{
 			{Type: "human_confirm", ID: "confirm_1", InfoPreview: `{"message":"请确认"}`},
 		},
-	}, "test-model")
+	}, "test-model", resolvedWorkflow{WorkflowID: 11, VersionID: 22}, 33)
 
 	if summary == nil || !summary.Interrupted {
 		t.Fatalf("expected interrupted summary, got %#v", summary)
@@ -37,6 +37,9 @@ func TestToWorkflowSummaryPreservesInterruptCheckpoint(t *testing.T) {
 	}
 	if summary.CheckPointData == "" {
 		t.Fatalf("expected checkpoint data")
+	}
+	if summary.WorkflowID != 11 || summary.WorkflowVersionID != 22 || summary.WorkflowRunID != 33 {
+		t.Fatalf("unexpected workflow identity: workflow=%d version=%d run=%d", summary.WorkflowID, summary.WorkflowVersionID, summary.WorkflowRunID)
 	}
 	if len(summary.Interrupts) != 1 || summary.Interrupts[0].ID != "confirm_1" {
 		t.Fatalf("unexpected interrupts: %#v", summary.Interrupts)
@@ -69,6 +72,7 @@ func TestServiceResumeUsesWorkflowCheckpointData(t *testing.T) {
 
 	summary, err := NewService().Resume(context.Background(), ResumeRequest{
 		Conversation: models.Conversation{ID: 1},
+		UserMessage:  models.Message{ID: 2, Content: "确认"},
 		AIAgent: models.AIAgent{
 			ID:                1,
 			WorkflowVersionID: version.ID,
@@ -84,6 +88,66 @@ func TestServiceResumeUsesWorkflowCheckpointData(t *testing.T) {
 	}
 	if summary == nil || summary.Status != "completed" || summary.Interrupted {
 		t.Fatalf("unexpected summary: %#v", summary)
+	}
+	if summary.WorkflowRunID <= 0 {
+		t.Fatalf("expected workflow run id in resume summary")
+	}
+	var run models.AIWorkflowRun
+	if err := db.First(&run, summary.WorkflowRunID).Error; err != nil {
+		t.Fatalf("find resume workflow run: %v", err)
+	}
+	if run.MessageID != 2 || run.Status != workflowRunStatusCompleted {
+		t.Fatalf("unexpected resume workflow run: %#v", run)
+	}
+}
+
+func TestServiceRunWritesFailedWorkflowRun(t *testing.T) {
+	db := setupWorkflowResumeTestDB(t)
+	def := dsl.Definition{
+		SchemaVersion: 1,
+		EntryNodeID:   "start_1",
+		Nodes: []dsl.Node{
+			{ID: "start_1", Type: workflowregistry.NodeTypeStart, Name: "Start"},
+			{ID: "bad_1", Type: "unsupported_node", Name: "Bad"},
+		},
+		Edges: []dsl.Edge{
+			{ID: "edge_start_bad", Source: "start_1", Target: "bad_1"},
+		},
+	}
+	version := models.AIWorkflowVersion{
+		WorkflowID: 9,
+		Version:    1,
+		Status:     enums.StatusOk,
+		Definition: mustMarshalDefinition(t, def),
+	}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatalf("create workflow version: %v", err)
+	}
+
+	_, err := NewService().Run(context.Background(), Request{
+		Conversation: models.Conversation{ID: 10},
+		UserMessage:  models.Message{ID: 20, Content: "hello"},
+		AIAgent: models.AIAgent{
+			ID:                30,
+			WorkflowVersionID: version.ID,
+		},
+	})
+	if err == nil {
+		t.Fatalf("expected workflow run error")
+	}
+	var run models.AIWorkflowRun
+	if err := db.First(&run, "workflow_version_id = ?", version.ID).Error; err != nil {
+		t.Fatalf("find failed workflow run: %v", err)
+	}
+	if run.Status != workflowRunStatusFailed || !strings.Contains(run.ErrorMessage, "unsupported workflow node type") {
+		t.Fatalf("unexpected failed workflow run: %#v", run)
+	}
+	var badNodeRun models.AIWorkflowNodeRun
+	if err := db.First(&badNodeRun, "workflow_run_id = ? AND node_id = ?", run.ID, "bad_1").Error; err != nil {
+		t.Fatalf("find failed node run: %v", err)
+	}
+	if badNodeRun.Status != workflowRunStatusFailed || badNodeRun.ErrorMessage == "" {
+		t.Fatalf("unexpected failed node run: %#v", badNodeRun)
 	}
 }
 
@@ -105,7 +169,7 @@ func setupWorkflowResumeTestDB(t *testing.T) *gorm.DB {
 			_ = sqlDB.Close()
 		}
 	})
-	if err := db.AutoMigrate(&models.AIWorkflowVersion{}, &models.ConversationInterrupt{}); err != nil {
+	if err := db.AutoMigrate(&models.AIWorkflowVersion{}, &models.AIWorkflowRun{}, &models.AIWorkflowNodeRun{}, &models.ConversationInterrupt{}); err != nil {
 		t.Fatalf("auto migrate: %v", err)
 	}
 	sqls.SetDB(db)

@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"agent-desk/internal/ai"
 	"agent-desk/internal/ai/runtime/graphs"
@@ -34,6 +35,7 @@ type Result struct {
 	Status           string
 	ReplyText        string
 	NodePath         []string
+	NodeTraces       []NodeTrace
 	PromptTokens     int
 	CompletionTokens int
 	RetrieverCount   int
@@ -42,6 +44,16 @@ type Result struct {
 	CheckPointData   string
 	Interrupted      bool
 	Interrupts       []InterruptSummary
+}
+
+type NodeTrace struct {
+	NodeID        string
+	NodeType      string
+	Status        string
+	InputPreview  string
+	OutputPreview string
+	ErrorMessage  string
+	DurationMS    int
 }
 
 type InterruptSummary struct {
@@ -127,23 +139,44 @@ func (e *Executor) executeFrom(ctx context.Context, state *runState, currentID s
 	for step := 0; step < maxWorkflowSteps; step++ {
 		node, ok := state.nodesByID[currentID]
 		if !ok {
-			return nil, fmt.Errorf("workflow node does not exist: %s", currentID)
+			err := fmt.Errorf("workflow node does not exist: %s", currentID)
+			state.result.Status = "error"
+			return &state.result, err
 		}
 		state.result.NodePath = append(state.result.NodePath, node.ID)
-		if err := e.executeNode(ctx, state, node); err != nil {
-			return nil, err
+		trace := NodeTrace{
+			NodeID:       node.ID,
+			NodeType:     node.Type,
+			Status:       "running",
+			InputPreview: workflowPreviewJSON(state.nodeInputPreview(node)),
 		}
+		startedAt := time.Now()
+		if err := e.executeNode(ctx, state, node); err != nil {
+			trace.Status = "failed"
+			trace.ErrorMessage = err.Error()
+			trace.DurationMS = int(time.Since(startedAt).Milliseconds())
+			state.result.NodeTraces = append(state.result.NodeTraces, trace)
+			state.result.Status = "error"
+			return &state.result, err
+		}
+		trace.OutputPreview = workflowPreviewJSON(state.vars[node.ID])
+		trace.DurationMS = int(time.Since(startedAt).Milliseconds())
 		if state.result.Interrupted {
+			trace.Status = "interrupted"
+			state.result.NodeTraces = append(state.result.NodeTraces, trace)
 			state.result.Status = "interrupted"
 			return &state.result, nil
 		}
+		trace.Status = "completed"
+		state.result.NodeTraces = append(state.result.NodeTraces, trace)
 		if node.Type == workflowregistry.NodeTypeEnd {
 			state.result.Status = "completed"
 			return &state.result, nil
 		}
 		nextID, ok, err := state.nextNodeID(node.ID)
 		if err != nil {
-			return nil, err
+			state.result.Status = "error"
+			return &state.result, err
 		}
 		if !ok {
 			state.result.Status = "completed"
@@ -151,7 +184,9 @@ func (e *Executor) executeFrom(ctx context.Context, state *runState, currentID s
 		}
 		currentID = nextID
 	}
-	return nil, fmt.Errorf("workflow exceeded max steps")
+	err := fmt.Errorf("workflow exceeded max steps")
+	state.result.Status = "error"
+	return &state.result, err
 }
 
 func newRunState(input Input) *runState {
@@ -161,8 +196,9 @@ func newRunState(input Input) *runState {
 		outgoing:  make(map[string][]dsl.Edge),
 		vars:      make(map[string]map[string]any),
 		result: Result{
-			Status:   "started",
-			NodePath: make([]string, 0),
+			Status:     "started",
+			NodePath:   make([]string, 0),
+			NodeTraces: make([]NodeTrace, 0),
 		},
 	}
 	for _, node := range input.Definition.Nodes {
@@ -551,6 +587,37 @@ func (s *runState) resolveInput(node dsl.Node, inputName string) any {
 		return nil
 	}
 	return s.resolveSelector(&selector)
+}
+
+func (s *runState) nodeInputPreview(node dsl.Node) map[string]any {
+	inputs := make(map[string]any, len(node.Inputs))
+	for name, selector := range node.Inputs {
+		inputs[name] = s.resolveSelector(&selector)
+	}
+	ret := map[string]any{
+		"inputs": inputs,
+	}
+	if len(node.Config) > 0 {
+		var cfg any
+		if err := json.Unmarshal(node.Config, &cfg); err == nil {
+			ret["config"] = cfg
+		} else {
+			ret["config"] = string(node.Config)
+		}
+	}
+	return ret
+}
+
+func workflowPreviewJSON(value any) string {
+	raw, err := json.Marshal(value)
+	if err != nil {
+		return ""
+	}
+	const maxPreviewBytes = 2000
+	if len(raw) <= maxPreviewBytes {
+		return string(raw)
+	}
+	return string(raw[:maxPreviewBytes])
 }
 
 func (s *runState) resolveSelector(selector *dsl.VariableSelector) any {

@@ -3,6 +3,7 @@ package runtime
 import (
 	"encoding/json"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
@@ -90,6 +91,9 @@ func buildRunLogPlan(summary *applicationruntime.Summary) (plannedAction, planne
 	if summary == nil {
 		return "", "", ""
 	}
+	if isWorkflowSummary(summary) {
+		return "workflow", workflowPlannedToolCode(summary), "workflow executed"
+	}
 	if summaryPlannedSkillID(summary) > 0 {
 		reason := strings.TrimSpace(summary.PlanReason)
 		if reason == "" {
@@ -138,6 +142,9 @@ func toRunLogFinalAction(summary *applicationruntime.Summary) string {
 	if summary == nil {
 		return ""
 	}
+	if isWorkflowSummary(summary) {
+		return workflowFinalAction(summary)
+	}
 	if summaryPlannedSkillID(summary) > 0 && strings.TrimSpace(summary.ReplyText) != "" {
 		return "skill"
 	}
@@ -158,6 +165,35 @@ func toRunLogFinalAction(summary *applicationruntime.Summary) string {
 	default:
 		return strings.TrimSpace(summary.Status)
 	}
+}
+
+func isWorkflowSummary(summary *applicationruntime.Summary) bool {
+	return summary != nil && summary.WorkflowVersionID > 0
+}
+
+func workflowPlannedToolCode(summary *applicationruntime.Summary) string {
+	if summary == nil || summary.WorkflowVersionID <= 0 {
+		return ""
+	}
+	return "workflow/" + strconv.FormatInt(summary.WorkflowVersionID, 10)
+}
+
+func workflowFinalAction(summary *applicationruntime.Summary) string {
+	if summary == nil {
+		return ""
+	}
+	switch strings.TrimSpace(summary.Status) {
+	case "interrupted":
+		return "workflow_interrupted"
+	case "error":
+		return "workflow_error"
+	case "expired":
+		return "workflow_expired"
+	}
+	if strings.TrimSpace(summary.ReplyText) != "" {
+		return "workflow_reply"
+	}
+	return "workflow_completed"
 }
 
 func buildRunLogReplyText(summary *applicationruntime.Summary) string {
