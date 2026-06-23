@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"agent-desk/internal/ai"
+	"agent-desk/internal/ai/runtime/graphs"
 	"agent-desk/internal/ai/runtime/internal/impl/retrievers"
 	"agent-desk/internal/ai/workflow/dsl"
 	workflowregistry "agent-desk/internal/ai/workflow/registry"
@@ -124,6 +125,8 @@ func (e *Executor) executeNode(ctx context.Context, state *runState, node dsl.No
 		return e.executeAnswerabilityGate(state, node)
 	case workflowregistry.NodeTypeCondition:
 		state.setNodeVars(node.ID, map[string]any{"matched": true})
+	case workflowregistry.NodeTypeAnalyzeConversation:
+		return e.executeAnalyzeConversation(ctx, state, node)
 	case workflowregistry.NodeTypeLLMReply:
 		return e.executeLLMReply(ctx, state, node)
 	case workflowregistry.NodeTypeSendReply:
@@ -140,6 +143,48 @@ func (e *Executor) executeNode(ctx context.Context, state *runState, node dsl.No
 	default:
 		return fmt.Errorf("unsupported workflow node type: %s", node.Type)
 	}
+	return nil
+}
+
+func (e *Executor) executeAnalyzeConversation(ctx context.Context, state *runState, node dsl.Node) error {
+	userMessage := strings.TrimSpace(toString(state.resolveInput(node, "userMessage")))
+	input := graphs.AnalyzeConversationInput{
+		ObservedIssue: userMessage,
+	}
+	if strings.TrimSpace(readStringConfig(node.Config, "goal")) != "" {
+		input.Goal = strings.TrimSpace(readStringConfig(node.Config, "goal"))
+	}
+	if readBoolConfig(node.Config, "needTicket") {
+		input.NeedTicket = true
+	}
+	if readBoolConfig(node.Config, "needHumanHandoff") {
+		input.NeedHumanHandoff = true
+	}
+	if readBoolConfig(node.Config, "needQualityCheck") {
+		input.NeedQualityCheck = true
+	}
+	if strings.TrimSpace(readStringConfig(node.Config, "additionalContext")) != "" {
+		input.AdditionalContext = strings.TrimSpace(readStringConfig(node.Config, "additionalContext"))
+	}
+	args, err := json.Marshal(input)
+	if err != nil {
+		return err
+	}
+	raw, err := graphs.NewAnalyzeConversationGraph(state.input.Conversation).Run(ctx, string(args))
+	if err != nil {
+		return err
+	}
+	var result graphs.AnalyzeConversationResult
+	if err := json.Unmarshal([]byte(raw), &result); err != nil {
+		return err
+	}
+	nextAction := strings.TrimSpace(result.RecommendedNextAction)
+	state.setNodeVars(node.ID, map[string]any{
+		"intent":           strings.TrimSpace(result.UserIntent),
+		"riskLevel":        strings.TrimSpace(result.RiskLevel),
+		"needTicket":       nextAction == "prepare_ticket",
+		"needHumanHandoff": nextAction == "handoff_to_human",
+	})
 	return nil
 }
 
@@ -333,6 +378,17 @@ func readStringConfig(raw json.RawMessage, key string) string {
 		return ""
 	}
 	return toString(cfg[key])
+}
+
+func readBoolConfig(raw json.RawMessage, key string) bool {
+	if len(raw) == 0 {
+		return false
+	}
+	var cfg map[string]any
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		return false
+	}
+	return truthy(cfg[key])
 }
 
 func compareString(left any, right any) int {

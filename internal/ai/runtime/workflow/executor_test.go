@@ -92,6 +92,24 @@ func TestExecutorHandoffToHumanRunsRealDispatchAction(t *testing.T) {
 	}
 }
 
+func TestExecutorAnalyzeConversationOutputsBranchVariables(t *testing.T) {
+	db := setupWorkflowExecutorHandoffDB(t)
+	aiAgent := createWorkflowExecutorHandoffAIAgent(t, db, "1")
+	conversation := createWorkflowExecutorHandoffConversation(t, db, aiAgent.ID)
+	userMessage := createWorkflowExecutorCustomerMessage(t, db, conversation.ID, "你们重复扣费了，我要投诉并转人工")
+
+	result, err := NewExecutor().Execute(context.Background(), Input{
+		Definition:   analyzeConversationWorkflowDefinition(),
+		Conversation: conversation,
+		UserMessage:  userMessage,
+		AIAgent:      aiAgent,
+	})
+	if err != nil {
+		t.Fatalf("execute workflow: %v", err)
+	}
+	assertPath(t, result.NodePath, []string{"start_1", "analyze_1", "handoff_end"})
+}
+
 func conditionalReplyDefinition() dsl.Definition {
 	return dsl.Definition{
 		SchemaVersion: 1,
@@ -126,6 +144,34 @@ func conditionalReplyDefinition() dsl.Definition {
 			{ID: "edge_normal_send", Source: "normal_reply", Target: "send_normal"},
 			{ID: "edge_send_vip_end", Source: "send_vip", Target: "end_1"},
 			{ID: "edge_send_normal_end", Source: "send_normal", Target: "end_1"},
+		},
+	}
+}
+
+func analyzeConversationWorkflowDefinition() dsl.Definition {
+	return dsl.Definition{
+		SchemaVersion: 1,
+		EntryNodeID:   "start_1",
+		Nodes: []dsl.Node{
+			{ID: "start_1", Type: workflowregistry.NodeTypeStart, Name: "Start"},
+			{ID: "analyze_1", Type: workflowregistry.NodeTypeAnalyzeConversation, Name: "Analyze", Inputs: map[string]dsl.VariableSelector{
+				"userMessage": {NodeID: "start_1", Field: "userMessage"},
+			}},
+			{ID: "handoff_end", Type: workflowregistry.NodeTypeEnd, Name: "Handoff"},
+			{ID: "default_end", Type: workflowregistry.NodeTypeEnd, Name: "Default"},
+		},
+		Edges: []dsl.Edge{
+			{ID: "edge_start_analyze", Source: "start_1", Target: "analyze_1"},
+			{
+				ID:     "edge_analyze_handoff",
+				Source: "analyze_1",
+				Target: "handoff_end",
+				Condition: &dsl.Condition{
+					Left:     &dsl.VariableSelector{NodeID: "analyze_1", Field: "needHumanHandoff"},
+					Operator: "is_true",
+				},
+			},
+			{ID: "edge_analyze_default", Source: "analyze_1", Target: "default_end"},
 		},
 	}
 }
