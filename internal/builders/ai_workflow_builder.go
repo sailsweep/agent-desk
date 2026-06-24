@@ -89,10 +89,14 @@ func BuildAIWorkflowNodeSpecs(list []workflowregistry.NodeSpec) []response.AIWor
 }
 
 func BuildAIWorkflowRun(item *models.AIWorkflowRun) response.AIWorkflowRunResponse {
+	return BuildAIWorkflowRunWithContext(item, nil, nil, nil)
+}
+
+func BuildAIWorkflowRunWithContext(item *models.AIWorkflowRun, workflow *models.AIWorkflow, version *models.AIWorkflowVersion, agent *models.AIAgent) response.AIWorkflowRunResponse {
 	if item == nil {
 		return response.AIWorkflowRunResponse{}
 	}
-	return response.AIWorkflowRunResponse{
+	ret := response.AIWorkflowRunResponse{
 		ID:                item.ID,
 		WorkflowID:        item.WorkflowID,
 		WorkflowVersionID: item.WorkflowVersionID,
@@ -103,16 +107,33 @@ func BuildAIWorkflowRun(item *models.AIWorkflowRun) response.AIWorkflowRunRespon
 		StatusName:        workflowRunStatusName(item.Status),
 		StartedAt:         formatWorkflowTime(item.StartedAt),
 		EndedAt:           formatWorkflowTimePtr(item.EndedAt),
+		DurationMS:        workflowRunDurationMS(item.StartedAt, item.EndedAt),
 		InterruptType:     item.InterruptType,
 		InterruptNodeID:   item.InterruptNodeID,
 		ErrorMessage:      item.ErrorMessage,
 		CreatedAt:         formatWorkflowTime(item.CreatedAt),
 		UpdatedAt:         formatWorkflowTime(item.UpdatedAt),
 	}
+	if workflow != nil {
+		ret.WorkflowName = workflow.Name
+	}
+	if version != nil {
+		ret.WorkflowVersion = version.Version
+	}
+	if agent != nil {
+		ret.AIAgentName = agent.Name
+	}
+	return ret
 }
 
 func BuildAIWorkflowRunDetail(item *models.AIWorkflowRun, nodes []models.AIWorkflowNodeRun) response.AIWorkflowRunResponse {
 	ret := BuildAIWorkflowRun(item)
+	ret.Nodes = BuildAIWorkflowNodeRunList(nodes)
+	return ret
+}
+
+func BuildAIWorkflowRunDetailWithContext(item *models.AIWorkflowRun, nodes []models.AIWorkflowNodeRun, workflow *models.AIWorkflow, version *models.AIWorkflowVersion, agent *models.AIAgent) response.AIWorkflowRunResponse {
+	ret := BuildAIWorkflowRunWithContext(item, workflow, version, agent)
 	ret.Nodes = BuildAIWorkflowNodeRunList(nodes)
 	return ret
 }
@@ -187,4 +208,11 @@ func formatWorkflowTimePtr(value *time.Time) string {
 		return ""
 	}
 	return formatWorkflowTime(*value)
+}
+
+func workflowRunDurationMS(startedAt time.Time, endedAt *time.Time) int64 {
+	if startedAt.IsZero() || endedAt == nil || endedAt.IsZero() {
+		return 0
+	}
+	return endedAt.Sub(startedAt).Milliseconds()
 }

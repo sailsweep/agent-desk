@@ -35,6 +35,13 @@ type aiWorkflowService struct {
 	registry *workflowregistry.Registry
 }
 
+type AIWorkflowRunAuditItem struct {
+	Run      models.AIWorkflowRun
+	Workflow *models.AIWorkflow
+	Version  *models.AIWorkflowVersion
+	Agent    *models.AIAgent
+}
+
 func (s *aiWorkflowService) Get(id int64) *models.AIWorkflow {
 	if id <= 0 {
 		return nil
@@ -61,6 +68,57 @@ func (s *aiWorkflowService) FindRunPageByCnd(cnd *sqls.Cnd) (list []models.AIWor
 	return repositories.AIWorkflowRunRepository.FindPageByCnd(sqls.DB(), cnd)
 }
 
+func (s *aiWorkflowService) BuildRunAuditItems(list []models.AIWorkflowRun) []AIWorkflowRunAuditItem {
+	ret := make([]AIWorkflowRunAuditItem, 0, len(list))
+	if len(list) == 0 {
+		return ret
+	}
+	workflowIDs := make([]int64, 0, len(list))
+	versionIDs := make([]int64, 0, len(list))
+	agentIDs := make([]int64, 0, len(list))
+	for _, item := range list {
+		workflowIDs = appendNonZeroInt64(workflowIDs, item.WorkflowID)
+		versionIDs = appendNonZeroInt64(versionIDs, item.WorkflowVersionID)
+		agentIDs = appendNonZeroInt64(agentIDs, item.AIAgentID)
+	}
+	var workflows []models.AIWorkflow
+	if len(workflowIDs) > 0 {
+		workflows = repositories.AIWorkflowRepository.Find(sqls.DB(), sqls.NewCnd().In("id", workflowIDs))
+	}
+	var versions []models.AIWorkflowVersion
+	if len(versionIDs) > 0 {
+		versions = repositories.AIWorkflowVersionRepository.Find(sqls.DB(), sqls.NewCnd().In("id", versionIDs))
+	}
+	var agents []models.AIAgent
+	if len(agentIDs) > 0 {
+		agents = repositories.AIAgentRepository.Find(sqls.DB(), sqls.NewCnd().In("id", agentIDs))
+	}
+	workflowByID := make(map[int64]*models.AIWorkflow, len(workflows))
+	for i := range workflows {
+		item := workflows[i]
+		workflowByID[item.ID] = &item
+	}
+	versionByID := make(map[int64]*models.AIWorkflowVersion, len(versions))
+	for i := range versions {
+		item := versions[i]
+		versionByID[item.ID] = &item
+	}
+	agentByID := make(map[int64]*models.AIAgent, len(agents))
+	for i := range agents {
+		item := agents[i]
+		agentByID[item.ID] = &item
+	}
+	for _, run := range list {
+		ret = append(ret, AIWorkflowRunAuditItem{
+			Run:      run,
+			Workflow: workflowByID[run.WorkflowID],
+			Version:  versionByID[run.WorkflowVersionID],
+			Agent:    agentByID[run.AIAgentID],
+		})
+	}
+	return ret
+}
+
 func (s *aiWorkflowService) GetRunDetail(id int64) (*models.AIWorkflowRun, []models.AIWorkflowNodeRun) {
 	if id <= 0 {
 		return nil, nil
@@ -71,6 +129,18 @@ func (s *aiWorkflowService) GetRunDetail(id int64) (*models.AIWorkflowRun, []mod
 	}
 	nodes := repositories.AIWorkflowNodeRunRepository.Find(sqls.DB(), sqls.NewCnd().Eq("workflow_run_id", id).Asc("id"))
 	return run, nodes
+}
+
+func appendNonZeroInt64(list []int64, value int64) []int64 {
+	if value <= 0 {
+		return list
+	}
+	for _, item := range list {
+		if item == value {
+			return list
+		}
+	}
+	return append(list, value)
 }
 
 func (s *aiWorkflowService) GetByAgentID(agentID int64) *models.AIWorkflow {

@@ -58,13 +58,17 @@ type AIWorkflowRunResponse struct {
 	ID                int64                       `json:"id"`
 	WorkflowID        int64                       `json:"workflowId"`
 	WorkflowVersionID int64                       `json:"workflowVersionId"`
+	WorkflowVersion   int                         `json:"workflowVersion"`
+	WorkflowName      string                      `json:"workflowName"`
 	ConversationID    int64                       `json:"conversationId"`
 	AIAgentID         int64                       `json:"aiAgentId"`
+	AIAgentName       string                      `json:"aiAgentName"`
 	MessageID         int64                       `json:"messageId"`
 	Status            int                         `json:"status"`
 	StatusName        string                      `json:"statusName"`
 	StartedAt         string                      `json:"startedAt"`
 	EndedAt           string                      `json:"endedAt"`
+	DurationMS        int64                       `json:"durationMs"`
 	InterruptType     string                      `json:"interruptType"`
 	InterruptNodeID   string                      `json:"interruptNodeId"`
 	ErrorMessage      string                      `json:"errorMessage"`

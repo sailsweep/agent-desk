@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"agent-desk/internal/builders"
+	"agent-desk/internal/models"
 	"agent-desk/internal/pkg/constants"
 	"agent-desk/internal/pkg/dto/request"
 	"agent-desk/internal/pkg/dto/response"
@@ -242,7 +243,13 @@ func AIWorkflowAnyRunList(ctx *gin.Context) {
 		params.QueryFilter{ParamName: "status"},
 	).Desc("id")
 	list, paging := services.AIWorkflowService.FindRunPageByCnd(cnd)
-	httpx.WriteJSON(ctx, &web.PageResult{Results: builders.BuildAIWorkflowRunList(list), Page: paging})
+	auditItems := services.AIWorkflowService.BuildRunAuditItems(list)
+	results := make([]response.AIWorkflowRunResponse, 0, len(auditItems))
+	for i := range auditItems {
+		item := auditItems[i]
+		results = append(results, builders.BuildAIWorkflowRunWithContext(&item.Run, item.Workflow, item.Version, item.Agent))
+	}
+	httpx.WriteJSON(ctx, &web.PageResult{Results: results, Page: paging})
 }
 
 func AIWorkflowGetRunBy(ctx *gin.Context) {
@@ -259,5 +266,11 @@ func AIWorkflowGetRunBy(ctx *gin.Context) {
 		httpx.WriteJSON(ctx, httpx.JsonErrorMsg(ctx, "error.e0002"))
 		return
 	}
-	httpx.WriteJSON(ctx, builders.BuildAIWorkflowRunDetail(item, nodes))
+	auditItems := services.AIWorkflowService.BuildRunAuditItems([]models.AIWorkflowRun{*item})
+	if len(auditItems) == 0 {
+		httpx.WriteJSON(ctx, builders.BuildAIWorkflowRunDetail(item, nodes))
+		return
+	}
+	auditItem := auditItems[0]
+	httpx.WriteJSON(ctx, builders.BuildAIWorkflowRunDetailWithContext(&auditItem.Run, nodes, auditItem.Workflow, auditItem.Version, auditItem.Agent))
 }

@@ -155,11 +155,23 @@ func TestAIWorkflowServicePublishRejectsInvalidDSL(t *testing.T) {
 func TestAIWorkflowServiceRunListAndDetail(t *testing.T) {
 	setupAIWorkflowTestDB(t)
 	now := time.Now()
+	agent := models.AIAgent{Name: "售后 Agent", Status: enums.StatusOk}
+	if err := sqls.DB().Create(&agent).Error; err != nil {
+		t.Fatalf("create agent: %v", err)
+	}
+	workflow := models.AIWorkflow{Name: "售后流程", AgentID: agent.ID, Status: enums.StatusOk}
+	if err := sqls.DB().Create(&workflow).Error; err != nil {
+		t.Fatalf("create workflow: %v", err)
+	}
+	version := models.AIWorkflowVersion{WorkflowID: workflow.ID, Version: 7, Status: enums.StatusOk}
+	if err := sqls.DB().Create(&version).Error; err != nil {
+		t.Fatalf("create workflow version: %v", err)
+	}
 	run := models.AIWorkflowRun{
-		WorkflowID:        101,
-		WorkflowVersionID: 202,
+		WorkflowID:        workflow.ID,
+		WorkflowVersionID: version.ID,
 		ConversationID:    303,
-		AIAgentID:         12,
+		AIAgentID:         agent.ID,
 		MessageID:         404,
 		Status:            1,
 		StartedAt:         now,
@@ -169,10 +181,10 @@ func TestAIWorkflowServiceRunListAndDetail(t *testing.T) {
 		t.Fatalf("create workflow run: %v", err)
 	}
 	otherRun := models.AIWorkflowRun{
-		WorkflowID:        101,
-		WorkflowVersionID: 202,
+		WorkflowID:        workflow.ID,
+		WorkflowVersionID: version.ID,
 		ConversationID:    999,
-		AIAgentID:         12,
+		AIAgentID:         agent.ID,
 		MessageID:         505,
 		Status:            1,
 		StartedAt:         now,
@@ -209,6 +221,19 @@ func TestAIWorkflowServiceRunListAndDetail(t *testing.T) {
 	list, paging := AIWorkflowService.FindRunPageByCnd(sqls.NewCnd().Eq("conversation_id", 303).Desc("id").Page(1, 20))
 	if paging.Total != 1 || len(list) != 1 || list[0].ID != run.ID {
 		t.Fatalf("unexpected run list: total=%d list=%#v", paging.Total, list)
+	}
+	auditItems := AIWorkflowService.BuildRunAuditItems(list)
+	if len(auditItems) != 1 {
+		t.Fatalf("unexpected audit item count: %d", len(auditItems))
+	}
+	if auditItems[0].Workflow == nil || auditItems[0].Workflow.Name != workflow.Name {
+		t.Fatalf("expected workflow context, got %#v", auditItems[0].Workflow)
+	}
+	if auditItems[0].Version == nil || auditItems[0].Version.Version != version.Version {
+		t.Fatalf("expected version context, got %#v", auditItems[0].Version)
+	}
+	if auditItems[0].Agent == nil || auditItems[0].Agent.Name != agent.Name {
+		t.Fatalf("expected agent context, got %#v", auditItems[0].Agent)
 	}
 
 	detail, nodeRuns := AIWorkflowService.GetRunDetail(run.ID)

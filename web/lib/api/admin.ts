@@ -530,13 +530,17 @@ export type AIWorkflowRun = {
   id: number
   workflowId: number
   workflowVersionId: number
+  workflowVersion: number
+  workflowName: string
   conversationId: number
   aiAgentId: number
+  aiAgentName: string
   messageId: number
   status: number
   statusName: string
   startedAt: string
   endedAt: string
+  durationMs: number
   interruptType: string
   interruptNodeId: string
   errorMessage: string
