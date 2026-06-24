@@ -74,6 +74,8 @@ func (r *conversationInterruptRepository) UpsertByCheckPointID(db *gorm.DB, item
 		"ai_agent_id":            item.AIAgentID,
 		"source_message_id":      item.SourceMessageID,
 		"last_resume_message_id": item.LastResumeMessageID,
+		"workflow_run_id":        item.WorkflowRunID,
+		"workflow_node_id":       item.WorkflowNodeID,
 		"interrupt_id":           item.InterruptID,
 		"interrupt_type":         item.InterruptType,
 		"status":                 item.Status,

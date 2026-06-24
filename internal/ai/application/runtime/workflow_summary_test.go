@@ -101,6 +101,87 @@ func TestServiceResumeUsesWorkflowCheckpointData(t *testing.T) {
 	}
 }
 
+func TestServiceResumeReusesInterruptedWorkflowRun(t *testing.T) {
+	db := setupWorkflowResumeTestDB(t)
+	def := runtimeHumanConfirmDefinition()
+	version := models.AIWorkflowVersion{
+		WorkflowID: 1,
+		Version:    1,
+		Status:     enums.StatusOk,
+		Definition: mustMarshalDefinition(t, def),
+	}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatalf("create workflow version: %v", err)
+	}
+	interruptedRun := models.AIWorkflowRun{
+		WorkflowID:        version.WorkflowID,
+		WorkflowVersionID: version.ID,
+		ConversationID:    1,
+		AIAgentID:         1,
+		MessageID:         2,
+		Status:            workflowRunStatusInterrupted,
+		InterruptType:     "human_confirm",
+		InterruptNodeID:   "confirm_1",
+	}
+	if err := db.Create(&interruptedRun).Error; err != nil {
+		t.Fatalf("create interrupted workflow run: %v", err)
+	}
+	if err := db.Create(&models.ConversationInterrupt{
+		ConversationID: 1,
+		AIAgentID:      1,
+		CheckPointID:   "workflow:1:2:confirm_1",
+		InterruptID:    "confirm_1",
+		InterruptType:  "human_confirm",
+		WorkflowRunID:  interruptedRun.ID,
+		WorkflowNodeID: "confirm_1",
+		RequestData:    mustMarshalWorkflowCheckpoint(t, def),
+		Status:         "pending",
+	}).Error; err != nil {
+		t.Fatalf("create interrupt: %v", err)
+	}
+
+	summary, err := NewService().Resume(context.Background(), ResumeRequest{
+		Conversation: models.Conversation{ID: 1},
+		UserMessage:  models.Message{ID: 3, Content: "确认"},
+		AIAgent: models.AIAgent{
+			ID:                1,
+			WorkflowVersionID: version.ID,
+		},
+		AIConfig:     models.AIConfig{ModelName: "test-model"},
+		CheckPointID: "workflow:1:2:confirm_1",
+		ResumeData: map[string]string{
+			"confirm_1": "确认",
+		},
+	})
+	if err != nil {
+		t.Fatalf("resume workflow: %v", err)
+	}
+	if summary.WorkflowRunID != interruptedRun.ID {
+		t.Fatalf("expected resume to reuse workflow run %d, got %d", interruptedRun.ID, summary.WorkflowRunID)
+	}
+	var runCount int64
+	if err := db.Model(&models.AIWorkflowRun{}).Count(&runCount).Error; err != nil {
+		t.Fatalf("count workflow runs: %v", err)
+	}
+	if runCount != 1 {
+		t.Fatalf("expected one workflow run after resume, got %d", runCount)
+	}
+	var updated models.AIWorkflowRun
+	if err := db.First(&updated, interruptedRun.ID).Error; err != nil {
+		t.Fatalf("find updated workflow run: %v", err)
+	}
+	if updated.Status != workflowRunStatusCompleted || updated.ErrorMessage != "" {
+		t.Fatalf("unexpected updated workflow run: %#v", updated)
+	}
+	var nodeCount int64
+	if err := db.Model(&models.AIWorkflowNodeRun{}).Where("workflow_run_id = ?", interruptedRun.ID).Count(&nodeCount).Error; err != nil {
+		t.Fatalf("count node runs: %v", err)
+	}
+	if nodeCount == 0 {
+		t.Fatalf("expected resumed node traces to be appended to original workflow run")
+	}
+}
+
 func TestServiceRunWritesFailedWorkflowRun(t *testing.T) {
 	db := setupWorkflowResumeTestDB(t)
 	def := dsl.Definition{

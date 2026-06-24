@@ -918,6 +918,8 @@ type ConversationInterrupt struct {
 	AIAgentID           int64      `gorm:"type:bigint;not null;default:0;index"`
 	SourceMessageID     int64      `gorm:"type:bigint;not null;default:0;index"`
 	LastResumeMessageID int64      `gorm:"type:bigint;not null;default:0;index"`
+	WorkflowRunID       int64      `gorm:"type:bigint;not null;default:0;index"`
+	WorkflowNodeID      string     `gorm:"type:varchar(100);not null;default:'';index"`
 	CheckPointID        string     `gorm:"type:varchar(128);not null;default:'';uniqueIndex"`
 	InterruptID         string     `gorm:"type:varchar(255);not null;default:'';index"`
 	InterruptType       string     `gorm:"type:varchar(50);not null;default:'';index"`

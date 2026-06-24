@@ -9,6 +9,7 @@ import (
 	"agent-desk/internal/ai/runtime/executor"
 	workflowexecutor "agent-desk/internal/ai/runtime/workflow"
 	"agent-desk/internal/models"
+	"agent-desk/internal/pkg/errorsx"
 	"agent-desk/internal/pkg/utils"
 	"agent-desk/internal/repositories"
 
@@ -69,34 +70,40 @@ func (s *Service) Resume(ctx context.Context, req ResumeRequest) (*Summary, erro
 		return nil, err
 	}
 	req.AIAgent = aiAgent
-	if interrupt := repositories.ConversationInterruptRepository.GetByCheckPointID(sqls.DB(), req.CheckPointID); interrupt != nil && strings.TrimSpace(interrupt.RequestData) != "" {
-		workflowResult, err := workflowexecutor.NewExecutor().Resume(ctx, workflowexecutor.Input{
-			Definition:   workflow.Definition,
-			Conversation: req.Conversation,
-			AIAgent:      req.AIAgent,
-			AIConfig:     req.AIConfig,
-		}, interrupt.RequestData, firstWorkflowResumeText(req.ResumeData))
-		if err != nil {
-			if workflowResult != nil {
-				_, _ = writeWorkflowRun(Request{
-					Conversation: req.Conversation,
-					UserMessage:  req.UserMessage,
-					AIAgent:      req.AIAgent,
-					AIConfig:     req.AIConfig,
-				}, workflow, workflowResult, err.Error())
+	if interrupt := repositories.ConversationInterruptRepository.GetByCheckPointID(sqls.DB(), req.CheckPointID); interrupt != nil {
+		if strings.TrimSpace(interrupt.RequestData) == "" {
+			if interrupt.WorkflowRunID > 0 || strings.HasPrefix(strings.TrimSpace(req.CheckPointID), "workflow:") {
+				return nil, errorsx.InvalidParam("workflow checkpoint data is required")
 			}
-			return nil, err
+		} else {
+			workflowResult, err := workflowexecutor.NewExecutor().Resume(ctx, workflowexecutor.Input{
+				Definition:   workflow.Definition,
+				Conversation: req.Conversation,
+				AIAgent:      req.AIAgent,
+				AIConfig:     req.AIConfig,
+			}, interrupt.RequestData, firstWorkflowResumeText(req.ResumeData))
+			if err != nil {
+				if workflowResult != nil {
+					_, _ = writeWorkflowRunWithExistingID(Request{
+						Conversation: req.Conversation,
+						UserMessage:  req.UserMessage,
+						AIAgent:      req.AIAgent,
+						AIConfig:     req.AIConfig,
+					}, workflow, workflowResult, err.Error(), interrupt.WorkflowRunID)
+				}
+				return nil, err
+			}
+			workflowRunID, err := writeWorkflowRunWithExistingID(Request{
+				Conversation: req.Conversation,
+				UserMessage:  req.UserMessage,
+				AIAgent:      req.AIAgent,
+				AIConfig:     req.AIConfig,
+			}, workflow, workflowResult, "", interrupt.WorkflowRunID)
+			if err != nil {
+				return nil, err
+			}
+			return toWorkflowSummary(workflowResult, req.AIConfig.ModelName, workflow, workflowRunID), nil
 		}
-		workflowRunID, err := writeWorkflowRun(Request{
-			Conversation: req.Conversation,
-			UserMessage:  req.UserMessage,
-			AIAgent:      req.AIAgent,
-			AIConfig:     req.AIConfig,
-		}, workflow, workflowResult, "")
-		if err != nil {
-			return nil, err
-		}
-		return toWorkflowSummary(workflowResult, req.AIConfig.ModelName, workflow, workflowRunID), nil
 	}
 	toolSet, err := s.prepare.prepareToolsForResume(req)
 	if err != nil {
@@ -173,6 +180,10 @@ func toWorkflowInterruptSummaries(items []workflowexecutor.InterruptSummary) []I
 }
 
 func writeWorkflowRun(req Request, workflow resolvedWorkflow, result *workflowexecutor.Result, errorMessage string) (int64, error) {
+	return writeWorkflowRunWithExistingID(req, workflow, result, errorMessage, 0)
+}
+
+func writeWorkflowRunWithExistingID(req Request, workflow resolvedWorkflow, result *workflowexecutor.Result, errorMessage string, existingRunID int64) (int64, error) {
 	if result == nil {
 		return 0, nil
 	}
@@ -185,20 +196,32 @@ func writeWorkflowRun(req Request, workflow resolvedWorkflow, result *workflowex
 	runStatus := workflowRunStatus(result.Status, errorMessage)
 	var runID int64
 	err := sqls.WithTransaction(func(ctx *sqls.TxContext) error {
-		run := &models.AIWorkflowRun{
-			WorkflowID:        workflow.WorkflowID,
-			WorkflowVersionID: workflow.VersionID,
-			ConversationID:    req.Conversation.ID,
-			AIAgentID:         req.AIAgent.ID,
-			MessageID:         req.UserMessage.ID,
-			Status:            runStatus,
-			StartedAt:         now,
-			EndedAt:           &endedAt,
-			InterruptType:     firstWorkflowInterruptType(result),
-			InterruptNodeID:   firstWorkflowInterruptNodeID(result),
-			ErrorMessage:      errorMessage,
-		}
-		if err := repositories.AIWorkflowRunRepository.Create(ctx.Tx, run); err != nil {
+		run := repositories.AIWorkflowRunRepository.Get(ctx.Tx, existingRunID)
+		if run == nil {
+			run = &models.AIWorkflowRun{
+				WorkflowID:        workflow.WorkflowID,
+				WorkflowVersionID: workflow.VersionID,
+				ConversationID:    req.Conversation.ID,
+				AIAgentID:         req.AIAgent.ID,
+				MessageID:         req.UserMessage.ID,
+				Status:            runStatus,
+				StartedAt:         now,
+				EndedAt:           &endedAt,
+				InterruptType:     firstWorkflowInterruptType(result),
+				InterruptNodeID:   firstWorkflowInterruptNodeID(result),
+				ErrorMessage:      errorMessage,
+			}
+			if err := repositories.AIWorkflowRunRepository.Create(ctx.Tx, run); err != nil {
+				return err
+			}
+		} else if err := repositories.AIWorkflowRunRepository.Updates(ctx.Tx, run.ID, map[string]any{
+			"status":            runStatus,
+			"ended_at":          &endedAt,
+			"interrupt_type":    firstWorkflowInterruptType(result),
+			"interrupt_node_id": firstWorkflowInterruptNodeID(result),
+			"error_message":     errorMessage,
+			"updated_at":        now,
+		}); err != nil {
 			return err
 		}
 		runID = run.ID

@@ -398,6 +398,9 @@ func (s *channelService) buildChannelModel(id int64, req request.CreateChannelRe
 	if aiAgent == nil || aiAgent.Status != enums.StatusOk {
 		return nil, errorsx.InvalidParamI18n("error.e0004")
 	}
+	if aiAgent.WorkflowVersionID <= 0 {
+		return nil, errorsx.InvalidParam("ai agent workflow must be published before binding channel")
+	}
 	status := enums.Status(req.Status)
 	if req.Status == 0 {
 		status = enums.StatusOk

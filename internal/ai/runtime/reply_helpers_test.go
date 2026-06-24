@@ -47,6 +47,7 @@ func TestBuildConversationInterruptStoresWorkflowCheckpointData(t *testing.T) {
 	item := buildConversationInterrupt(testConversation(1), testMessage(2), testAIAgent(3), &applicationruntime.Summary{
 		CheckPointData: `{"confirmNodeId":"confirm_1"}`,
 		Interrupted:    true,
+		WorkflowRunID:  99,
 		Interrupts: []applicationruntime.InterruptContextSummary{
 			{Type: "human_confirm", ID: "confirm_1", InfoPreview: `{"message":"请确认"}`},
 		},
@@ -56,6 +57,9 @@ func TestBuildConversationInterruptStoresWorkflowCheckpointData(t *testing.T) {
 	}
 	if item.RequestData != `{"confirmNodeId":"confirm_1"}` {
 		t.Fatalf("unexpected request data: %q", item.RequestData)
+	}
+	if item.WorkflowRunID != 99 || item.WorkflowNodeID != "confirm_1" {
+		t.Fatalf("unexpected workflow interrupt identity: run=%d node=%q", item.WorkflowRunID, item.WorkflowNodeID)
 	}
 }
 

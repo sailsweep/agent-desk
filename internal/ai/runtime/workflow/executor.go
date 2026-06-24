@@ -420,6 +420,18 @@ func (e *Executor) executeAnalyzeConversation(ctx context.Context, state *runSta
 }
 
 func (e *Executor) executeHandoffToHuman(state *runState, node dsl.Node) error {
+	if _, hasConfirmedInput := node.Inputs["confirmed"]; hasConfirmedInput && !truthy(state.resolveInput(node, "confirmed")) {
+		state.setNodeVars(node.ID, map[string]any{
+			"handoffId":  int64(0),
+			"reason":     strings.TrimSpace(toString(state.resolveInput(node, "reason"))),
+			"decision":   "cancelled",
+			"teamId":     int64(0),
+			"assigneeId": int64(0),
+			"message":    "",
+			"skipped":    true,
+		})
+		return nil
+	}
 	reason := strings.TrimSpace(toString(state.resolveInput(node, "reason")))
 	result, err := services.ConversationHumanDispatchService.HandoffByAIWithRequestID(
 		state.input.Conversation.ID,

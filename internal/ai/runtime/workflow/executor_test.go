@@ -92,6 +92,50 @@ func TestExecutorHandoffToHumanRunsRealDispatchAction(t *testing.T) {
 	}
 }
 
+func TestExecutorResumeSkipsHandoffWhenConfirmationCancelled(t *testing.T) {
+	db := setupWorkflowExecutorHandoffDB(t)
+	aiAgent := createWorkflowExecutorHandoffAIAgent(t, db, "1")
+	createWorkflowExecutorHandoffTeam(t, db, 1, "售后支持组")
+	createWorkflowExecutorHandoffActiveSchedule(t, db, 1)
+	createWorkflowExecutorHandoffAgentProfile(t, db, 101, 1)
+	conversation := createWorkflowExecutorHandoffConversation(t, db, aiAgent.ID)
+	userMessage := createWorkflowExecutorCustomerMessage(t, db, conversation.ID, "需要人工处理")
+	input := Input{
+		Definition:   handoffAfterConfirmationWorkflowDefinition(),
+		Conversation: conversation,
+		UserMessage:  userMessage,
+		AIAgent:      aiAgent,
+	}
+
+	interrupted, err := NewExecutor().Execute(context.Background(), input)
+	if err != nil {
+		t.Fatalf("execute workflow: %v", err)
+	}
+	if !interrupted.Interrupted {
+		t.Fatalf("expected workflow to interrupt before handoff")
+	}
+
+	result, err := NewExecutor().Resume(context.Background(), input, interrupted.CheckPointData, "取消")
+	if err != nil {
+		t.Fatalf("resume workflow: %v", err)
+	}
+	if result.Interrupted {
+		t.Fatalf("expected cancelled resume to complete")
+	}
+	assertPath(t, result.NodePath, []string{"handoff_1", "end_1"})
+
+	current := services.ConversationService.Get(conversation.ID)
+	if current.Status != enums.IMConversationStatusAIServing {
+		t.Fatalf("expected conversation to remain ai serving, got status=%d", current.Status)
+	}
+	if current.CurrentAssigneeID != 0 || current.CurrentTeamID != 0 || current.HandoffAt != nil {
+		t.Fatalf("expected no handoff side effect, got assignee=%d team=%d handoffAt=%v", current.CurrentAssigneeID, current.CurrentTeamID, current.HandoffAt)
+	}
+	if count := services.MessageService.Count(sqls.NewCnd().Eq("conversation_id", conversation.ID).Eq("sender_type", enums.IMSenderTypeAI)); count != 0 {
+		t.Fatalf("expected no handoff notice message, got %d", count)
+	}
+}
+
 func TestExecutorAnalyzeConversationOutputsBranchVariables(t *testing.T) {
 	db := setupWorkflowExecutorHandoffDB(t)
 	aiAgent := createWorkflowExecutorHandoffAIAgent(t, db, "1")
@@ -423,6 +467,31 @@ func handoffWorkflowDefinition() dsl.Definition {
 				},
 			},
 			{ID: "edge_handoff_default", Source: "handoff_1", Target: "default_end"},
+		},
+	}
+}
+
+func handoffAfterConfirmationWorkflowDefinition() dsl.Definition {
+	return dsl.Definition{
+		SchemaVersion: 1,
+		EntryNodeID:   "start_1",
+		Nodes: []dsl.Node{
+			{ID: "start_1", Type: workflowregistry.NodeTypeStart, Name: "Start"},
+			{ID: "prompt_1", Type: workflowregistry.NodeTypeLLMReply, Name: "Prompt", Config: []byte(`{"staticReply":"请确认转人工"}`)},
+			{ID: "confirm_1", Type: workflowregistry.NodeTypeHumanConfirm, Name: "Confirm", Inputs: map[string]dsl.VariableSelector{
+				"prompt": {NodeID: "prompt_1", Field: "replyText"},
+			}},
+			{ID: "handoff_1", Type: workflowregistry.NodeTypeHandoffToHuman, Name: "Handoff", Inputs: map[string]dsl.VariableSelector{
+				"reason":    {NodeID: "start_1", Field: "userMessage"},
+				"confirmed": {NodeID: "confirm_1", Field: "confirmed"},
+			}},
+			{ID: "end_1", Type: workflowregistry.NodeTypeEnd, Name: "End"},
+		},
+		Edges: []dsl.Edge{
+			{ID: "edge_start_prompt", Source: "start_1", Target: "prompt_1"},
+			{ID: "edge_prompt_confirm", Source: "prompt_1", Target: "confirm_1"},
+			{ID: "edge_confirm_handoff", Source: "confirm_1", Target: "handoff_1"},
+			{ID: "edge_handoff_end", Source: "handoff_1", Target: "end_1"},
 		},
 	}
 }

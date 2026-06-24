@@ -32,6 +32,8 @@ func buildConversationInterrupt(conversation models.Conversation, message models
 	item.SourceMessageID = message.ID
 	item.InterruptID = firstInterruptID(summary)
 	item.InterruptType = firstInterruptType(summary)
+	item.WorkflowRunID = summary.WorkflowRunID
+	item.WorkflowNodeID = firstInterruptID(summary)
 	item.Status = "pending"
 	item.PromptText = resolveInterruptPrompt(summary)
 	item.RequestData = strings.TrimSpace(summary.CheckPointData)
