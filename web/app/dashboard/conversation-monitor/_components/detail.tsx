@@ -32,6 +32,7 @@ type ConversationDetailDialogProps = {
   open: boolean;
   loading: boolean;
   saving: boolean;
+  readOnly?: boolean;
   item: AdminConversation | null;
   detail: AdminConversationDetail | null;
   messages?: AdminMessage[] | null;
@@ -164,6 +165,7 @@ export function ConversationDetailDialog({
   open,
   loading,
   saving,
+  readOnly = false,
   item,
   detail,
   messages: rawMessages,
@@ -301,53 +303,59 @@ export function ConversationDetailDialog({
                 })
               : t("conversationMonitor.noConversationInfo")}
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              onClick={onOpenAssign}
-              disabled={saving || !currentConversation || currentConversation.status !== 2}
-            >
-              <MessageCircleMoreIcon />
-              {saving ? t("conversationMonitor.processing") : t("conversationMonitor.assign")}
+          {readOnly ? (
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              {t("common.close")}
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => void onDispatch()}
-              disabled={
-                saving || !currentConversation || !isPendingConversation
-              }
-            >
-              <MessageCircleMoreIcon />
-              {saving ? t("conversationMonitor.processing") : t("conversationMonitor.retryDispatch")}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => void onRead()}
-              disabled={saving || !currentConversation}
-            >
-              <CheckCheckIcon />
-              {saving ? t("conversationMonitor.processing") : t("conversationMonitor.markRead")}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onOpenTransfer}
-              disabled={saving || !currentConversation || currentConversation.status !== 3}
-            >
-              <MessageCircleMoreIcon />
-              {saving ? t("conversationMonitor.processing") : t("conversationMonitor.transfer")}
-            </Button>
-            {!isClosedConversation ? (
+          ) : (
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
-                onClick={onOpenClose}
+                onClick={onOpenAssign}
+                disabled={saving || !currentConversation || currentConversation.status !== 2}
+              >
+                <MessageCircleMoreIcon />
+                {saving ? t("conversationMonitor.processing") : t("conversationMonitor.assign")}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => void onDispatch()}
+                disabled={
+                  saving || !currentConversation || !isPendingConversation
+                }
+              >
+                <MessageCircleMoreIcon />
+                {saving ? t("conversationMonitor.processing") : t("conversationMonitor.retryDispatch")}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => void onRead()}
                 disabled={saving || !currentConversation}
               >
-                <EyeIcon />
-                {saving ? t("conversationMonitor.processing") : t("conversationMonitor.close")}
+                <CheckCheckIcon />
+                {saving ? t("conversationMonitor.processing") : t("conversationMonitor.markRead")}
               </Button>
-            ) : null}
-          </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onOpenTransfer}
+                disabled={saving || !currentConversation || currentConversation.status !== 3}
+              >
+                <MessageCircleMoreIcon />
+                {saving ? t("conversationMonitor.processing") : t("conversationMonitor.transfer")}
+              </Button>
+              {!isClosedConversation ? (
+                <Button
+                  variant="outline"
+                  onClick={onOpenClose}
+                  disabled={saving || !currentConversation}
+                >
+                  <EyeIcon />
+                  {saving ? t("conversationMonitor.processing") : t("conversationMonitor.close")}
+                </Button>
+              ) : null}
+            </div>
+          )}
         </div>
       }
     >

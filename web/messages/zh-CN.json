@@ -2262,6 +2262,7 @@
     "allAgents": "全部 Agent",
     "loadAgentsFailed": "加载 AI Agent 列表失败",
     "loadDetailFailed": "加载流程执行详情失败",
+    "loadConversationFailed": "加载会话详情失败",
     "conversationId": "会话ID",
     "messageId": "消息ID",
     "workflowVersionId": "流程版本ID",

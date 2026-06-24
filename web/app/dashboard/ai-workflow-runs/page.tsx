@@ -1,23 +1,34 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import {
   AlertTriangleIcon,
   Clock3Icon,
+  MessageCircleMoreIcon,
   MessageSquareTextIcon,
   WorkflowIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 
+import { ConversationDetailDialog } from "@/app/dashboard/conversation-monitor/_components/detail"
 import { DashboardListPage } from "@/components/dashboard/list"
 import { JsonTreeViewer } from "@/components/json-tree-viewer"
 import { ProjectDialog } from "@/components/project-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
   fetchAIAgentsAll,
   fetchAIWorkflowRun,
   fetchAIWorkflowRuns,
+  fetchConversationDetail,
+  fetchConversationMessages,
+  type AdminConversationDetail,
+  type AdminMessage,
   type AIAgent,
   type AIWorkflowNodeRun,
   type AIWorkflowRun,
@@ -59,6 +70,10 @@ export default function DashboardAIWorkflowRunsPage() {
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
   const [activeRun, setActiveRun] = useState<AIWorkflowRun | null>(null)
+  const [conversationOpen, setConversationOpen] = useState(false)
+  const [conversationLoading, setConversationLoading] = useState(false)
+  const [activeConversation, setActiveConversation] = useState<AdminConversationDetail | null>(null)
+  const [conversationMessages, setConversationMessages] = useState<AdminMessage[]>([])
   const statusOptions = useMemo(() => getStatusOptions(t), [t])
   const agentOptions = useMemo(
     () => [
@@ -104,6 +119,27 @@ export default function DashboardAIWorkflowRunsPage() {
       setDetailOpen(false)
     } finally {
       setDetailLoading(false)
+    }
+  }
+
+  async function openConversation(conversationId: number) {
+    if (!conversationId) {
+      return
+    }
+    setConversationOpen(true)
+    setConversationLoading(true)
+    try {
+      const [detail, messagePage] = await Promise.all([
+        fetchConversationDetail(conversationId),
+        fetchConversationMessages({ conversationId, limit: 20 }),
+      ])
+      setActiveConversation(detail)
+      setConversationMessages(messagePage.results ?? [])
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("workflowRun.loadConversationFailed"))
+      setConversationOpen(false)
+    } finally {
+      setConversationLoading(false)
     }
   }
 
@@ -198,7 +234,21 @@ export default function DashboardAIWorkflowRunsPage() {
             className: "w-48",
             render: (item) => (
               <div className="space-y-1 text-sm">
-                <div>{t("workflowRun.conversationShort", { id: item.conversationId || "-" })}</div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto max-w-full justify-start px-0 py-0 text-sm font-normal hover:bg-transparent hover:text-primary"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    void openConversation(item.conversationId)
+                  }}
+                >
+                  <MessageCircleMoreIcon className="size-3.5" />
+                  <span className="truncate">
+                    {t("workflowRun.conversationShort", { id: item.conversationId || "-" })}
+                  </span>
+                </Button>
                 <div className="text-xs text-muted-foreground">
                   {t("workflowRun.messageShort", { id: item.messageId || "-" })}
                 </div>
@@ -224,13 +274,10 @@ export default function DashboardAIWorkflowRunsPage() {
           {
             key: "error",
             label: t("workflowRun.error"),
-            className: "min-w-48",
+            className: "w-72 max-w-72",
             render: (item) =>
               item.errorMessage ? (
-                <div className="flex items-start gap-1.5 text-xs text-destructive">
-                  <AlertTriangleIcon className="mt-0.5 size-3.5 shrink-0" />
-                  <span className="line-clamp-2 break-all">{item.errorMessage}</span>
-                </div>
+                <ErrorMessagePreview message={item.errorMessage} />
               ) : (
                 <span className="text-muted-foreground">-</span>
               ),
@@ -255,8 +302,66 @@ export default function DashboardAIWorkflowRunsPage() {
           }
         }}
         t={t}
+        onOpenConversation={openConversation}
+      />
+      <ConversationDetailDialog
+        open={conversationOpen}
+        loading={conversationLoading}
+        saving={false}
+        readOnly
+        item={activeConversation}
+        detail={activeConversation}
+        messages={conversationMessages}
+        messagesHasMore={false}
+        loadingMoreMessages={false}
+        onOpenChange={(open) => {
+          setConversationOpen(open)
+          if (!open) {
+            setActiveConversation(null)
+            setConversationMessages([])
+          }
+        }}
+        onOpenAssign={() => undefined}
+        onDispatch={async () => undefined}
+        onOpenTransfer={() => undefined}
+        onRead={async () => undefined}
+        onOpenClose={() => undefined}
       />
     </>
+  )
+}
+
+function ErrorMessagePreview({ message }: { message: string }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <button
+            type="button"
+            className="flex w-full min-w-0 items-center gap-1.5 text-left text-xs text-destructive"
+            onClick={(event) => event.stopPropagation()}
+            onMouseEnter={() => setOpen(true)}
+            onMouseLeave={() => setOpen(false)}
+            onFocus={() => setOpen(true)}
+            onBlur={() => setOpen(false)}
+          />
+        }
+      >
+        <AlertTriangleIcon className="size-3.5 shrink-0" />
+        <span className="block min-w-0 truncate">{message}</span>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        className="max-h-80 w-[30rem] max-w-[min(30rem,calc(100vw-2rem))] overflow-auto whitespace-pre-wrap break-words text-xs text-destructive"
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onClick={(event) => event.stopPropagation()}
+      >
+        {message}
+      </PopoverContent>
+    </Popover>
   )
 }
 
@@ -266,12 +371,14 @@ function WorkflowRunDetailDialog({
   run,
   onOpenChange,
   t,
+  onOpenConversation,
 }: {
   open: boolean
   loading: boolean
   run: AIWorkflowRun | null
   onOpenChange: (open: boolean) => void
   t: TFunction
+  onOpenConversation: (conversationId: number) => void | Promise<void>
 }) {
   return (
     <ProjectDialog
@@ -303,7 +410,19 @@ function WorkflowRunDetailDialog({
             <DetailRow label={t("workflowRun.version")} value={`v${run.workflowVersion || "-"} / #${run.workflowVersionId}`} />
             <DetailRow label={t("workflowRun.agent")} value={run.aiAgentName || `#${run.aiAgentId}`} />
             <DetailRow label={t("workflowRun.status")} value={formatRunStatus(run)} />
-            <DetailRow label={t("workflowRun.conversationId")} value={`#${run.conversationId}`} />
+            <DetailRow
+              label={t("workflowRun.conversationId")}
+              value={
+                <Button
+                  type="button"
+                  variant="link"
+                  className="h-auto min-w-0 px-0 py-0 font-medium"
+                  onClick={() => void onOpenConversation(run.conversationId)}
+                >
+                  #{run.conversationId}
+                </Button>
+              }
+            />
             <DetailRow label={t("workflowRun.messageId")} value={`#${run.messageId}`} />
             <DetailRow label={t("workflowRun.startedAt")} value={run.startedAt ? formatDateTime(run.startedAt) : "-"} />
             <DetailRow label={t("workflowRun.endedAt")} value={run.endedAt ? formatDateTime(run.endedAt) : "-"} />
@@ -396,7 +515,7 @@ function PreviewBlock({
   )
 }
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+function DetailRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex min-w-0 items-center justify-between gap-3">
       <span className="shrink-0 text-xs text-muted-foreground">{label}</span>

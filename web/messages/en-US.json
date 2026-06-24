@@ -2262,6 +2262,7 @@
     "allAgents": "All agents",
     "loadAgentsFailed": "Could not load AI agents.",
     "loadDetailFailed": "Could not load workflow run details.",
+    "loadConversationFailed": "Could not load conversation details.",
     "conversationId": "Conversation ID",
     "messageId": "Message ID",
     "workflowVersionId": "Workflow Version ID",
