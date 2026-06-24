@@ -181,6 +181,22 @@ func (v *definitionValidator) validateConfirmationGuards() {
 		if !v.hasConfirmationPredecessor(id, make(map[string]struct{})) {
 			v.addError("nodes."+id, node.Type+" requires human_confirm before execution")
 		}
+		v.validateConfirmedInput(id, node)
+	}
+}
+
+func (v *definitionValidator) validateConfirmedInput(nodeID string, node dsl.Node) {
+	selector, ok := node.Inputs["confirmed"]
+	if !ok || strings.TrimSpace(selector.NodeID) == "" || strings.TrimSpace(selector.Field) == "" {
+		return
+	}
+	sourceNodeID := strings.TrimSpace(selector.NodeID)
+	sourceNode, ok := v.nodesByID[sourceNodeID]
+	if !ok {
+		return
+	}
+	if sourceNode.Type != registry.NodeTypeHumanConfirm || strings.TrimSpace(selector.Field) != "confirmed" {
+		v.addError("nodes."+nodeID+".inputs.confirmed", "confirmed input must come from human_confirm.confirmed")
 	}
 }
 

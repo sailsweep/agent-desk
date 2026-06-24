@@ -110,6 +110,46 @@ func TestValidateDefinitionAcceptsConfirmedCreateTicket(t *testing.T) {
 	}
 }
 
+func TestValidateDefinitionRejectsConfirmedInputFromNonConfirmNode(t *testing.T) {
+	def := dsl.Definition{
+		SchemaVersion: 1,
+		EntryNodeID:   "start_1",
+		Nodes: []dsl.Node{
+			{ID: "start_1", Type: "start"},
+			{ID: "analysis_1", Type: "analyze_conversation", Inputs: map[string]dsl.VariableSelector{
+				"userMessage": {NodeID: "start_1", Field: "userMessage"},
+			}},
+			{ID: "draft_1", Type: "prepare_ticket_draft", Inputs: map[string]dsl.VariableSelector{
+				"issue": {NodeID: "start_1", Field: "userMessage"},
+			}},
+			{ID: "confirm_1", Type: "human_confirm", Inputs: map[string]dsl.VariableSelector{
+				"prompt": {NodeID: "start_1", Field: "userMessage"},
+			}},
+			{ID: "create_1", Type: "create_ticket", Inputs: map[string]dsl.VariableSelector{
+				"ticketDraft": {NodeID: "draft_1", Field: "ticketDraft"},
+				"confirmed":   {NodeID: "analysis_1", Field: "needTicket"},
+			}},
+			{ID: "end_1", Type: "end"},
+		},
+		Edges: []dsl.Edge{
+			{ID: "e1", Source: "start_1", Target: "analysis_1"},
+			{ID: "e2", Source: "analysis_1", Target: "draft_1"},
+			{ID: "e3", Source: "draft_1", Target: "confirm_1"},
+			{ID: "e4", Source: "confirm_1", Target: "create_1"},
+			{ID: "e5", Source: "create_1", Target: "end_1"},
+		},
+	}
+
+	result := validator.ValidateDefinition(def, registry.DefaultRegistry())
+
+	if result.Valid {
+		t.Fatalf("expected confirmed input from non-confirm node to be invalid")
+	}
+	if !hasValidationMessage(result, "confirmed input must come from human_confirm.confirmed") {
+		t.Fatalf("expected confirmed-source error, got %#v", result.Errors)
+	}
+}
+
 func TestValidateDefinitionRejectsMissingRequiredInputMapping(t *testing.T) {
 	def := minimalDefinition()
 	def.Nodes[1].Inputs = nil
