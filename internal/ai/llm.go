@@ -59,7 +59,7 @@ func (s *llm) ChatWithConfig(ctx context.Context, config models.AIConfig, system
 	if config.MaxOutputTokens > 0 {
 		params.MaxCompletionTokens = openai.Int(int64(config.MaxOutputTokens))
 	}
-	applyProviderSpecificChatParams(params, config)
+	applyProviderSpecificChatParams(&params, config)
 
 	client := newOpenAIClient(config)
 	chatResp, err := client.Chat.Completions.New(ctx, params)
@@ -80,7 +80,10 @@ func (s *llm) ChatWithConfig(ctx context.Context, config models.AIConfig, system
 	}, nil
 }
 
-func applyProviderSpecificChatParams(params openai.ChatCompletionNewParams, config models.AIConfig) {
+func applyProviderSpecificChatParams(params *openai.ChatCompletionNewParams, config models.AIConfig) {
+	if params == nil {
+		return
+	}
 	if isDashScopeQwenThinkingModel(config) {
 		params.SetExtraFields(map[string]any{
 			"enable_thinking": false,
