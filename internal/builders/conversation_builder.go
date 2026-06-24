@@ -150,6 +150,7 @@ func BuildMessageWithReadStatesAndLocale(item *models.Message, agentReadState, c
 		ID:              item.ID,
 		ConversationID:  item.ConversationID,
 		RequestID:       item.RequestID,
+		WorkflowRunID:   item.WorkflowRunID,
 		ClientMsgID:     item.ClientMsgID,
 		SenderType:      item.SenderType,
 		SenderID:        item.SenderID,

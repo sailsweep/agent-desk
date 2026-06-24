@@ -9,14 +9,24 @@ import {
   useRef,
   useState,
 } from "react";
-import { BotIcon, LockKeyholeIcon, UserCheckIcon } from "lucide-react";
+import {
+  AlertTriangleIcon,
+  BotIcon,
+  LockKeyholeIcon,
+  TimerIcon,
+  UserCheckIcon,
+  WorkflowIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { ConversationTransferDialog } from "@/components/conversation-actions/transfer-dialog";
 import { ImMessageHTML } from "@/components/im-message-html";
 import { useImageLightbox } from "@/components/image-lightbox";
+import { JsonTreeViewer } from "@/components/json-tree-viewer";
+import { ProjectDialog } from "@/components/project-dialog";
 import { useI18n } from "@/i18n/provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -36,6 +46,11 @@ import {
   assignAgentConversation,
   type AgentMessage,
 } from "@/lib/api/agent";
+import {
+  fetchAIWorkflowRun,
+  type AIWorkflowNodeRun,
+  type AIWorkflowRun,
+} from "@/lib/api/admin";
 import { readSession } from "@/lib/auth";
 import { renderIMMessageHTML } from "@/lib/im-message";
 import {
@@ -153,6 +168,10 @@ export function ChatPanel() {
   const [claiming, setClaiming] = useState(false);
   const [claimDialogOpen, setClaimDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [workflowRunDialogOpen, setWorkflowRunDialogOpen] = useState(false);
+  const [workflowRunLoading, setWorkflowRunLoading] = useState(false);
+  const [activeWorkflowRun, setActiveWorkflowRun] =
+    useState<AIWorkflowRun | null>(null);
   const isLgUp = useIsLgUp();
   const isClosedConversation = conversation?.status === 4;
   const isPendingConversation = conversation?.status === 2;
@@ -397,6 +416,23 @@ export function ChatPanel() {
     await loadMessages(conversationId, { forceLoading: true, reset: true });
   };
 
+  const openWorkflowRunDetail = useCallback(
+    async (runId: number) => {
+      setWorkflowRunDialogOpen(true);
+      setWorkflowRunLoading(true);
+      try {
+        const data = await fetchAIWorkflowRun(runId);
+        setActiveWorkflowRun(data);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "加载 AI 执行详情失败");
+        setWorkflowRunDialogOpen(false);
+      } finally {
+        setWorkflowRunLoading(false);
+      }
+    },
+    [],
+  );
+
   if (!conversation) {
     return (
       <div className="mt-10 flex flex-1 items-center justify-center px-4">
@@ -447,6 +483,7 @@ export function ChatPanel() {
               onRecall={async (messageId) => {
                 await recallMessage(messageId);
               }}
+              onOpenWorkflowRun={openWorkflowRunDetail}
             />
           ))
         ) : (
@@ -594,6 +631,17 @@ export function ChatPanel() {
           await reloadConversationData(conversation.id);
         }}
       />
+      <WorkflowRunDetailDialog
+        open={workflowRunDialogOpen}
+        loading={workflowRunLoading}
+        run={activeWorkflowRun}
+        onOpenChange={(open) => {
+          setWorkflowRunDialogOpen(open);
+          if (!open) {
+            setActiveWorkflowRun(null);
+          }
+        }}
+      />
     </div>
   );
 }
@@ -604,6 +652,7 @@ type MessageItemProps = {
   canRecall: boolean;
   recalling: boolean;
   onRecall: (messageId: number) => Promise<void>;
+  onOpenWorkflowRun: (runId: number) => Promise<void>;
 };
 
 const MessageItem = memo(
@@ -613,6 +662,7 @@ const MessageItem = memo(
     canRecall,
     recalling,
     onRecall,
+    onOpenWorkflowRun,
   }: MessageItemProps) {
     const t = useI18n();
     const { open: openImageLightbox } = useImageLightbox();
@@ -706,6 +756,20 @@ const MessageItem = memo(
                     {recalling ? t("conversation.recalling") : t("conversation.recall")}
                   </Button>
                 ) : null}
+                {isAi && message.workflowRunId ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto gap-1 px-1 py-0 text-xs text-muted-foreground"
+                    onClick={() => {
+                      void onOpenWorkflowRun(message.workflowRunId ?? 0);
+                    }}
+                  >
+                    <WorkflowIcon className="size-3" />
+                    执行详情
+                  </Button>
+                ) : null}
               </div>
             </div>
             <Avatar className="size-8 shrink-0">
@@ -754,7 +818,8 @@ const MessageItem = memo(
     prevProps.onImageSettled === nextProps.onImageSettled &&
     prevProps.canRecall === nextProps.canRecall &&
     prevProps.recalling === nextProps.recalling &&
-    prevProps.onRecall === nextProps.onRecall,
+    prevProps.onRecall === nextProps.onRecall &&
+    prevProps.onOpenWorkflowRun === nextProps.onOpenWorkflowRun,
 );
 
 function buildMessageHTML(message: {
@@ -763,4 +828,200 @@ function buildMessageHTML(message: {
   payload?: string;
 }) {
   return renderIMMessageHTML(message);
+}
+
+function WorkflowRunDetailDialog({
+  open,
+  loading,
+  run,
+  onOpenChange,
+}: {
+  open: boolean;
+  loading: boolean;
+  run: AIWorkflowRun | null;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <ProjectDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={
+        <span className="flex items-center gap-2">
+          <WorkflowIcon className="size-4" />
+          AI 执行详情
+        </span>
+      }
+      description={run ? `Run #${run.id}` : "Workflow 执行链路"}
+      size="xl"
+      allowFullscreen
+      footer={
+        <Button variant="outline" onClick={() => onOpenChange(false)}>
+          关闭
+        </Button>
+      }
+    >
+      {loading ? (
+        <div className="px-6 py-10 text-sm text-muted-foreground">
+          加载执行详情中
+        </div>
+      ) : run ? (
+        <div className="space-y-4 px-6 pb-6">
+          <div className="grid gap-2 rounded-lg border bg-muted/20 p-3 text-sm md:grid-cols-2">
+            <WorkflowRunDetailRow
+              label="Workflow"
+              value={`#${run.workflowId} / v${run.workflowVersionId}`}
+            />
+            <WorkflowRunDetailRow label="会话" value={`#${run.conversationId}`} />
+            <WorkflowRunDetailRow label="消息" value={`#${run.messageId}`} />
+            <WorkflowRunDetailRow label="Agent" value={`#${run.aiAgentId}`} />
+            <WorkflowRunDetailRow
+              label="状态"
+              value={run.statusName || String(run.status)}
+            />
+            <WorkflowRunDetailRow
+              label="开始"
+              value={run.startedAt ? formatDateTime(run.startedAt) : ""}
+            />
+            <WorkflowRunDetailRow
+              label="结束"
+              value={run.endedAt ? formatDateTime(run.endedAt) : ""}
+            />
+            <WorkflowRunDetailRow label="中断节点" value={run.interruptNodeId || ""} />
+          </div>
+          {run.errorMessage ? (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              {run.errorMessage}
+            </div>
+          ) : null}
+          <div className="space-y-3">
+            {(run.nodes ?? []).map((node) => (
+              <WorkflowNodeRunBlock key={node.id} node={node} />
+            ))}
+            {!run.nodes || run.nodes.length === 0 ? (
+              <p className="text-sm text-muted-foreground">暂无节点记录</p>
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <div className="px-6 py-10 text-sm text-muted-foreground">
+          未找到执行记录
+        </div>
+      )}
+    </ProjectDialog>
+  );
+}
+
+function WorkflowRunDetailRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  const empty = !value.trim();
+  return (
+    <div className="flex gap-2.5 text-sm leading-snug">
+      <span className="w-17 shrink-0 pt-px text-xs text-muted-foreground">
+        {label}
+      </span>
+      <span
+        className={`min-w-0 flex-1 break-all ${
+          empty ? "text-muted-foreground" : "text-foreground"
+        }`}
+      >
+        {empty ? "—" : value}
+      </span>
+    </div>
+  );
+}
+
+function WorkflowNodeRunBlock({ node }: { node: AIWorkflowNodeRun }) {
+  const inputValue = safeParseJSON(node.inputPreview);
+  const outputValue = safeParseJSON(node.outputPreview);
+
+  return (
+    <div className="rounded-lg border bg-background p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="truncate text-sm font-medium text-foreground">
+              {node.nodeId || `Node #${node.id}`}
+            </span>
+            <WorkflowRunStatusBadge statusName={node.statusName} />
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            {node.nodeType || "unknown"}
+          </div>
+        </div>
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <TimerIcon className="size-3.5" />
+          {node.durationMs} ms
+        </div>
+      </div>
+      {node.errorMessage ? (
+        <div className="mt-3 flex items-start gap-1.5 rounded-md bg-destructive/5 px-3 py-2 text-xs text-destructive">
+          <AlertTriangleIcon className="mt-0.5 size-3.5 shrink-0" />
+          <span className="break-all">{node.errorMessage}</span>
+        </div>
+      ) : null}
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <WorkflowPreviewBlock title="输入" raw={node.inputPreview} value={inputValue} />
+        <WorkflowPreviewBlock title="输出" raw={node.outputPreview} value={outputValue} />
+      </div>
+    </div>
+  );
+}
+
+function WorkflowPreviewBlock({
+  title,
+  raw,
+  value,
+}: {
+  title: string;
+  raw: string;
+  value: unknown;
+}) {
+  return (
+    <div className="min-w-0">
+      <div className="mb-1 text-xs font-medium text-muted-foreground">{title}</div>
+      {value !== null ? (
+        <JsonTreeViewer value={value} collapsed={2} />
+      ) : raw.trim() ? (
+        <pre className="max-h-72 overflow-auto rounded-md border bg-muted/20 p-3 text-xs whitespace-pre-wrap break-all">
+          {raw}
+        </pre>
+      ) : (
+        <div className="rounded-md border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+          —
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WorkflowRunStatusBadge({ statusName }: { statusName: string }) {
+  const normalized = statusName.trim();
+  const variant =
+    normalized === "failed"
+      ? "destructive"
+      : normalized === "interrupted"
+        ? "outline"
+        : "secondary";
+  return (
+    <Badge variant={variant} className="h-5 px-1.5 text-[11px]">
+      {normalized || "unknown"}
+    </Badge>
+  );
+}
+
+function safeParseJSON(raw: string): unknown | null {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+  try {
+    return JSON.parse(trimmed) as unknown;
+  } catch {
+    return null;
+  }
 }

@@ -22,6 +22,7 @@ type replyCommitInput struct {
 	AIAgent        models.AIAgent
 	ReplyText      string
 	ClientPrefix   string
+	WorkflowRunID  int64
 	IncrementRound bool
 }
 
@@ -34,7 +35,7 @@ func (s *replyCommitService) SendAIReply(input replyCommitInput) (*models.Messag
 	if replyText == "" {
 		return nil, nil
 	}
-	replyMessage, err := svc.MessageService.SendAIMessageWithRequestID(
+	replyMessage, err := svc.MessageService.SendAIMessageWithRequestIDAndWorkflowRunID(
 		input.Conversation.ID,
 		input.AIAgent.ID,
 		fmt.Sprintf("%s_%d", strings.TrimSpace(input.ClientPrefix), input.Message.ID),
@@ -43,6 +44,7 @@ func (s *replyCommitService) SendAIReply(input replyCommitInput) (*models.Messag
 		"",
 		s.buildAIPrincipal(input.AIAgent),
 		input.Message.RequestID,
+		input.WorkflowRunID,
 	)
 	if err != nil || !input.IncrementRound {
 		return replyMessage, err

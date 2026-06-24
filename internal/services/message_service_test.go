@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"agent-desk/internal/models"
+	"agent-desk/internal/pkg/dto"
 	"agent-desk/internal/pkg/enums"
 	"agent-desk/internal/pkg/openidentity"
 
@@ -103,6 +104,30 @@ func welcomeTestExternalUser(id string) openidentity.ExternalUser {
 	}
 }
 
+func createMessageTestConversation(t *testing.T, db *gorm.DB, aiAgentID int64) *models.Conversation {
+	t.Helper()
+	now := time.Now()
+	conversation := &models.Conversation{
+		CustomerID:   1,
+		ChannelID:    11,
+		AIAgentID:    aiAgentID,
+		Status:       enums.IMConversationStatusAIServing,
+		LastActiveAt: now,
+		AuditFields: models.AuditFields{
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+	}
+	if err := db.Create(conversation).Error; err != nil {
+		t.Fatalf("create conversation: %v", err)
+	}
+	return conversation
+}
+
+func workflowTestAIPrincipal() *dto.AuthPrincipal {
+	return &dto.AuthPrincipal{UserID: 0, Username: "AI", Nickname: "AI"}
+}
+
 func TestConversationCreateCreatesAIWelcomeMessage(t *testing.T) {
 	db := setupMessageWelcomeTestDB(t)
 	aiAgent := createWelcomeTestAIAgent(t, db, "  您好，请问有什么可以帮您？  ")
@@ -194,6 +219,38 @@ func TestSendCustomerMessageStoresRequestIDOnMessageAndEvent(t *testing.T) {
 	}
 	if event.RequestID != "trace-123" {
 		t.Fatalf("event.RequestID=%q want %q", event.RequestID, "trace-123")
+	}
+}
+
+func TestSendAIMessageStoresWorkflowRunID(t *testing.T) {
+	db := setupMessageWelcomeTestDB(t)
+	aiAgent := createWelcomeTestAIAgent(t, db, "")
+	conversation := createMessageTestConversation(t, db, aiAgent.ID)
+
+	message, err := MessageService.SendAIMessageWithRequestIDAndWorkflowRunID(
+		conversation.ID,
+		aiAgent.ID,
+		"ai-reply-workflow-1",
+		enums.IMMessageTypeText,
+		"AI reply",
+		"",
+		workflowTestAIPrincipal(),
+		"trace-workflow-1",
+		9988,
+	)
+	if err != nil {
+		t.Fatalf("SendAIMessageWithRequestIDAndWorkflowRunID() error = %v", err)
+	}
+	if message.WorkflowRunID != 9988 {
+		t.Fatalf("message.WorkflowRunID=%d want 9988", message.WorkflowRunID)
+	}
+
+	var stored models.Message
+	if err := db.First(&stored, message.ID).Error; err != nil {
+		t.Fatalf("find message: %v", err)
+	}
+	if stored.WorkflowRunID != 9988 {
+		t.Fatalf("stored.WorkflowRunID=%d want 9988", stored.WorkflowRunID)
 	}
 }
 

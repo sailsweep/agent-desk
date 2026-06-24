@@ -132,11 +132,11 @@ func (s *messageService) GetConversationReadTarget(conversationID, messageID int
 func (s *messageService) SendMessage(conversationID int64, senderType enums.IMSenderType, reqSenderID int64, clientMsgID string, messageType enums.IMMessageType, content, payload string, operator *dto.AuthPrincipal, external *openidentity.ExternalUser) (*models.Message, error) {
 	switch senderType {
 	case enums.IMSenderTypeAgent:
-		return s.sendMessage(conversationID, enums.IMSenderTypeAgent, reqSenderID, clientMsgID, messageType, content, payload, operator, nil, "")
+		return s.sendMessage(conversationID, enums.IMSenderTypeAgent, reqSenderID, clientMsgID, messageType, content, payload, operator, nil, "", 0)
 	case enums.IMSenderTypeAI:
-		return s.sendMessage(conversationID, enums.IMSenderTypeAI, reqSenderID, clientMsgID, messageType, content, payload, operator, nil, "")
+		return s.sendMessage(conversationID, enums.IMSenderTypeAI, reqSenderID, clientMsgID, messageType, content, payload, operator, nil, "", 0)
 	case enums.IMSenderTypeCustomer:
-		return s.sendMessage(conversationID, enums.IMSenderTypeCustomer, 0, clientMsgID, messageType, content, payload, nil, external, "")
+		return s.sendMessage(conversationID, enums.IMSenderTypeCustomer, 0, clientMsgID, messageType, content, payload, nil, external, "", 0)
 	default:
 		return nil, errorsx.InvalidParamI18n("error.e0080")
 	}
@@ -147,7 +147,7 @@ func (s *messageService) SendAgentMessage(conversationID int64, reqSenderID int6
 }
 
 func (s *messageService) SendAgentMessageWithRequestID(conversationID int64, reqSenderID int64, clientMsgID string, messageType enums.IMMessageType, content, payload string, operator *dto.AuthPrincipal, requestID string) (*models.Message, error) {
-	return s.sendMessage(conversationID, enums.IMSenderTypeAgent, reqSenderID, clientMsgID, messageType, content, payload, operator, nil, requestID)
+	return s.sendMessage(conversationID, enums.IMSenderTypeAgent, reqSenderID, clientMsgID, messageType, content, payload, operator, nil, requestID, 0)
 }
 
 func (s *messageService) RecallAgentMessage(messageID int64, operator *dto.AuthPrincipal) (*models.Message, error) {
@@ -250,7 +250,11 @@ func (s *messageService) SendAIMessage(conversationID int64, aiAgentID int64, cl
 }
 
 func (s *messageService) SendAIMessageWithRequestID(conversationID int64, aiAgentID int64, clientMsgID string, messageType enums.IMMessageType, content, payload string, operator *dto.AuthPrincipal, requestID string) (*models.Message, error) {
-	return s.sendMessage(conversationID, enums.IMSenderTypeAI, aiAgentID, clientMsgID, messageType, content, payload, operator, nil, requestID)
+	return s.SendAIMessageWithRequestIDAndWorkflowRunID(conversationID, aiAgentID, clientMsgID, messageType, content, payload, operator, requestID, 0)
+}
+
+func (s *messageService) SendAIMessageWithRequestIDAndWorkflowRunID(conversationID int64, aiAgentID int64, clientMsgID string, messageType enums.IMMessageType, content, payload string, operator *dto.AuthPrincipal, requestID string, workflowRunID int64) (*models.Message, error) {
+	return s.sendMessage(conversationID, enums.IMSenderTypeAI, aiAgentID, clientMsgID, messageType, content, payload, operator, nil, requestID, workflowRunID)
 }
 
 func (s *messageService) SendAIServiceNotice(conversationID int64, aiAgentID int64, content string) (*models.Message, error) {
@@ -269,7 +273,7 @@ func (s *messageService) SendAIServiceNoticeWithRequestID(conversationID int64, 
 		UserID:   0,
 		Username: "system",
 		Nickname: "system",
-	}, nil, requestID)
+	}, nil, requestID, 0)
 }
 
 func (s *messageService) createAIWelcomeMessage(ctx *sqls.TxContext, conversation *models.Conversation, aiAgent *models.AIAgent, now time.Time) (*models.Message, error) {
@@ -370,11 +374,11 @@ func (s *messageService) SendCustomerMessage(conversationID int64, clientMsgID s
 
 func (s *messageService) SendCustomerMessageWithRequestID(conversationID int64, clientMsgID string, messageType enums.IMMessageType, content, payload string, external openidentity.ExternalUser, requestID string) (*models.Message, error) {
 	ext := external
-	return s.sendMessage(conversationID, enums.IMSenderTypeCustomer, 0, clientMsgID, messageType, content, payload, nil, &ext, requestID)
+	return s.sendMessage(conversationID, enums.IMSenderTypeCustomer, 0, clientMsgID, messageType, content, payload, nil, &ext, requestID, 0)
 }
 
 func (s *messageService) sendMessage(conversationID int64, senderType enums.IMSenderType, reqSenderID int64, clientMsgID string,
-	messageType enums.IMMessageType, content, payload string, operator *dto.AuthPrincipal, external *openidentity.ExternalUser, requestID string) (*models.Message, error) {
+	messageType enums.IMMessageType, content, payload string, operator *dto.AuthPrincipal, external *openidentity.ExternalUser, requestID string, workflowRunID int64) (*models.Message, error) {
 
 	if senderType == enums.IMSenderTypeCustomer {
 		if external == nil || strings.TrimSpace(external.ExternalID) == "" {
@@ -391,11 +395,11 @@ func (s *messageService) sendMessage(conversationID int64, senderType enums.IMSe
 	if err != nil {
 		return nil, err
 	}
-	return s.sendValidatedMessage(conversation, senderType, reqSenderID, clientMsgID, messageType, content, payload, operator, external, requestID)
+	return s.sendValidatedMessage(conversation, senderType, reqSenderID, clientMsgID, messageType, content, payload, operator, external, requestID, workflowRunID)
 }
 
 func (s *messageService) sendValidatedMessage(conversation *models.Conversation, senderType enums.IMSenderType, reqSenderID int64, clientMsgID string,
-	messageType enums.IMMessageType, content, payload string, operator *dto.AuthPrincipal, external *openidentity.ExternalUser, requestID string) (*models.Message, error) {
+	messageType enums.IMMessageType, content, payload string, operator *dto.AuthPrincipal, external *openidentity.ExternalUser, requestID string, workflowRunID int64) (*models.Message, error) {
 
 	var err error
 	var summary string
@@ -432,6 +436,7 @@ func (s *messageService) sendValidatedMessage(conversation *models.Conversation,
 	message := &models.Message{
 		ConversationID: conversation.ID,
 		RequestID:      traceID,
+		WorkflowRunID:  workflowRunID,
 		ClientMsgID:    clientMsgID,
 		SenderType:     senderType,
 		SenderID:       reqSenderID,

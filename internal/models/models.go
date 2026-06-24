@@ -390,6 +390,7 @@ type Message struct {
 	ID              int64                 `gorm:"primaryKey;autoIncrement"`
 	ConversationID  int64                 `gorm:"type:bigint;not null;index;uniqueIndex:uk_conversation_seq;uniqueIndex:uk_conversation_client_msg"`
 	RequestID       string                `gorm:"type:varchar(128);not null;default:'';index"`
+	WorkflowRunID   int64                 `gorm:"type:bigint;not null;default:0;index"`
 	ClientMsgID     string                `gorm:"type:varchar(128);not null;default:'';uniqueIndex:uk_conversation_client_msg"`
 	SenderType      enums.IMSenderType    `gorm:"type:varchar(30);not null;default:'';index"`
 	SenderID        int64                 `gorm:"type:bigint;not null;default:0;index"`

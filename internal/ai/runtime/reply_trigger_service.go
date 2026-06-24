@@ -84,11 +84,12 @@ func (s *aiReplyService) executeReply(ctx context.Context, replyCtx aiReplyConte
 	}
 	if summary != nil && strings.TrimSpace(summary.ReplyText) != "" {
 		_, err := s.commit.CommitAIReply(replyCommitInput{
-			Conversation: replyCtx.Conversation,
-			Message:      replyCtx.Message,
-			AIAgent:      replyCtx.AIAgent,
-			ReplyText:    summary.ReplyText,
-			ClientPrefix: "ai_reply",
+			Conversation:  replyCtx.Conversation,
+			Message:       replyCtx.Message,
+			AIAgent:       replyCtx.AIAgent,
+			ReplyText:     summary.ReplyText,
+			ClientPrefix:  "ai_reply",
+			WorkflowRunID: summary.WorkflowRunID,
 		})
 		if err != nil {
 			return err

@@ -64,6 +64,7 @@ export type ImConversationDetail = ImConversation
 export type ImMessage = {
   id: number
   conversationId: number
+  workflowRunId?: number
   clientMsgId?: string
   senderType: string
   senderId: number

@@ -70,6 +70,7 @@ export type AgentConversationDetail = AgentConversation & {
 export type AgentMessage = {
   id: number
   conversationId: number
+  workflowRunId?: number
   clientMsgId?: string
   senderType: string
   senderId: number

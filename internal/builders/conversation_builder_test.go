@@ -3,6 +3,8 @@ package builders
 import (
 	"testing"
 
+	"agent-desk/internal/models"
+	"agent-desk/internal/pkg/enums"
 	"agent-desk/internal/pkg/i18nx"
 )
 
@@ -95,5 +97,20 @@ func TestLocalizeRenderableMessageContent(t *testing.T) {
 				t.Fatalf("localizeRenderableMessageContent() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestBuildMessageIncludesWorkflowRunID(t *testing.T) {
+	resp := BuildMessageWithReadStatesAndLocale(&models.Message{
+		ID:             1,
+		ConversationID: 2,
+		SenderType:     enums.IMSenderTypeAI,
+		MessageType:    enums.IMMessageTypeText,
+		Content:        "AI reply",
+		WorkflowRunID:  9988,
+	}, nil, nil, nil, nil, nil, i18nx.DefaultLocale)
+
+	if resp.WorkflowRunID != 9988 {
+		t.Fatalf("resp.WorkflowRunID=%d want 9988", resp.WorkflowRunID)
 	}
 }
