@@ -380,7 +380,6 @@ type ConversationReadState struct {
 	ReaderID          int64              `gorm:"type:bigint;not null;default:0;uniqueIndex:uk_conversation_reader"`
 	ExternalReaderID  string             `gorm:"type:varchar(128);not null;default:'';uniqueIndex:uk_conversation_reader"`
 	LastReadMessageID int64              `gorm:"type:bigint;not null;default:0;index"`
-	LastReadSeqNo     int64              `gorm:"type:bigint;not null;default:0;index"`
 	LastReadAt        *time.Time         `gorm:"type:datetime"`
 	AuditFields
 }
@@ -388,7 +387,7 @@ type ConversationReadState struct {
 // Message 会话消息。
 type Message struct {
 	ID              int64                 `gorm:"primaryKey;autoIncrement"`
-	ConversationID  int64                 `gorm:"type:bigint;not null;index;uniqueIndex:uk_conversation_seq;uniqueIndex:uk_conversation_client_msg"`
+	ConversationID  int64                 `gorm:"type:bigint;not null;index;uniqueIndex:uk_conversation_client_msg"`
 	RequestID       string                `gorm:"type:varchar(128);not null;default:'';index"`
 	WorkflowRunID   int64                 `gorm:"type:bigint;not null;default:0;index"`
 	ClientMsgID     string                `gorm:"type:varchar(128);not null;default:'';uniqueIndex:uk_conversation_client_msg"`
@@ -398,7 +397,6 @@ type Message struct {
 	MessageType     enums.IMMessageType   `gorm:"type:varchar(30);not null;default:'';index"`
 	Content         string                `gorm:"type:text"`
 	Payload         string                `gorm:"type:text"`
-	SeqNo           int64                 `gorm:"type:bigint;not null;default:0;uniqueIndex:uk_conversation_seq"`
 	SendStatus      enums.IMMessageStatus `gorm:"type:int;not null;default:2;index"`
 	SentAt          *time.Time            `gorm:"type:datetime;index"`
 	DeliveredAt     *time.Time            `gorm:"type:datetime"`

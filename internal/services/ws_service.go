@@ -253,7 +253,9 @@ func (s *wsService) closeSession(session *ClientSession) {
 		remaining := s.manager.Unregister(session)
 
 		close(session.Send)
-		_ = session.Conn.Close()
+		if session.Conn != nil {
+			_ = session.Conn.Close()
+		}
 
 		var discUserID int64
 		var discExternalID string
@@ -309,7 +311,6 @@ func (s *wsService) PublishMessageCreated(conversation *models.Conversation, mes
 			MessageType:       message.MessageType,
 			Content:           content,
 			Payload:           payload,
-			SeqNo:             message.SeqNo,
 			SendStatus:        message.SendStatus,
 			SentAt:            formatWsTime(message.SentAt),
 		},
@@ -334,7 +335,6 @@ func (s *wsService) buildRealtimeMessage(item *models.Message) response.MessageR
 		MessageType:     item.MessageType,
 		Content:         content,
 		Payload:         payload,
-		SeqNo:           item.SeqNo,
 		SendStatus:      item.SendStatus,
 		SentAt:          utils.FormatTimePtr(item.SentAt),
 		DeliveredAt:     utils.FormatTimePtr(item.DeliveredAt),
@@ -389,7 +389,7 @@ func (s *wsService) fillRealtimeMessageUserName(ret *response.MessageResponse, u
 }
 
 func isRealtimeMessageRead(item *models.Message, state *models.ConversationReadState) bool {
-	return item != nil && state != nil && state.LastReadSeqNo >= item.SeqNo
+	return item != nil && state != nil && state.LastReadMessageID >= item.ID
 }
 
 func realtimeReadMessageAt(item *models.Message, state *models.ConversationReadState) string {
@@ -438,10 +438,8 @@ func (s *wsService) PublishConversationChanged(conversation *models.Conversation
 			CustomerUnreadCount:       conversation.CustomerUnreadCount,
 			AgentUnreadCount:          conversation.AgentUnreadCount,
 			CustomerLastReadMessageID: readStateMessageID(customerReadState),
-			CustomerLastReadSeqNo:     readStateSeqNo(customerReadState),
 			CustomerLastReadAt:        readStateAt(customerReadState),
 			AgentLastReadMessageID:    readStateMessageID(agentReadState),
-			AgentLastReadSeqNo:        readStateSeqNo(agentReadState),
 			AgentLastReadAt:           readStateAt(agentReadState),
 		},
 	})
@@ -476,13 +474,6 @@ func readStateMessageID(state *models.ConversationReadState) int64 {
 		return 0
 	}
 	return state.LastReadMessageID
-}
-
-func readStateSeqNo(state *models.ConversationReadState) int64 {
-	if state == nil {
-		return 0
-	}
-	return state.LastReadSeqNo
 }
 
 func readStateAt(state *models.ConversationReadState) string {

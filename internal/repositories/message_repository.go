@@ -43,7 +43,6 @@ func (r *messageRepository) FindLastUnrecalledByConversationID(db *gorm.DB, conv
 	ret := &models.Message{}
 	if err := db.
 		Where("conversation_id = ? AND recalled_at IS NULL AND send_status <> ?", conversationID, 6).
-		Order("seq_no DESC").
 		Order("id DESC").
 		Limit(1).
 		Take(ret).Error; err != nil {
@@ -117,12 +116,4 @@ func (r *messageRepository) Delete(db *gorm.DB, id int64) {
 // GetByClientMsgID 根据 conversationID 和 clientMsgID 获取消息
 func (r *messageRepository) GetByClientMsgID(db *gorm.DB, conversationID int64, clientMsgID string) *models.Message {
 	return r.FindOne(db, sqls.NewCnd().Where("conversation_id = ? AND client_msg_id = ?", conversationID, clientMsgID))
-}
-
-// NextSeqNo
-func (r *messageRepository) NextSeqNo(db *gorm.DB, conversationID int64) int64 {
-	if last := r.FindOne(db, sqls.NewCnd().Where("conversation_id = ?", conversationID).Desc("seq_no")); last != nil {
-		return last.SeqNo + 1
-	}
-	return 1
 }

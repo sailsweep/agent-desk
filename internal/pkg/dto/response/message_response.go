@@ -15,7 +15,6 @@ type MessageResponse struct {
 	MessageType     enums.IMMessageType   `json:"messageType"`
 	Content         string                `json:"content"`
 	Payload         string                `json:"payload,omitempty"`
-	SeqNo           int64                 `json:"seqNo"`
 	SendStatus      enums.IMMessageStatus `json:"sendStatus"`
 	SentAt          string                `json:"sentAt,omitempty"`
 	DeliveredAt     string                `json:"deliveredAt,omitempty"`

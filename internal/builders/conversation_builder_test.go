@@ -1,6 +1,8 @@
 package builders
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 
 	"agent-desk/internal/models"
@@ -112,5 +114,23 @@ func TestBuildMessageIncludesWorkflowRunID(t *testing.T) {
 
 	if resp.WorkflowRunID != 9988 {
 		t.Fatalf("resp.WorkflowRunID=%d want 9988", resp.WorkflowRunID)
+	}
+}
+
+func TestBuildMessageJSONDoesNotExposeSeqNo(t *testing.T) {
+	resp := BuildMessageWithReadStatesAndLocale(&models.Message{
+		ID:             1,
+		ConversationID: 2,
+		SenderType:     enums.IMSenderTypeCustomer,
+		MessageType:    enums.IMMessageTypeText,
+		Content:        "hello",
+	}, nil, nil, nil, nil, nil, i18nx.DefaultLocale)
+
+	raw, err := json.Marshal(resp)
+	if err != nil {
+		t.Fatalf("marshal message response: %v", err)
+	}
+	if strings.Contains(string(raw), "seqNo") {
+		t.Fatalf("message response should not expose seqNo, got %s", raw)
 	}
 }

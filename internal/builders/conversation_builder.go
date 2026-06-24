@@ -37,10 +37,8 @@ func BuildConversationWithLocale(item *models.Conversation, locale string) respo
 		CustomerUnreadCount:       item.CustomerUnreadCount,
 		AgentUnreadCount:          item.AgentUnreadCount,
 		CustomerLastReadMessageID: readStateMessageID(customerReadState),
-		CustomerLastReadSeqNo:     readStateSeqNo(customerReadState),
 		CustomerLastReadAt:        readStateAt(customerReadState),
 		AgentLastReadMessageID:    readStateMessageID(agentReadState),
-		AgentLastReadSeqNo:        readStateSeqNo(agentReadState),
 		AgentLastReadAt:           readStateAt(agentReadState),
 		ClosedAt:                  utils.FormatTimePtr(item.ClosedAt),
 		ClosedBy:                  item.ClosedBy,
@@ -157,7 +155,6 @@ func BuildMessageWithReadStatesAndLocale(item *models.Message, agentReadState, c
 		MessageType:     item.MessageType,
 		Content:         localizeRenderableMessageContent(locale, content),
 		Payload:         payload,
-		SeqNo:           item.SeqNo,
 		SendStatus:      item.SendStatus,
 		SentAt:          utils.FormatTimePtr(item.SentAt),
 		DeliveredAt:     utils.FormatTimePtr(item.DeliveredAt),
@@ -282,7 +279,7 @@ func collectMessageSenderNameMaps(list []models.Message) (aiNames map[int64]stri
 }
 
 func isMessageRead(item *models.Message, state *models.ConversationReadState) bool {
-	return item != nil && state != nil && state.LastReadSeqNo >= item.SeqNo
+	return item != nil && state != nil && state.LastReadMessageID >= item.ID
 }
 
 func readMessageAt(item *models.Message, state *models.ConversationReadState) string {
@@ -297,13 +294,6 @@ func readStateMessageID(state *models.ConversationReadState) int64 {
 		return 0
 	}
 	return state.LastReadMessageID
-}
-
-func readStateSeqNo(state *models.ConversationReadState) int64 {
-	if state == nil {
-		return 0
-	}
-	return state.LastReadSeqNo
 }
 
 func readStateAt(state *models.ConversationReadState) string {

@@ -1,7 +1,9 @@
 package services
 
 import (
+	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -163,9 +165,6 @@ func TestConversationCreateCreatesAIWelcomeMessage(t *testing.T) {
 	if message.Content != "您好，请问有什么可以帮您？" {
 		t.Fatalf("expected trimmed welcome content, got %q", message.Content)
 	}
-	if message.SeqNo != 1 {
-		t.Fatalf("expected seq no 1, got %d", message.SeqNo)
-	}
 	if message.SendStatus != enums.IMMessageStatusSent {
 		t.Fatalf("expected sent status, got %d", message.SendStatus)
 	}
@@ -219,6 +218,134 @@ func TestSendCustomerMessageStoresRequestIDOnMessageAndEvent(t *testing.T) {
 	}
 	if event.RequestID != "trace-123" {
 		t.Fatalf("event.RequestID=%q want %q", event.RequestID, "trace-123")
+	}
+}
+
+func TestSendCustomerMessagesConcurrentlyAssignsUniqueIDs(t *testing.T) {
+	db := setupMessageWelcomeTestDB(t)
+	aiAgent := createWelcomeTestAIAgent(t, db, "")
+	external := welcomeTestExternalUser("concurrent-user")
+	conversation, err := ConversationService.Create(external, 11, aiAgent.ID)
+	if err != nil {
+		t.Fatalf("create conversation: %v", err)
+	}
+
+	const messageCount = 10
+	var wg sync.WaitGroup
+	errCh := make(chan error, messageCount)
+	for i := 0; i < messageCount; i++ {
+		i := i
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, err := MessageService.SendCustomerMessageWithRequestID(
+				conversation.ID,
+				fmt.Sprintf("client-msg-concurrent-%d", i),
+				enums.IMMessageTypeText,
+				"hello concurrent",
+				"",
+				external,
+				"trace-concurrent",
+			)
+			errCh <- err
+		}()
+	}
+	wg.Wait()
+	close(errCh)
+	for err := range errCh {
+		if err != nil {
+			t.Fatalf("SendCustomerMessageWithRequestID() concurrent error = %v", err)
+		}
+	}
+
+	var messages []models.Message
+	if err := db.
+		Where("conversation_id = ? AND sender_type = ?", conversation.ID, enums.IMSenderTypeCustomer).
+		Order("id ASC").
+		Find(&messages).Error; err != nil {
+		t.Fatalf("find messages: %v", err)
+	}
+	if len(messages) != messageCount {
+		t.Fatalf("expected %d customer messages, got %d", messageCount, len(messages))
+	}
+	seen := make(map[int64]struct{}, messageCount)
+	for _, message := range messages {
+		if message.ID <= 0 {
+			t.Fatalf("expected persisted message id, got %d", message.ID)
+		}
+		if _, ok := seen[message.ID]; ok {
+			t.Fatalf("duplicate message id %d", message.ID)
+		}
+		seen[message.ID] = struct{}{}
+	}
+}
+
+func TestUnreadCountUsesLastReadMessageID(t *testing.T) {
+	db := setupMessageWelcomeTestDB(t)
+	aiAgent := createWelcomeTestAIAgent(t, db, "")
+	conversation := createMessageTestConversation(t, db, aiAgent.ID)
+	now := time.Now()
+
+	messages := []models.Message{
+		{
+			ConversationID: conversation.ID,
+			ClientMsgID:    "read-message",
+			SenderType:     enums.IMSenderTypeCustomer,
+			MessageType:    enums.IMMessageTypeText,
+			Content:        "read",
+			SendStatus:     enums.IMMessageStatusSent,
+			SentAt:         &now,
+			AuditFields:    models.AuditFields{CreatedAt: now, UpdatedAt: now},
+		},
+		{
+			ConversationID: conversation.ID,
+			ClientMsgID:    "unread-message-1",
+			SenderType:     enums.IMSenderTypeCustomer,
+			MessageType:    enums.IMMessageTypeText,
+			Content:        "unread 1",
+			SendStatus:     enums.IMMessageStatusSent,
+			SentAt:         &now,
+			AuditFields:    models.AuditFields{CreatedAt: now, UpdatedAt: now},
+		},
+		{
+			ConversationID: conversation.ID,
+			ClientMsgID:    "unread-message-2",
+			SenderType:     enums.IMSenderTypeCustomer,
+			MessageType:    enums.IMMessageTypeText,
+			Content:        "unread 2",
+			SendStatus:     enums.IMMessageStatusSent,
+			SentAt:         &now,
+			AuditFields:    models.AuditFields{CreatedAt: now, UpdatedAt: now},
+		},
+	}
+	if err := db.Create(&messages).Error; err != nil {
+		t.Fatalf("create messages: %v", err)
+	}
+
+	readState := &models.ConversationReadState{
+		ConversationID:    conversation.ID,
+		ReaderType:        enums.IMSenderTypeAgent,
+		ReaderID:          1,
+		LastReadMessageID: messages[0].ID,
+		LastReadAt:        &now,
+		AuditFields:       models.AuditFields{CreatedAt: now, UpdatedAt: now},
+	}
+	if err := db.Create(readState).Error; err != nil {
+		t.Fatalf("create read state: %v", err)
+	}
+
+	err := sqls.WithTransaction(func(ctx *sqls.TxContext) error {
+		count, err := ConversationService.countUnreadByState(ctx, conversation.ID, readState, enums.IMSenderTypeCustomer)
+		if err != nil {
+			return err
+		}
+		if count != 2 {
+			t.Fatalf("unread count=%d want 2", count)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("count unread: %v", err)
 	}
 }
 

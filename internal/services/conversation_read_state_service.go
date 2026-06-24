@@ -160,11 +160,11 @@ func (s *conversationReadStateService) pickConversationReadStates(list []models.
 		item := &list[i]
 		switch item.ReaderType {
 		case enums.IMSenderTypeAgent:
-			if agentState == nil || item.LastReadSeqNo > agentState.LastReadSeqNo {
+			if agentState == nil || item.LastReadMessageID > agentState.LastReadMessageID {
 				agentState = item
 			}
 		case enums.IMSenderTypeCustomer:
-			if customerState == nil || item.LastReadSeqNo > customerState.LastReadSeqNo {
+			if customerState == nil || item.LastReadMessageID > customerState.LastReadMessageID {
 				customerState = item
 			}
 		}
@@ -214,7 +214,6 @@ func (s *conversationReadStateService) markReadTxWithCursor(ctx *sqls.TxContext,
 			ReaderID:          c.readerID,
 			ExternalReaderID:  c.externalReaderID,
 			LastReadMessageID: message.ID,
-			LastReadSeqNo:     message.SeqNo,
 			LastReadAt:        &now,
 			AuditFields: models.AuditFields{
 				CreatedAt:      now,
@@ -231,19 +230,17 @@ func (s *conversationReadStateService) markReadTxWithCursor(ctx *sqls.TxContext,
 		return item, nil
 	}
 
-	if item.LastReadSeqNo >= message.SeqNo {
+	if item.LastReadMessageID >= message.ID {
 		return item, nil
 	}
 
 	item.LastReadMessageID = message.ID
-	item.LastReadSeqNo = message.SeqNo
 	item.LastReadAt = &now
 	item.UpdatedAt = now
 	item.UpdateUserID = c.auditUserID
 	item.UpdateUserName = c.auditUserName
 	if err := repositories.ConversationReadStateRepository.Updates(ctx.Tx, item.ID, map[string]any{
 		"last_read_message_id": item.LastReadMessageID,
-		"last_read_seq_no":     item.LastReadSeqNo,
 		"last_read_at":         item.LastReadAt,
 		"updated_at":           item.UpdatedAt,
 		"update_user_id":       item.UpdateUserID,
@@ -254,7 +251,7 @@ func (s *conversationReadStateService) markReadTxWithCursor(ctx *sqls.TxContext,
 	return item, nil
 }
 
-func (s *conversationReadStateService) CountUnreadMessages(ctx *sqls.TxContext, conversationID, lastReadSeqNo int64, senderTypes ...enums.IMSenderType) (int64, error) {
+func (s *conversationReadStateService) CountUnreadMessages(ctx *sqls.TxContext, conversationID, lastReadMessageID int64, senderTypes ...enums.IMSenderType) (int64, error) {
 	normalizedSenderTypes := make([]enums.IMSenderType, 0, len(senderTypes))
 	for _, senderType := range senderTypes {
 		if strs.IsBlank(string(senderType)) {
@@ -267,7 +264,7 @@ func (s *conversationReadStateService) CountUnreadMessages(ctx *sqls.TxContext, 
 	}
 	var count int64
 	query := ctx.Tx.Model(&models.Message{}).
-		Where("conversation_id = ? AND seq_no > ? AND recalled_at IS NULL AND send_status <> ?", conversationID, lastReadSeqNo, int(enums.IMMessageStatusRecalled))
+		Where("conversation_id = ? AND id > ? AND recalled_at IS NULL AND send_status <> ?", conversationID, lastReadMessageID, int(enums.IMMessageStatusRecalled))
 	if len(normalizedSenderTypes) == 1 {
 		query = query.Where("sender_type = ?", normalizedSenderTypes[0])
 	} else {

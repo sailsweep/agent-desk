@@ -146,7 +146,6 @@ type RealtimeMessageCreatedPayload struct {
 	MessageType       enums.IMMessageType        `json:"messageType,omitempty"`
 	Content           string                     `json:"content,omitempty"`
 	Payload           string                     `json:"payload,omitempty"`
-	SeqNo             int64                      `json:"seqNo,omitempty"`
 	SendStatus        enums.IMMessageStatus      `json:"sendStatus,omitempty"`
 	SentAt            string                     `json:"sentAt,omitempty"`
 }
@@ -201,10 +200,8 @@ type RealtimeConversationChangedPayload struct {
 	CustomerUnreadCount       int                             `json:"customerUnreadCount,omitempty"`
 	AgentUnreadCount          int                             `json:"agentUnreadCount,omitempty"`
 	CustomerLastReadMessageID int64                           `json:"customerLastReadMessageId,omitempty"`
-	CustomerLastReadSeqNo     int64                           `json:"customerLastReadSeqNo,omitempty"`
 	CustomerLastReadAt        string                          `json:"customerLastReadAt,omitempty"`
 	AgentLastReadMessageID    int64                           `json:"agentLastReadMessageId,omitempty"`
-	AgentLastReadSeqNo        int64                           `json:"agentLastReadSeqNo,omitempty"`
 	AgentLastReadAt           string                          `json:"agentLastReadAt,omitempty"`
 }
 

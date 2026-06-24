@@ -603,7 +603,7 @@ func (s *conversationService) markConversationReadWithActor(conversation *models
 	}
 
 	currentReadState := actor.getReadState(conversation.ID)
-	if currentReadState != nil && currentReadState.LastReadSeqNo >= targetMessage.SeqNo {
+	if currentReadState != nil && currentReadState.LastReadMessageID >= targetMessage.ID {
 		if actor.isAgentSide() && conversation.AgentUnreadCount == 0 {
 			return false, nil
 		}
@@ -629,10 +629,10 @@ func (s *conversationService) markConversationReadWithActor(conversation *models
 		if err != nil {
 			return err
 		}
-		if actor.isAgentSide() && currentConversation.AgentUnreadCount == agentUnreadCount && currentReadState != nil && currentReadState.LastReadSeqNo >= targetMessage.SeqNo {
+		if actor.isAgentSide() && currentConversation.AgentUnreadCount == agentUnreadCount && currentReadState != nil && currentReadState.LastReadMessageID >= targetMessage.ID {
 			return nil
 		}
-		if !actor.isAgentSide() && currentConversation.CustomerUnreadCount == customerUnreadCount && currentReadState != nil && currentReadState.LastReadSeqNo >= targetMessage.SeqNo {
+		if !actor.isAgentSide() && currentConversation.CustomerUnreadCount == customerUnreadCount && currentReadState != nil && currentReadState.LastReadMessageID >= targetMessage.ID {
 			return nil
 		}
 		updateUserID, updateUserName := actor.conversationUpdateAudit()
@@ -651,15 +651,15 @@ func (s *conversationService) markConversationReadWithActor(conversation *models
 }
 
 func (s *conversationService) countUnreadByState(ctx *sqls.TxContext, conversationID int64, state *models.ConversationReadState, senderTypes ...enums.IMSenderType) (int, error) {
-	lastReadSeqNo := int64(0)
+	lastReadMessageID := int64(0)
 	if state != nil {
-		lastReadSeqNo = state.LastReadSeqNo
+		lastReadMessageID = state.LastReadMessageID
 	}
 	normalizedSenderTypes := make([]enums.IMSenderType, 0, len(senderTypes))
 	for _, senderType := range senderTypes {
 		normalizedSenderTypes = append(normalizedSenderTypes, senderType)
 	}
-	count, err := ConversationReadStateService.CountUnreadMessages(ctx, conversationID, lastReadSeqNo, normalizedSenderTypes...)
+	count, err := ConversationReadStateService.CountUnreadMessages(ctx, conversationID, lastReadMessageID, normalizedSenderTypes...)
 	return int(count), err
 }
 

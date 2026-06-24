@@ -126,7 +126,7 @@ func (s *messageService) GetConversationReadTarget(conversationID, messageID int
 		}
 		return message, nil
 	}
-	return s.FindOne(sqls.NewCnd().Eq("conversation_id", conversationID).Desc("seq_no").Desc("id")), nil
+	return s.FindOne(sqls.NewCnd().Eq("conversation_id", conversationID).Desc("id")), nil
 }
 
 func (s *messageService) SendMessage(conversationID int64, senderType enums.IMSenderType, reqSenderID int64, clientMsgID string, messageType enums.IMMessageType, content, payload string, operator *dto.AuthPrincipal, external *openidentity.ExternalUser) (*models.Message, error) {
@@ -197,11 +197,11 @@ func (s *messageService) RecallAgentMessage(messageID int64, operator *dto.AuthP
 		message.UpdateUserName = operator.Username
 
 		agentReadState, customerReadState := ConversationReadStateService.getConversationReadStates(ctx.Tx, conversation.ID)
-		agentUnreadCount, err := ConversationReadStateService.CountUnreadMessages(ctx, conversation.ID, s.readSeqNo(agentReadState), enums.IMSenderTypeCustomer)
+		agentUnreadCount, err := ConversationReadStateService.CountUnreadMessages(ctx, conversation.ID, s.readMessageID(agentReadState), enums.IMSenderTypeCustomer)
 		if err != nil {
 			return err
 		}
-		customerUnreadCount, err := ConversationReadStateService.CountUnreadMessages(ctx, conversation.ID, s.readSeqNo(customerReadState), enums.IMSenderTypeAgent, enums.IMSenderTypeAI)
+		customerUnreadCount, err := ConversationReadStateService.CountUnreadMessages(ctx, conversation.ID, s.readMessageID(customerReadState), enums.IMSenderTypeAgent, enums.IMSenderTypeAI)
 		if err != nil {
 			return err
 		}
@@ -302,7 +302,6 @@ func (s *messageService) createAIWelcomeMessage(ctx *sqls.TxContext, conversatio
 		MessageType:    enums.IMMessageTypeText,
 		Content:        content,
 		Payload:        payload,
-		SeqNo:          repositories.MessageRepository.NextSeqNo(ctx.Tx, conversation.ID),
 		SendStatus:     enums.IMMessageStatusSent,
 		SentAt:         &now,
 		AuditFields: models.AuditFields{
@@ -322,11 +321,11 @@ func (s *messageService) createAIWelcomeMessage(ctx *sqls.TxContext, conversatio
 		return nil, err
 	}
 	agentReadState, customerReadState := ConversationReadStateService.getConversationReadStates(ctx.Tx, conversation.ID)
-	agentUnreadCount, err := ConversationReadStateService.CountUnreadMessages(ctx, conversation.ID, s.readSeqNo(agentReadState), enums.IMSenderTypeCustomer)
+	agentUnreadCount, err := ConversationReadStateService.CountUnreadMessages(ctx, conversation.ID, s.readMessageID(agentReadState), enums.IMSenderTypeCustomer)
 	if err != nil {
 		return nil, err
 	}
-	customerUnreadCount, err := ConversationReadStateService.CountUnreadMessages(ctx, conversation.ID, s.readSeqNo(customerReadState), enums.IMSenderTypeAgent, enums.IMSenderTypeAI)
+	customerUnreadCount, err := ConversationReadStateService.CountUnreadMessages(ctx, conversation.ID, s.readMessageID(customerReadState), enums.IMSenderTypeAgent, enums.IMSenderTypeAI)
 	if err != nil {
 		return nil, err
 	}
@@ -423,7 +422,6 @@ func (s *messageService) sendValidatedMessage(conversation *models.Conversation,
 		traceID       = tracex.NormalizeRequestID(requestID)
 		auditUserID   = int64(0)
 		auditUserName = ""
-		nextSeq       = repositories.MessageRepository.NextSeqNo(sqls.DB(), conversation.ID)
 	)
 	if operator != nil {
 		auditUserID = operator.UserID
@@ -443,7 +441,6 @@ func (s *messageService) sendValidatedMessage(conversation *models.Conversation,
 		MessageType:    messageType,
 		Content:        content,
 		Payload:        payload,
-		SeqNo:          nextSeq,
 		SendStatus:     enums.IMMessageStatusSent,
 		SentAt:         &now,
 		AuditFields: models.AuditFields{
@@ -569,10 +566,10 @@ func (s *messageService) handleReadState(ctx *sqls.TxContext, senderType enums.I
 		}
 	}
 	agentReadState, customerReadState := ConversationReadStateService.getConversationReadStates(ctx.Tx, conversation.ID)
-	if agentUnreadCount, err = ConversationReadStateService.CountUnreadMessages(ctx, conversation.ID, s.readSeqNo(agentReadState), enums.IMSenderTypeCustomer); err != nil {
+	if agentUnreadCount, err = ConversationReadStateService.CountUnreadMessages(ctx, conversation.ID, s.readMessageID(agentReadState), enums.IMSenderTypeCustomer); err != nil {
 		return 0, 0, err
 	}
-	if customerUnreadCount, err = ConversationReadStateService.CountUnreadMessages(ctx, conversation.ID, s.readSeqNo(customerReadState), enums.IMSenderTypeAgent, enums.IMSenderTypeAI); err != nil {
+	if customerUnreadCount, err = ConversationReadStateService.CountUnreadMessages(ctx, conversation.ID, s.readMessageID(customerReadState), enums.IMSenderTypeAgent, enums.IMSenderTypeAI); err != nil {
 		return 0, 0, err
 	}
 	return agentUnreadCount, customerUnreadCount, nil
@@ -706,9 +703,9 @@ func (s *messageService) suffixFilenameForSummary(filename string) string {
 	return " " + filename
 }
 
-func (s *messageService) readSeqNo(state *models.ConversationReadState) int64 {
+func (s *messageService) readMessageID(state *models.ConversationReadState) int64 {
 	if state == nil {
 		return 0
 	}
-	return state.LastReadSeqNo
+	return state.LastReadMessageID
 }

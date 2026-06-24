@@ -698,7 +698,6 @@ func createWorkflowExecutorCustomerMessage(t *testing.T, db *gorm.DB, conversati
 		SenderType:     enums.IMSenderTypeCustomer,
 		MessageType:    enums.IMMessageTypeText,
 		Content:        content,
-		SeqNo:          1,
 		SendStatus:     enums.IMMessageStatusSent,
 		SentAt:         &now,
 	}
