@@ -41,6 +41,7 @@ func (s *Service) Run(ctx context.Context, req Request) (*Summary, error) {
 	req.UserMessage.Content = utils.BuildRuntimeMessageText(req.UserMessage.MessageType, req.UserMessage.Content)
 	aiAgent, workflow, err := prepareWorkflowAgent(req.AIAgent)
 	if err != nil {
+		_, _ = writeWorkflowPrepareFailedRun(req, err.Error())
 		return nil, err
 	}
 	req.AIAgent = aiAgent
@@ -181,6 +182,33 @@ func toWorkflowInterruptSummaries(items []workflowexecutor.InterruptSummary) []I
 
 func writeWorkflowRun(req Request, workflow resolvedWorkflow, result *workflowexecutor.Result, errorMessage string) (int64, error) {
 	return writeWorkflowRunWithExistingID(req, workflow, result, errorMessage, 0)
+}
+
+func writeWorkflowPrepareFailedRun(req Request, errorMessage string) (int64, error) {
+	now := time.Now()
+	endedAt := now
+	workflowID := int64(0)
+	workflowVersionID := req.AIAgent.WorkflowVersionID
+	if workflowVersionID > 0 {
+		if version := repositories.AIWorkflowVersionRepository.Get(sqls.DB(), workflowVersionID); version != nil {
+			workflowID = version.WorkflowID
+		}
+	}
+	run := &models.AIWorkflowRun{
+		WorkflowID:        workflowID,
+		WorkflowVersionID: workflowVersionID,
+		ConversationID:    req.Conversation.ID,
+		AIAgentID:         req.AIAgent.ID,
+		MessageID:         req.UserMessage.ID,
+		Status:            workflowRunStatusFailed,
+		StartedAt:         now,
+		EndedAt:           &endedAt,
+		ErrorMessage:      errorMessage,
+	}
+	if err := repositories.AIWorkflowRunRepository.Create(sqls.DB(), run); err != nil {
+		return 0, err
+	}
+	return run.ID, nil
 }
 
 func writeWorkflowRunWithExistingID(req Request, workflow resolvedWorkflow, result *workflowexecutor.Result, errorMessage string, existingRunID int64) (int64, error) {

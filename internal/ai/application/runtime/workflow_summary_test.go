@@ -232,6 +232,48 @@ func TestServiceRunWritesFailedWorkflowRun(t *testing.T) {
 	}
 }
 
+func TestServiceRunWritesFailedWorkflowRunWhenVersionDisabled(t *testing.T) {
+	db := setupWorkflowResumeTestDB(t)
+	version := models.AIWorkflowVersion{
+		WorkflowID: 9,
+		Version:    1,
+		Status:     enums.StatusDisabled,
+		Definition: mustMarshalDefinition(t, runtimeHumanConfirmDefinition()),
+	}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatalf("create disabled workflow version: %v", err)
+	}
+
+	_, err := NewService().Run(context.Background(), Request{
+		Conversation: models.Conversation{ID: 10},
+		UserMessage:  models.Message{ID: 20, Content: "hello"},
+		AIAgent: models.AIAgent{
+			ID:                30,
+			WorkflowVersionID: version.ID,
+		},
+	})
+	if err == nil {
+		t.Fatalf("expected disabled workflow version error")
+	}
+	var run models.AIWorkflowRun
+	if err := db.First(&run, "workflow_version_id = ?", version.ID).Error; err != nil {
+		t.Fatalf("find prepare-stage failed workflow run: %v", err)
+	}
+	if run.WorkflowID != version.WorkflowID || run.ConversationID != 10 || run.AIAgentID != 30 || run.MessageID != 20 {
+		t.Fatalf("unexpected prepare-stage failed workflow run identity: %#v", run)
+	}
+	if run.Status != workflowRunStatusFailed || !strings.Contains(run.ErrorMessage, "workflow version does not exist") {
+		t.Fatalf("unexpected prepare-stage failed workflow run: %#v", run)
+	}
+	var nodeCount int64
+	if err := db.Model(&models.AIWorkflowNodeRun{}).Where("workflow_run_id = ?", run.ID).Count(&nodeCount).Error; err != nil {
+		t.Fatalf("count node runs: %v", err)
+	}
+	if nodeCount != 0 {
+		t.Fatalf("expected no node runs for prepare-stage failure, got %d", nodeCount)
+	}
+}
+
 func setupWorkflowResumeTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	dbName := strings.NewReplacer("/", "_", " ", "_").Replace(t.Name())
