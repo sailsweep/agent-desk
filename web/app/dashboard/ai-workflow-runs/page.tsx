@@ -17,11 +17,6 @@ import { ProjectDialog } from "@/components/project-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import {
   fetchAIAgentsAll,
   fetchAIWorkflowRun,
   fetchAIWorkflowRuns,
@@ -332,36 +327,16 @@ export default function DashboardAIWorkflowRunsPage() {
 }
 
 function ErrorMessagePreview({ message }: { message: string }) {
-  const [open, setOpen] = useState(false)
-
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        render={
-          <button
-            type="button"
-            className="flex w-full min-w-0 items-center gap-1.5 text-left text-xs text-destructive"
-            onClick={(event) => event.stopPropagation()}
-            onMouseEnter={() => setOpen(true)}
-            onMouseLeave={() => setOpen(false)}
-            onFocus={() => setOpen(true)}
-            onBlur={() => setOpen(false)}
-          />
-        }
-      >
-        <AlertTriangleIcon className="size-3.5 shrink-0" />
-        <span className="block min-w-0 truncate">{message}</span>
-      </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        className="max-h-80 w-[30rem] max-w-[min(30rem,calc(100vw-2rem))] overflow-auto whitespace-pre-wrap break-words text-xs text-destructive"
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        onClick={(event) => event.stopPropagation()}
-      >
-        {message}
-      </PopoverContent>
-    </Popover>
+    <button
+      type="button"
+      className="flex w-full min-w-0 items-center gap-1.5 text-left text-xs text-destructive"
+      title={message}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <AlertTriangleIcon className="size-3.5 shrink-0" />
+      <span className="block min-w-0 truncate">{message}</span>
+    </button>
   )
 }
 
