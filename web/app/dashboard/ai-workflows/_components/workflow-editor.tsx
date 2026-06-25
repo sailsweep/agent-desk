@@ -43,7 +43,6 @@ import {
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -961,16 +960,15 @@ export function WorkflowEditor({
             <WorkflowHelperLines lines={helperLines} />
           </ReactFlow>
           <div className="absolute left-3 top-3 z-20 flex items-center gap-2">
-            <WorkflowValidationBadge errors={validation.errors} valid={validation.valid} />
-            <WorkflowCanvasActions
+            <WorkflowCanvasToolbar
+              validationErrors={validation.errors}
+              validationValid={validation.valid}
               onValidate={onValidate}
               validateDisabled={validateDisabled}
               onSaveDraft={onSaveDraft}
               saveDraftDisabled={saveDraftDisabled}
               onPublish={onPublish}
               publishDisabled={publishDisabled}
-            />
-            <WorkflowHistoryControls
               canUndo={historyAvailability.canUndo}
               canRedo={historyAvailability.canRedo}
               onUndo={undoWorkflowEdit}
@@ -1597,112 +1595,15 @@ function WorkflowCanvasNode({ id, data, selected }: NodeProps<WorkflowFlowNode>)
   )
 }
 
-function WorkflowValidationBadge({
-  errors,
-  valid,
-}: {
-  errors: string[]
-  valid: boolean
-}) {
-  return (
-    <div className="flex gap-2">
-      {valid ? (
-        <Badge variant="default">流程可发布</Badge>
-      ) : (
-        <Popover>
-          <PopoverTrigger
-            render={
-              <button
-                type="button"
-                className="inline-flex rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
-            }
-          >
-            <Badge variant="destructive" className="cursor-pointer">
-              {errors.length} 个待处理
-            </Badge>
-          </PopoverTrigger>
-          <PopoverContent side="bottom" align="start" className="w-80">
-            <div className="text-sm font-medium">Validation issues</div>
-            <ul className="mt-2 max-h-72 space-y-1 overflow-y-auto text-xs text-destructive">
-              {errors.map((error) => (
-                <li key={error} className="rounded-md bg-destructive/10 px-2 py-1.5">
-                  {error}
-                </li>
-              ))}
-            </ul>
-          </PopoverContent>
-        </Popover>
-      )}
-    </div>
-  )
-}
-
-function WorkflowCanvasActions({
+function WorkflowCanvasToolbar({
+  validationErrors,
+  validationValid,
   onValidate,
   validateDisabled,
   onSaveDraft,
   saveDraftDisabled,
   onPublish,
   publishDisabled,
-}: {
-  onValidate?: () => void
-  validateDisabled?: boolean
-  onSaveDraft?: () => void
-  saveDraftDisabled?: boolean
-  onPublish?: () => void
-  publishDisabled?: boolean
-}) {
-  if (!onValidate && !onSaveDraft && !onPublish) {
-    return null
-  }
-
-  return (
-    <div className="flex overflow-hidden rounded-md border bg-background/95 shadow-sm">
-      {onValidate ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-7 rounded-none px-2 text-xs text-muted-foreground hover:text-foreground"
-          onClick={onValidate}
-          disabled={validateDisabled}
-        >
-          <CheckCircle2Icon className="size-3.5" />
-          校验
-        </Button>
-      ) : null}
-      {onSaveDraft ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-7 rounded-none border-l px-2 text-xs text-muted-foreground hover:text-foreground"
-          onClick={onSaveDraft}
-          disabled={saveDraftDisabled}
-        >
-          <SaveIcon className="size-3.5" />
-          保存草稿
-        </Button>
-      ) : null}
-      {onPublish ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-7 rounded-none border-l px-2 text-xs font-medium text-foreground hover:text-foreground"
-          onClick={onPublish}
-          disabled={publishDisabled}
-        >
-          <SendIcon className="size-3.5" />
-          发布流程
-        </Button>
-      ) : null}
-    </div>
-  )
-}
-
-function WorkflowHistoryControls({
   canUndo,
   canRedo,
   onUndo,
@@ -1710,6 +1611,14 @@ function WorkflowHistoryControls({
   onRestoreDefault,
   restoreDefaultDisabled,
 }: {
+  validationErrors: string[]
+  validationValid: boolean
+  onValidate?: () => void
+  validateDisabled?: boolean
+  onSaveDraft?: () => void
+  saveDraftDisabled?: boolean
+  onPublish?: () => void
+  publishDisabled?: boolean
   canUndo: boolean
   canRedo: boolean
   onUndo: () => void
@@ -1719,6 +1628,72 @@ function WorkflowHistoryControls({
 }) {
   return (
     <div className="flex overflow-hidden rounded-md border bg-background/95 shadow-sm">
+      <WorkflowValidationIndicator errors={validationErrors} valid={validationValid} />
+      {onValidate ? (
+        <>
+          <WorkflowToolbarDivider />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 rounded-none px-2 text-xs text-muted-foreground hover:text-foreground"
+            onClick={onValidate}
+            disabled={validateDisabled}
+          >
+            <CheckCircle2Icon className="size-3.5" />
+            校验
+          </Button>
+        </>
+      ) : null}
+      {onSaveDraft ? (
+        <>
+          <WorkflowToolbarDivider />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 rounded-none px-2 text-xs text-muted-foreground hover:text-foreground"
+            onClick={onSaveDraft}
+            disabled={saveDraftDisabled}
+          >
+            <SaveIcon className="size-3.5" />
+            保存草稿
+          </Button>
+        </>
+      ) : null}
+      {onPublish ? (
+        <>
+          <WorkflowToolbarDivider />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 rounded-none px-2 text-xs font-medium text-foreground hover:text-foreground"
+            onClick={onPublish}
+            disabled={publishDisabled}
+          >
+            <SendIcon className="size-3.5" />
+            发布流程
+          </Button>
+        </>
+      ) : null}
+      {onRestoreDefault ? (
+        <>
+          <WorkflowToolbarDivider />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 rounded-none px-2 text-xs text-muted-foreground hover:text-foreground"
+            onClick={onRestoreDefault}
+            disabled={restoreDefaultDisabled}
+          >
+            <RotateCcwIcon className="size-3.5" />
+            恢复默认
+          </Button>
+        </>
+      ) : null}
+      <WorkflowToolbarDivider />
       <Button
         type="button"
         variant="ghost"
@@ -1731,11 +1706,12 @@ function WorkflowHistoryControls({
       >
         <Undo2Icon className="size-3.5" />
       </Button>
+      <WorkflowToolbarDivider />
       <Button
         type="button"
         variant="ghost"
         size="icon"
-        className="size-7 rounded-none border-l text-muted-foreground hover:text-foreground"
+        className="size-7 rounded-none text-muted-foreground hover:text-foreground"
         onClick={onRedo}
         disabled={!canRedo}
         aria-label="反撤销"
@@ -1743,21 +1719,54 @@ function WorkflowHistoryControls({
       >
         <Redo2Icon className="size-3.5" />
       </Button>
-      {onRestoreDefault ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-7 rounded-none border-l text-muted-foreground hover:text-foreground"
-          onClick={onRestoreDefault}
-          disabled={restoreDefaultDisabled}
-          aria-label="恢复默认"
-          title="恢复默认"
-        >
-          <RotateCcwIcon className="size-3.5" />
-        </Button>
-      ) : null}
     </div>
+  )
+}
+
+function WorkflowToolbarDivider() {
+  return <div className="my-1.5 h-4 w-px shrink-0 self-center bg-border/70" />
+}
+
+function WorkflowValidationIndicator({
+  errors,
+  valid,
+}: {
+  errors: string[]
+  valid: boolean
+}) {
+  if (valid) {
+    return (
+      <div className="flex h-7 items-center gap-1.5 px-2 text-xs font-medium text-primary">
+        <CheckCircle2Icon className="size-3.5" />
+        流程可发布
+      </div>
+    )
+  }
+
+  return (
+    <Popover>
+      <PopoverTrigger
+        render={
+          <button
+            type="button"
+            className="inline-flex h-7 items-center gap-1.5 px-2 text-xs font-medium text-destructive outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        }
+      >
+        <AlertCircleIcon className="size-3.5" />
+        {errors.length} 个待处理
+      </PopoverTrigger>
+      <PopoverContent side="bottom" align="start" className="w-80">
+        <div className="text-sm font-medium">Validation issues</div>
+        <ul className="mt-2 max-h-72 space-y-1 overflow-y-auto text-xs text-destructive">
+          {errors.map((error) => (
+            <li key={error} className="rounded-md bg-destructive/10 px-2 py-1.5">
+              {error}
+            </li>
+          ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
   )
 }
 
