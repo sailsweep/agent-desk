@@ -3,18 +3,20 @@ package registry
 import "agent-desk/internal/ai/workflow/dsl"
 
 const (
-	NodeTypeStart               = "start"
-	NodeTypeKnowledgeRetrieve   = "knowledge_retrieve"
-	NodeTypeAnswerabilityGate   = "answerability_gate"
-	NodeTypeLLMReply            = "llm_reply"
-	NodeTypeCondition           = "condition"
-	NodeTypeAnalyzeConversation = "analyze_conversation"
-	NodeTypePrepareTicketDraft  = "prepare_ticket_draft"
-	NodeTypeHumanConfirm        = "human_confirm"
-	NodeTypeCreateTicket        = "create_ticket"
-	NodeTypeHandoffToHuman      = "handoff_to_human"
-	NodeTypeSendReply           = "send_reply"
-	NodeTypeEnd                 = "end"
+	NodeTypeStart                     = "start"
+	NodeTypeConversationUnderstanding = "conversation_understanding"
+	NodeTypeReplyPolicy               = "reply_policy"
+	NodeTypeKnowledgeRetrieve         = "knowledge_retrieve"
+	NodeTypeAnswerabilityGate         = "answerability_gate"
+	NodeTypeLLMReply                  = "llm_reply"
+	NodeTypeCondition                 = "condition"
+	NodeTypeAnalyzeConversation       = "analyze_conversation"
+	NodeTypePrepareTicketDraft        = "prepare_ticket_draft"
+	NodeTypeHumanConfirm              = "human_confirm"
+	NodeTypeCreateTicket              = "create_ticket"
+	NodeTypeHandoffToHuman            = "handoff_to_human"
+	NodeTypeSendReply                 = "send_reply"
+	NodeTypeEnd                       = "end"
 )
 
 func DefaultRegistry() *Registry {
@@ -30,6 +32,47 @@ func DefaultRegistry() *Registry {
 				output("aiAgentId", VariableTypeInteger, "AI Agent ID."),
 				output("userMessage", VariableTypeString, "Current user message content."),
 				output("knowledgeBaseIds", VariableTypeIntegerArray, "Knowledge bases bound to the AI Agent."),
+			},
+		},
+		NodeSpec{
+			Type:        NodeTypeConversationUnderstanding,
+			Title:       "Conversation Understanding",
+			Description: "Classify customer message intent and answer scope before retrieval.",
+			RiskLevel:   NodeRiskLevelLow,
+			InputSchema: []VariableSpec{
+				requiredInput("userMessage", VariableTypeString, "Current user message content."),
+			},
+			OutputSchema: []VariableSpec{
+				output("normalizedMessage", VariableTypeString, "Normalized customer message."),
+				output("messageIntent", VariableTypeString, "Detected customer message intent."),
+				output("answerScope", VariableTypeString, "Recommended answer scope."),
+				output("confidence", VariableTypeNumber, "Classifier confidence."),
+				output("riskSignals", VariableTypeStringArray, "Detected risk signals."),
+				output("reason", VariableTypeString, "Decision reason."),
+			},
+			DefaultInputs: map[string]dsl.VariableSelector{
+				"userMessage": {NodeID: "start_1", Field: "userMessage"},
+			},
+		},
+		NodeSpec{
+			Type:        NodeTypeReplyPolicy,
+			Title:       "Reply Policy",
+			Description: "Decide the next customer-service action from understanding output and agent policy.",
+			RiskLevel:   NodeRiskLevelLow,
+			InputSchema: []VariableSpec{
+				requiredInput("messageIntent", VariableTypeString, "Detected customer message intent."),
+				requiredInput("answerScope", VariableTypeString, "Recommended answer scope."),
+				optionalInput("userMessage", VariableTypeString, "Current user message content."),
+				optionalInput("riskSignals", VariableTypeStringArray, "Detected risk signals."),
+				optionalInput("answerability", VariableTypeString, "Knowledge answerability decision."),
+			},
+			OutputSchema: []VariableSpec{
+				output("action", VariableTypeString, "Selected policy action."),
+				output("replyText", VariableTypeString, "Customer-visible reply text when the policy can answer directly."),
+				output("reason", VariableTypeString, "Policy decision reason."),
+				output("requiresFlow", VariableTypeBoolean, "Whether the decision should continue into workflow actions."),
+				output("targetFlow", VariableTypeString, "Suggested target flow."),
+				output("finalReplySource", VariableTypeString, "Source category for the final reply."),
 			},
 		},
 		NodeSpec{

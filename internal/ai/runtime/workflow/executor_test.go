@@ -239,6 +239,55 @@ func TestExecutorPrepareTicketDraftOutputsDraftVariable(t *testing.T) {
 	assertPath(t, result.NodePath, []string{"start_1", "draft_1", "draft_route_1", "ready_end"})
 }
 
+func TestExecutorPolicyFirstWorkflowRoutesGreetingToDirectReply(t *testing.T) {
+	result, err := NewExecutor().Execute(context.Background(), Input{
+		Definition: policyFirstWorkflowDefinition(),
+		UserMessage: models.Message{
+			Content: "<p>你好。</p>",
+		},
+		AIAgent: models.AIAgent{
+			KnowledgeIDs:    "1",
+			FallbackMessage: "我暂时没有找到足够准确的信息。",
+		},
+	})
+	if err != nil {
+		t.Fatalf("execute workflow: %v", err)
+	}
+	if result.ReplyText != "您好，请问有什么可以帮您？" {
+		t.Fatalf("expected greeting reply, got %q", result.ReplyText)
+	}
+	if result.RetrieverCount != 0 {
+		t.Fatalf("expected greeting to skip retrieval, got retriever count %d", result.RetrieverCount)
+	}
+	assertPath(t, result.NodePath, []string{"start_1", "understanding_1", "policy_1", "policy_route_1", "send_direct_1", "end_1"})
+
+	understandingTrace := findNodeTrace(result.NodeTraces, "understanding_1")
+	if understandingTrace == nil || !strings.Contains(understandingTrace.OutputPreview, `"messageIntent":"greeting"`) || !strings.Contains(understandingTrace.OutputPreview, `"answerScope":"direct_reply"`) {
+		t.Fatalf("expected understanding trace to audit greeting/direct_reply, got %#v", understandingTrace)
+	}
+	policyTrace := findNodeTrace(result.NodeTraces, "policy_1")
+	if policyTrace == nil || !strings.Contains(policyTrace.OutputPreview, `"action":"direct_reply"`) || !strings.Contains(policyTrace.OutputPreview, `"finalReplySource":"direct_reply"`) {
+		t.Fatalf("expected policy trace to audit direct reply, got %#v", policyTrace)
+	}
+}
+
+func TestExecutorPolicyFirstWorkflowRoutesBusinessQuestionToKnowledge(t *testing.T) {
+	result, err := NewExecutor().Execute(context.Background(), Input{
+		Definition: policyFirstWorkflowDefinition(),
+		UserMessage: models.Message{
+			Content: "你们价格是多少？",
+		},
+		AIAgent: models.AIAgent{
+			KnowledgeIDs:    "1",
+			FallbackMessage: "我暂时没有找到足够准确的信息。",
+		},
+	})
+	if err != nil {
+		t.Fatalf("execute workflow: %v", err)
+	}
+	assertPath(t, result.NodePath, []string{"start_1", "understanding_1", "policy_1", "policy_route_1", "retrieve_end"})
+}
+
 func TestExecutorLLMReplyUsesAgentFallbackWhenDeclaredKnowledgeIsEmpty(t *testing.T) {
 	result, err := NewExecutor().Execute(context.Background(), Input{
 		Definition: emptyKnowledgeReplyDefinition(),
@@ -404,6 +453,53 @@ func emptyKnowledgeReplyDefinition() dsl.Definition {
 			{ID: "edge_start_reply", Source: "start_1", Target: "reply_1"},
 			{ID: "edge_reply_send", Source: "reply_1", Target: "send_1"},
 			{ID: "edge_send_end", Source: "send_1", Target: "end_1"},
+		},
+	}
+}
+
+func policyFirstWorkflowDefinition() dsl.Definition {
+	return dsl.Definition{
+		SchemaVersion: 1,
+		EntryNodeID:   "start_1",
+		Nodes: []dsl.Node{
+			{ID: "start_1", Type: workflowregistry.NodeTypeStart, Name: "Start"},
+			{ID: "understanding_1", Type: workflowregistry.NodeTypeConversationUnderstanding, Name: "Understanding", Inputs: map[string]dsl.VariableSelector{
+				"userMessage": {NodeID: "start_1", Field: "userMessage"},
+			}},
+			{ID: "policy_1", Type: workflowregistry.NodeTypeReplyPolicy, Name: "Policy", Inputs: map[string]dsl.VariableSelector{
+				"userMessage":    {NodeID: "start_1", Field: "userMessage"},
+				"messageIntent":  {NodeID: "understanding_1", Field: "messageIntent"},
+				"answerScope":    {NodeID: "understanding_1", Field: "answerScope"},
+				"riskSignals":    {NodeID: "understanding_1", Field: "riskSignals"},
+				"knowledgeItems": {NodeID: "retrieve_1", Field: "items"},
+			}},
+			{ID: "policy_route_1", Type: workflowregistry.NodeTypeCondition, Name: "Policy Route", Config: mustMarshalWorkflowTestConfig(dsl.ConditionConfig{Branches: []dsl.ConditionBranch{
+				{ID: "direct", Name: "Direct", TargetNodeID: "send_direct_1", Condition: &dsl.Condition{
+					Left:     &dsl.VariableSelector{NodeID: "policy_1", Field: "action"},
+					Operator: "eq",
+					Right:    "direct_reply",
+				}},
+				{ID: "knowledge", Name: "Knowledge", TargetNodeID: "retrieve_end", Condition: &dsl.Condition{
+					Left:     &dsl.VariableSelector{NodeID: "policy_1", Field: "action"},
+					Operator: "eq",
+					Right:    "retrieve_knowledge",
+				}},
+				{ID: "default", Name: "Default", TargetNodeID: "end_1", Default: true},
+			}})},
+			{ID: "send_direct_1", Type: workflowregistry.NodeTypeSendReply, Name: "Send Direct", Inputs: map[string]dsl.VariableSelector{
+				"replyText": {NodeID: "policy_1", Field: "replyText"},
+			}},
+			{ID: "retrieve_end", Type: workflowregistry.NodeTypeEnd, Name: "Retrieve"},
+			{ID: "end_1", Type: workflowregistry.NodeTypeEnd, Name: "End"},
+		},
+		Edges: []dsl.Edge{
+			{ID: "edge_start_understanding", Source: "start_1", Target: "understanding_1"},
+			{ID: "edge_understanding_policy", Source: "understanding_1", Target: "policy_1"},
+			{ID: "edge_policy_route", Source: "policy_1", Target: "policy_route_1"},
+			{ID: "edge_policy_direct", Source: "policy_route_1", Target: "send_direct_1"},
+			{ID: "edge_policy_knowledge", Source: "policy_route_1", Target: "retrieve_end"},
+			{ID: "edge_policy_default", Source: "policy_route_1", Target: "end_1"},
+			{ID: "edge_send_direct_end", Source: "send_direct_1", Target: "end_1"},
 		},
 	}
 }

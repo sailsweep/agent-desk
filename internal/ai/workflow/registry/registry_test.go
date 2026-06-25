@@ -41,9 +41,54 @@ func TestDefaultRegistryExposesSendReplyRequiredInput(t *testing.T) {
 	}
 }
 
+func TestDefaultRegistryExposesConversationUnderstandingOutputs(t *testing.T) {
+	spec, ok := DefaultRegistry().Get(NodeTypeConversationUnderstanding)
+	if !ok {
+		t.Fatalf("conversation_understanding node spec not found")
+	}
+	if !hasRequiredVariable(spec.InputSchema, "userMessage", VariableTypeString) {
+		t.Fatalf("expected conversation_understanding required input userMessage:string, got %#v", spec.InputSchema)
+	}
+	for _, want := range []string{"messageIntent", "answerScope", "riskSignals", "reason"} {
+		if !hasVariableName(spec.OutputSchema, want) {
+			t.Fatalf("expected conversation_understanding output %s, got %#v", want, spec.OutputSchema)
+		}
+	}
+	if !hasVariable(spec.OutputSchema, "confidence", VariableTypeNumber) {
+		t.Fatalf("expected conversation_understanding output confidence:number, got %#v", spec.OutputSchema)
+	}
+}
+
+func TestDefaultRegistryExposesReplyPolicyOutputs(t *testing.T) {
+	spec, ok := DefaultRegistry().Get(NodeTypeReplyPolicy)
+	if !ok {
+		t.Fatalf("reply_policy node spec not found")
+	}
+	if !hasRequiredVariable(spec.InputSchema, "messageIntent", VariableTypeString) {
+		t.Fatalf("expected reply_policy required input messageIntent:string, got %#v", spec.InputSchema)
+	}
+	if !hasRequiredVariable(spec.InputSchema, "answerScope", VariableTypeString) {
+		t.Fatalf("expected reply_policy required input answerScope:string, got %#v", spec.InputSchema)
+	}
+	for _, want := range []string{"action", "replyText", "reason", "finalReplySource"} {
+		if !hasVariableName(spec.OutputSchema, want) {
+			t.Fatalf("expected reply_policy output %s, got %#v", want, spec.OutputSchema)
+		}
+	}
+}
+
 func hasRequiredVariable(items []VariableSpec, name string, variableType VariableType) bool {
 	for _, item := range items {
 		if item.Name == name && item.Type == variableType && item.Required {
+			return true
+		}
+	}
+	return false
+}
+
+func hasVariableName(items []VariableSpec, name string) bool {
+	for _, item := range items {
+		if item.Name == name {
 			return true
 		}
 	}

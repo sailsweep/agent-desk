@@ -14,6 +14,7 @@ type VariableType string
 
 const (
 	VariableTypeString       VariableType = "string"
+	VariableTypeNumber       VariableType = "number"
 	VariableTypeInteger      VariableType = "integer"
 	VariableTypeBoolean      VariableType = "boolean"
 	VariableTypeObject       VariableType = "object"

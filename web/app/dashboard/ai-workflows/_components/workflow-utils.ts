@@ -94,6 +94,7 @@ export type WorkflowDefinition = {
 
 export type WorkflowVariableType =
   | "string"
+  | "number"
   | "integer"
   | "boolean"
   | "object"

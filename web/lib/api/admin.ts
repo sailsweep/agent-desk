@@ -287,6 +287,7 @@ export type AIWorkflowPosition = {
 
 export type AIWorkflowVariableType =
   | "string"
+  | "number"
   | "integer"
   | "boolean"
   | "object"

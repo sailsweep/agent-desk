@@ -56,10 +56,18 @@ func TestAIAgentServiceCreatesDefaultWorkflow(t *testing.T) {
 	if !validation.Valid {
 		t.Fatalf("expected default workflow to be valid, got %#v", validation.Errors)
 	}
-	if nodeTypeByID(stored, "route_intent_1") != workflowregistry.NodeTypeCondition {
-		t.Fatalf("expected default workflow to start with a clear intent router, got nodes: %#v", stored.Nodes)
+	if nodeTypeByID(stored, "understanding_1") != workflowregistry.NodeTypeConversationUnderstanding {
+		t.Fatalf("expected default workflow to include conversation understanding, got nodes: %#v", stored.Nodes)
+	}
+	if nodeTypeByID(stored, "policy_1") != workflowregistry.NodeTypeReplyPolicy {
+		t.Fatalf("expected default workflow to include reply policy, got nodes: %#v", stored.Nodes)
+	}
+	if !workflowEdgeExists(stored, "start_1", "understanding_1") || !workflowEdgeExists(stored, "understanding_1", "policy_1") {
+		t.Fatalf("expected default workflow to start with policy-first understanding flow, got edges: %#v", stored.Edges)
 	}
 	for _, nodeType := range []string{
+		workflowregistry.NodeTypeConversationUnderstanding,
+		workflowregistry.NodeTypeReplyPolicy,
 		workflowregistry.NodeTypeHandoffToHuman,
 		workflowregistry.NodeTypePrepareTicketDraft,
 		workflowregistry.NodeTypeHumanConfirm,
@@ -73,8 +81,9 @@ func TestAIAgentServiceCreatesDefaultWorkflow(t *testing.T) {
 			t.Fatalf("expected default workflow to include %s node: %#v", nodeType, stored.Nodes)
 		}
 	}
-	assertConditionBranchToNodeType(t, stored, "route_intent_1", workflowregistry.NodeTypeHandoffToHuman, "contains", "人工")
-	assertConditionBranchToNodeType(t, stored, "route_intent_1", workflowregistry.NodeTypePrepareTicketDraft, "contains", "工单")
+	assertConditionBranchToNodeType(t, stored, "policy_route_1", workflowregistry.NodeTypeSendReply, "eq", "direct_reply")
+	assertConditionBranchToNodeType(t, stored, "policy_route_1", workflowregistry.NodeTypeHandoffToHuman, "eq", "handoff_to_human")
+	assertConditionBranchToNodeType(t, stored, "policy_route_1", workflowregistry.NodeTypePrepareTicketDraft, "eq", "prepare_ticket")
 	assertConditionBranchToNodeID(t, stored, "answerability_route_1", "reply_1", "eq", "answerable")
 	assertDefaultBranchToNodeID(t, stored, "answerability_route_1", "fallback_reply_1")
 	if !workflowEdgeExists(stored, "create_ticket_1", "ticket_result_reply_1") {
@@ -91,8 +100,11 @@ func TestAIWorkflowServiceDefaultAgentWorkflowDefinitionIsValid(t *testing.T) {
 	if !validation.Valid {
 		t.Fatalf("expected default workflow definition to be valid, got %#v", validation.Errors)
 	}
-	if nodeTypeByID(definition, "route_intent_1") != workflowregistry.NodeTypeCondition {
-		t.Fatalf("expected default workflow to include intent router, got nodes: %#v", definition.Nodes)
+	if nodeTypeByID(definition, "understanding_1") != workflowregistry.NodeTypeConversationUnderstanding {
+		t.Fatalf("expected default workflow to include conversation understanding, got nodes: %#v", definition.Nodes)
+	}
+	if nodeTypeByID(definition, "policy_1") != workflowregistry.NodeTypeReplyPolicy {
+		t.Fatalf("expected default workflow to include reply policy, got nodes: %#v", definition.Nodes)
 	}
 	if !workflowHasNodeType(definition, workflowregistry.NodeTypeHandoffToHuman) {
 		t.Fatalf("expected default workflow to include human handoff node")

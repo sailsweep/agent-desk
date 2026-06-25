@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -23,6 +25,8 @@ import (
 )
 
 const maxWorkflowSteps = 128
+
+var workflowHTMLTagPattern = regexp.MustCompile(`<[^>]+>`)
 
 type Input struct {
 	Definition   dsl.Definition
@@ -259,6 +263,10 @@ func (e *Executor) executeNode(ctx context.Context, state *runState, node dsl.No
 			"knowledgeBaseIds":  utils.SplitInt64s(state.input.AIAgent.KnowledgeIDs),
 			"conversationState": state.input.Conversation.Status,
 		})
+	case workflowregistry.NodeTypeConversationUnderstanding:
+		return e.executeConversationUnderstanding(state, node)
+	case workflowregistry.NodeTypeReplyPolicy:
+		return e.executeReplyPolicy(state, node)
 	case workflowregistry.NodeTypeKnowledgeRetrieve:
 		return e.executeKnowledgeRetrieve(ctx, state, node)
 	case workflowregistry.NodeTypeAnswerabilityGate:
@@ -289,6 +297,44 @@ func (e *Executor) executeNode(ctx context.Context, state *runState, node dsl.No
 	default:
 		return fmt.Errorf("unsupported workflow node type: %s", node.Type)
 	}
+	return nil
+}
+
+func (e *Executor) executeConversationUnderstanding(state *runState, node dsl.Node) error {
+	rawMessage := strings.TrimSpace(toString(state.resolveInput(node, "userMessage")))
+	if rawMessage == "" {
+		rawMessage = state.input.UserMessage.Content
+	}
+	understanding := understandConversationMessage(rawMessage)
+	state.setNodeVars(node.ID, map[string]any{
+		"normalizedMessage": understanding.NormalizedMessage,
+		"messageIntent":     understanding.MessageIntent,
+		"answerScope":       understanding.AnswerScope,
+		"confidence":        understanding.Confidence,
+		"riskSignals":       understanding.RiskSignals,
+		"reason":            understanding.Reason,
+	})
+	return nil
+}
+
+func (e *Executor) executeReplyPolicy(state *runState, node dsl.Node) error {
+	intent := strings.TrimSpace(toString(state.resolveInput(node, "messageIntent")))
+	scope := strings.TrimSpace(toString(state.resolveInput(node, "answerScope")))
+	userMessage := normalizeWorkflowUserMessage(toString(state.resolveInput(node, "userMessage")))
+	decision := decideWorkflowReplyPolicy(state.input.AIAgent, workflowReplyPolicyInput{
+		MessageIntent: intent,
+		AnswerScope:   scope,
+		UserMessage:   userMessage,
+		Answerability: strings.TrimSpace(toString(state.resolveInput(node, "answerability"))),
+	})
+	state.setNodeVars(node.ID, map[string]any{
+		"action":           decision.Action,
+		"replyText":        decision.ReplyText,
+		"reason":           decision.Reason,
+		"requiresFlow":     decision.RequiresFlow,
+		"targetFlow":       decision.TargetFlow,
+		"finalReplySource": decision.FinalReplySource,
+	})
 	return nil
 }
 
@@ -342,6 +388,164 @@ func workflowAIPrincipal(aiAgent models.AIAgent) *dto.AuthPrincipal {
 		Username: username,
 		Nickname: username,
 	}
+}
+
+type workflowConversationUnderstanding struct {
+	NormalizedMessage string
+	MessageIntent     string
+	AnswerScope       string
+	Confidence        float64
+	RiskSignals       []string
+	Reason            string
+}
+
+type workflowReplyPolicyInput struct {
+	MessageIntent string
+	AnswerScope   string
+	UserMessage   string
+	Answerability string
+}
+
+type workflowReplyPolicyDecision struct {
+	Action           string
+	ReplyText        string
+	Reason           string
+	RequiresFlow     bool
+	TargetFlow       string
+	FinalReplySource string
+}
+
+func understandConversationMessage(rawMessage string) workflowConversationUnderstanding {
+	message := normalizeWorkflowUserMessage(rawMessage)
+	ret := workflowConversationUnderstanding{
+		NormalizedMessage: message,
+		MessageIntent:     "unknown",
+		AnswerScope:       "needs_clarification",
+		Confidence:        0.5,
+		Reason:            "message intent is unclear",
+	}
+	if message == "" {
+		ret.MessageIntent = "unknown"
+		ret.AnswerScope = "needs_clarification"
+		ret.Confidence = 0.9
+		ret.Reason = "empty message"
+		return ret
+	}
+	lower := strings.ToLower(message)
+	switch {
+	case isGreetingMessage(lower):
+		ret.MessageIntent = "greeting"
+		ret.AnswerScope = "direct_reply"
+		ret.Confidence = 0.98
+		ret.Reason = "matched greeting phrase"
+	case containsAnyWorkflowText(lower, "谢谢", "感谢", "多谢", "辛苦了", "thank"):
+		ret.MessageIntent = "thanks"
+		ret.AnswerScope = "direct_reply"
+		ret.Confidence = 0.95
+		ret.Reason = "matched thanks phrase"
+	case containsAnyWorkflowText(lower, "再见", "拜拜", "不用了", "没事了", "结束"):
+		ret.MessageIntent = "end_conversation"
+		ret.AnswerScope = "direct_reply"
+		ret.Confidence = 0.9
+		ret.Reason = "matched ending phrase"
+	case containsAnyWorkflowText(lower, "人工", "转人工", "真人", "客服"):
+		ret.MessageIntent = "handoff_request"
+		ret.AnswerScope = "needs_handoff"
+		ret.Confidence = 0.95
+		ret.RiskSignals = append(ret.RiskSignals, "handoff_requested")
+		ret.Reason = "matched handoff phrase"
+	case containsAnyWorkflowText(lower, "投诉", "举报", "差评", "曝光", "起诉", "律师", "12315"):
+		ret.MessageIntent = "complaint"
+		ret.AnswerScope = "needs_handoff"
+		ret.Confidence = 0.92
+		ret.RiskSignals = append(ret.RiskSignals, "complaint_escalation")
+		ret.Reason = "matched complaint phrase"
+	case containsAnyWorkflowText(lower, "工单", "报障", "售后", "登记问题", "记录问题"):
+		ret.MessageIntent = "ticket_request"
+		ret.AnswerScope = "needs_ticket"
+		ret.Confidence = 0.9
+		ret.RiskSignals = append(ret.RiskSignals, "ticket_expected")
+		ret.Reason = "matched ticket phrase"
+	case containsAnyWorkflowText(lower, "确认", "可以", "好的", "好", "是的", "取消"):
+		ret.MessageIntent = "confirmation"
+		ret.AnswerScope = "direct_reply"
+		ret.Confidence = 0.8
+		ret.Reason = "matched confirmation phrase"
+	case isAmbiguousWorkflowQuestion(lower):
+		ret.MessageIntent = "ambiguous_question"
+		ret.AnswerScope = "needs_clarification"
+		ret.Confidence = 0.82
+		ret.Reason = "message lacks a concrete business object"
+	default:
+		ret.MessageIntent = "business_question"
+		ret.AnswerScope = "needs_knowledge"
+		ret.Confidence = 0.7
+		ret.Reason = "default business question policy"
+	}
+	return ret
+}
+
+func decideWorkflowReplyPolicy(aiAgent models.AIAgent, input workflowReplyPolicyInput) workflowReplyPolicyDecision {
+	intent := strings.TrimSpace(input.MessageIntent)
+	scope := strings.TrimSpace(input.AnswerScope)
+	if answerability := strings.TrimSpace(input.Answerability); answerability != "" && answerability != "answerable" {
+		return workflowReplyPolicyDecision{
+			Action:           "knowledge_fallback",
+			ReplyText:        workflowKnowledgeFallbackReply(aiAgent),
+			Reason:           "knowledge is not sufficient for business answer",
+			FinalReplySource: "knowledge_fallback",
+		}
+	}
+	switch {
+	case intent == "greeting":
+		return workflowReplyPolicyDecision{Action: "direct_reply", ReplyText: "您好，请问有什么可以帮您？", Reason: "greeting can be answered directly", FinalReplySource: "direct_reply"}
+	case intent == "thanks":
+		return workflowReplyPolicyDecision{Action: "direct_reply", ReplyText: "不客气，如有其他问题可以继续告诉我。", Reason: "thanks can be answered directly", FinalReplySource: "direct_reply"}
+	case intent == "end_conversation":
+		return workflowReplyPolicyDecision{Action: "end_conversation", ReplyText: "好的，如后续还有问题可以随时联系。", Reason: "conversation ending phrase", FinalReplySource: "direct_reply"}
+	case intent == "confirmation":
+		return workflowReplyPolicyDecision{Action: "direct_reply", ReplyText: "好的，请继续补充需要处理的问题。", Reason: "confirmation without pending interrupt", FinalReplySource: "direct_reply"}
+	case intent == "handoff_request" || scope == "needs_handoff":
+		return workflowReplyPolicyDecision{Action: "handoff_to_human", Reason: "user requested human support or risk requires handoff", RequiresFlow: true, TargetFlow: "handoff_to_human", FinalReplySource: "handoff_notice"}
+	case intent == "ticket_request" || scope == "needs_ticket":
+		return workflowReplyPolicyDecision{Action: "prepare_ticket", Reason: "user requested ticket handling", RequiresFlow: true, TargetFlow: "prepare_ticket", FinalReplySource: "ticket_result"}
+	case intent == "ambiguous_question" || scope == "needs_clarification":
+		return workflowReplyPolicyDecision{Action: "clarify", ReplyText: "请补充具体的产品、场景、报错信息或你希望处理的结果，我再继续帮你确认。", Reason: "message needs clarification", FinalReplySource: "clarification"}
+	case scope == "needs_knowledge":
+		return workflowReplyPolicyDecision{Action: "retrieve_knowledge", Reason: "business question should be answered with knowledge evidence", RequiresFlow: true, TargetFlow: "knowledge", FinalReplySource: "knowledge_answer"}
+	default:
+		return workflowReplyPolicyDecision{Action: "clarify", ReplyText: "请补充更具体的问题，我再继续帮你处理。", Reason: "fallback to clarification for unclear policy input", FinalReplySource: "clarification"}
+	}
+}
+
+func normalizeWorkflowUserMessage(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	value = workflowHTMLTagPattern.ReplaceAllString(value, " ")
+	value = html.UnescapeString(value)
+	value = strings.Join(strings.Fields(value), " ")
+	return strings.TrimSpace(value)
+}
+
+func isGreetingMessage(value string) bool {
+	trimmed := strings.Trim(value, " 	\r\n。.!！?？~～")
+	return containsAnyWorkflowText(trimmed, "你好", "您好", "在吗", "在不在") || trimmed == "hello" || trimmed == "hi"
+}
+
+func isAmbiguousWorkflowQuestion(value string) bool {
+	trimmed := strings.Trim(value, " 	\r\n。.!！?？~～")
+	return containsAnyWorkflowText(trimmed, "怎么弄", "怎么办", "怎么处理", "帮我看看", "有问题") || len([]rune(trimmed)) <= 3
+}
+
+func containsAnyWorkflowText(value string, needles ...string) bool {
+	for _, needle := range needles {
+		if strings.Contains(value, needle) {
+			return true
+		}
+	}
+	return false
 }
 
 func (e *Executor) executeHumanConfirm(state *runState, node dsl.Node) error {
