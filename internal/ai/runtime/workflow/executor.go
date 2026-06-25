@@ -17,6 +17,7 @@ import (
 	"agent-desk/internal/models"
 	"agent-desk/internal/pkg/dto"
 	"agent-desk/internal/pkg/dto/request"
+	"agent-desk/internal/pkg/enums"
 	"agent-desk/internal/pkg/utils"
 	"agent-desk/internal/services"
 )
@@ -311,8 +312,20 @@ func (e *Executor) executeCreateTicket(state *runState, node dsl.Node) error {
 		"ticketId": item.ID,
 		"ticketNo": item.TicketNo,
 		"created":  true,
+		"message":  buildTicketCreatedMessage(item),
 	})
 	return nil
+}
+
+func buildTicketCreatedMessage(item *models.Ticket) string {
+	if item == nil {
+		return "工单已创建。"
+	}
+	ticketNo := strings.TrimSpace(item.TicketNo)
+	if ticketNo == "" {
+		return fmt.Sprintf("工单已创建，工单 ID：%d。", item.ID)
+	}
+	return "工单已创建，工单号：" + ticketNo + "。"
 }
 
 func workflowAIPrincipal(aiAgent models.AIAgent) *dto.AuthPrincipal {
@@ -543,6 +556,10 @@ func (e *Executor) executeLLMReply(ctx context.Context, state *runState, node ds
 	if prompt := strings.TrimSpace(readStringConfig(node.Config, "prompt")); prompt != "" {
 		systemPrompt = strings.TrimSpace(systemPrompt + "\n\n" + prompt)
 	}
+	if _, declaresKnowledge := node.Inputs["knowledgeItems"]; declaresKnowledge && len(utils.SplitInt64s(state.input.AIAgent.KnowledgeIDs)) > 0 && !hasItems(state.resolveInput(node, "knowledgeItems")) {
+		state.setNodeVars(node.ID, map[string]any{"replyText": workflowKnowledgeFallbackReply(state.input.AIAgent)})
+		return nil
+	}
 	if knowledgeItems != "" {
 		userPrompt = userPrompt + "\n\nKnowledge context:\n" + knowledgeItems
 	}
@@ -554,6 +571,16 @@ func (e *Executor) executeLLMReply(ctx context.Context, state *runState, node ds
 	state.result.CompletionTokens += result.CompletionTokens
 	state.setNodeVars(node.ID, map[string]any{"replyText": result.Content})
 	return nil
+}
+
+func workflowKnowledgeFallbackReply(aiAgent models.AIAgent) string {
+	if reply := strings.TrimSpace(aiAgent.FallbackMessage); reply != "" {
+		return reply
+	}
+	if aiAgent.FallbackMode == enums.AIAgentFallbackModeSuggestRetry {
+		return "当前知识库里没有找到足够明确的信息，你可以换个更具体的问法再试一次。"
+	}
+	return "当前知识库暂无明确信息。"
 }
 
 func (s *runState) nextNodeID(sourceNodeID string) (string, bool, error) {

@@ -323,7 +323,10 @@ export type AIWorkflowDefinition = {
     source: string
     target: string
     condition?: {
-      expression: string
+      expression?: string
+      left?: AIWorkflowVariableSelector
+      operator?: string
+      right?: unknown
     }
   }[]
 }

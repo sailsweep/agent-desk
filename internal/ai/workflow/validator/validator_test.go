@@ -110,6 +110,30 @@ func TestValidateDefinitionAcceptsConfirmedCreateTicket(t *testing.T) {
 	}
 }
 
+func TestValidateDefinitionAcceptsDirectHandoffToHuman(t *testing.T) {
+	def := dsl.Definition{
+		SchemaVersion: 1,
+		EntryNodeID:   "start_1",
+		Nodes: []dsl.Node{
+			{ID: "start_1", Type: "start"},
+			{ID: "handoff_1", Type: "handoff_to_human", Inputs: map[string]dsl.VariableSelector{
+				"reason": {NodeID: "start_1", Field: "userMessage"},
+			}},
+			{ID: "end_1", Type: "end"},
+		},
+		Edges: []dsl.Edge{
+			{ID: "e1", Source: "start_1", Target: "handoff_1"},
+			{ID: "e2", Source: "handoff_1", Target: "end_1"},
+		},
+	}
+
+	result := validator.ValidateDefinition(def, registry.DefaultRegistry())
+
+	if !result.Valid {
+		t.Fatalf("expected direct handoff_to_human to be valid, got %#v", result.Errors)
+	}
+}
+
 func TestValidateDefinitionRejectsConfirmedInputFromNonConfirmNode(t *testing.T) {
 	def := dsl.Definition{
 		SchemaVersion: 1,

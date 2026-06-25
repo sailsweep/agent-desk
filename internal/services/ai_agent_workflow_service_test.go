@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"agent-desk/internal/ai/workflow/dsl"
+	workflowregistry "agent-desk/internal/ai/workflow/registry"
+	workflowvalidator "agent-desk/internal/ai/workflow/validator"
 	"agent-desk/internal/models"
 	"agent-desk/internal/pkg/dto"
 	"agent-desk/internal/pkg/dto/request"
@@ -50,11 +52,33 @@ func TestAIAgentServiceCreatesDefaultWorkflow(t *testing.T) {
 	if stored.EntryNodeID == "" {
 		t.Fatalf("expected default draft definition")
 	}
-	if len(stored.Nodes) < 5 {
-		t.Fatalf("expected product-ready default workflow, got nodes: %#v", stored.Nodes)
+	validation := workflowvalidator.ValidateDefinition(stored, workflowregistry.DefaultRegistry())
+	if !validation.Valid {
+		t.Fatalf("expected default workflow to be valid, got %#v", validation.Errors)
 	}
-	if !workflowHasNodeType(stored, "knowledge_retrieve") || !workflowHasNodeType(stored, "llm_reply") || !workflowHasNodeType(stored, "send_reply") {
-		t.Fatalf("expected default workflow to include retrieve, llm reply, and send reply nodes: %#v", stored.Nodes)
+	if nodeTypeByID(stored, "route_intent_1") != workflowregistry.NodeTypeCondition {
+		t.Fatalf("expected default workflow to start with a clear intent router, got nodes: %#v", stored.Nodes)
+	}
+	for _, nodeType := range []string{
+		workflowregistry.NodeTypeHandoffToHuman,
+		workflowregistry.NodeTypePrepareTicketDraft,
+		workflowregistry.NodeTypeHumanConfirm,
+		workflowregistry.NodeTypeCreateTicket,
+		workflowregistry.NodeTypeKnowledgeRetrieve,
+		workflowregistry.NodeTypeAnswerabilityGate,
+		workflowregistry.NodeTypeLLMReply,
+		workflowregistry.NodeTypeSendReply,
+	} {
+		if !workflowHasNodeType(stored, nodeType) {
+			t.Fatalf("expected default workflow to include %s node: %#v", nodeType, stored.Nodes)
+		}
+	}
+	assertConditionEdgeToNodeType(t, stored, "route_intent_1", workflowregistry.NodeTypeHandoffToHuman, "contains", "人工")
+	assertConditionEdgeToNodeType(t, stored, "route_intent_1", workflowregistry.NodeTypePrepareTicketDraft, "contains", "工单")
+	assertConditionEdgeToNodeType(t, stored, "answerability_1", workflowregistry.NodeTypeLLMReply, "eq", "answerable")
+	assertDefaultEdgeToNodeType(t, stored, "answerability_1", workflowregistry.NodeTypeLLMReply)
+	if !workflowEdgeExists(stored, "create_ticket_1", "ticket_result_reply_1") {
+		t.Fatalf("expected create_ticket to flow into a customer-visible result reply")
 	}
 }
 
@@ -180,4 +204,55 @@ func workflowHasNodeType(def dsl.Definition, nodeType string) bool {
 		}
 	}
 	return false
+}
+
+func nodeTypeByID(def dsl.Definition, nodeID string) string {
+	for _, node := range def.Nodes {
+		if node.ID == nodeID {
+			return node.Type
+		}
+	}
+	return ""
+}
+
+func assertConditionEdgeToNodeType(t *testing.T, def dsl.Definition, sourceID string, targetType string, operator string, right any) {
+	t.Helper()
+	nodeTypes := workflowNodeTypeMap(def)
+	for _, edge := range def.Edges {
+		if edge.Source != sourceID || nodeTypes[edge.Target] != targetType || edge.Condition == nil {
+			continue
+		}
+		if edge.Condition.Operator == operator && edge.Condition.Right == right {
+			return
+		}
+	}
+	t.Fatalf("expected %s conditional edge from %s to %s with right=%v, got %#v", operator, sourceID, targetType, right, def.Edges)
+}
+
+func assertDefaultEdgeToNodeType(t *testing.T, def dsl.Definition, sourceID string, targetType string) {
+	t.Helper()
+	nodeTypes := workflowNodeTypeMap(def)
+	for _, edge := range def.Edges {
+		if edge.Source == sourceID && nodeTypes[edge.Target] == targetType && edge.Condition == nil {
+			return
+		}
+	}
+	t.Fatalf("expected default edge from %s to %s, got %#v", sourceID, targetType, def.Edges)
+}
+
+func workflowEdgeExists(def dsl.Definition, sourceID string, targetID string) bool {
+	for _, edge := range def.Edges {
+		if edge.Source == sourceID && edge.Target == targetID {
+			return true
+		}
+	}
+	return false
+}
+
+func workflowNodeTypeMap(def dsl.Definition) map[string]string {
+	ret := make(map[string]string, len(def.Nodes))
+	for _, node := range def.Nodes {
+		ret[node.ID] = node.Type
+	}
+	return ret
 }

@@ -137,17 +137,19 @@ func DefaultRegistry() *Registry {
 			},
 			OutputSchema: []VariableSpec{
 				output("ticketId", VariableTypeInteger, "Created ticket ID."),
+				output("ticketNo", VariableTypeString, "Created ticket number."),
+				output("created", VariableTypeBoolean, "Whether the ticket was created."),
+				output("message", VariableTypeString, "Customer-visible ticket creation result."),
 			},
 		},
 		NodeSpec{
-			Type:                            NodeTypeHandoffToHuman,
-			Title:                           "Handoff To Human",
-			Description:                     "Transfer the conversation to human support.",
-			RiskLevel:                       NodeRiskLevelHigh,
-			RequiresConfirmationPredecessor: true,
+			Type:        NodeTypeHandoffToHuman,
+			Title:       "Handoff To Human",
+			Description: "Transfer the conversation to human support.",
+			RiskLevel:   NodeRiskLevelHigh,
 			InputSchema: []VariableSpec{
 				requiredInput("reason", VariableTypeString, "Handoff reason."),
-				requiredInput("confirmed", VariableTypeBoolean, "Confirmation result."),
+				optionalInput("confirmed", VariableTypeBoolean, "Confirmation result."),
 			},
 			OutputSchema: []VariableSpec{
 				output("handoffId", VariableTypeInteger, "Handoff operation ID."),

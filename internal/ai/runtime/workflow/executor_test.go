@@ -228,6 +228,31 @@ func TestExecutorPrepareTicketDraftOutputsDraftVariable(t *testing.T) {
 	assertPath(t, result.NodePath, []string{"start_1", "draft_1", "ready_end"})
 }
 
+func TestExecutorLLMReplyUsesAgentFallbackWhenDeclaredKnowledgeIsEmpty(t *testing.T) {
+	result, err := NewExecutor().Execute(context.Background(), Input{
+		Definition: emptyKnowledgeReplyDefinition(),
+		UserMessage: models.Message{
+			Content: "产品功能",
+		},
+		AIAgent: models.AIAgent{
+			KnowledgeIDs:    "1",
+			FallbackMode:    enums.AIAgentFallbackModeNoAnswer,
+			FallbackMessage: "我暂时没有找到足够准确的信息。你可以补充更具体的问题，我再继续帮你查。",
+			SystemPrompt:    "不要编造事实。",
+		},
+		AIConfig: models.AIConfig{
+			ModelName: "should-not-be-called",
+		},
+	})
+	if err != nil {
+		t.Fatalf("execute workflow: %v", err)
+	}
+	if result.ReplyText != "我暂时没有找到足够准确的信息。你可以补充更具体的问题，我再继续帮你查。" {
+		t.Fatalf("expected fallback reply, got %q", result.ReplyText)
+	}
+	assertPath(t, result.NodePath, []string{"start_1", "reply_1", "send_1", "end_1"})
+}
+
 func TestExecutorHumanConfirmInterruptsWithCheckpoint(t *testing.T) {
 	result, err := NewExecutor().Execute(context.Background(), Input{
 		Definition: humanConfirmWorkflowDefinition(),
@@ -333,6 +358,11 @@ func TestExecutorResumeCreatesTicketAfterHumanConfirmation(t *testing.T) {
 	if ticket.Title == "" || !strings.Contains(ticket.Description, "订单支付失败") {
 		t.Fatalf("unexpected ticket: %+v", ticket)
 	}
+
+	trace := findNodeTrace(result.NodeTraces, "create_ticket_1")
+	if trace == nil || !strings.Contains(trace.OutputPreview, "工单已创建") {
+		t.Fatalf("expected create_ticket output to include customer-visible result message, got %#v", trace)
+	}
 }
 
 func findNodeTrace(items []NodeTrace, nodeID string) *NodeTrace {
@@ -342,6 +372,29 @@ func findNodeTrace(items []NodeTrace, nodeID string) *NodeTrace {
 		}
 	}
 	return nil
+}
+
+func emptyKnowledgeReplyDefinition() dsl.Definition {
+	return dsl.Definition{
+		SchemaVersion: 1,
+		EntryNodeID:   "start_1",
+		Nodes: []dsl.Node{
+			{ID: "start_1", Type: workflowregistry.NodeTypeStart, Name: "Start"},
+			{ID: "reply_1", Type: workflowregistry.NodeTypeLLMReply, Name: "Reply", Inputs: map[string]dsl.VariableSelector{
+				"userMessage":    {NodeID: "start_1", Field: "userMessage"},
+				"knowledgeItems": {NodeID: "missing_retrieve", Field: "items"},
+			}},
+			{ID: "send_1", Type: workflowregistry.NodeTypeSendReply, Name: "Send", Inputs: map[string]dsl.VariableSelector{
+				"replyText": {NodeID: "reply_1", Field: "replyText"},
+			}},
+			{ID: "end_1", Type: workflowregistry.NodeTypeEnd, Name: "End"},
+		},
+		Edges: []dsl.Edge{
+			{ID: "edge_start_reply", Source: "start_1", Target: "reply_1"},
+			{ID: "edge_reply_send", Source: "reply_1", Target: "send_1"},
+			{ID: "edge_send_end", Source: "send_1", Target: "end_1"},
+		},
+	}
 }
 
 func conditionalReplyDefinition() dsl.Definition {
