@@ -6,7 +6,6 @@ import {
   ArrowUpIcon,
   BotMessageSquareIcon,
   BrainCircuitIcon,
-  CheckCircle2Icon,
   DatabaseIcon,
   GitBranchIcon,
   HistoryIcon,
@@ -165,6 +164,7 @@ export function AIAgentConfigWorkbench({
   const [directTools, setDirectTools] = useState<DirectToolItem[]>([])
 
   const [definition, setDefinition] = useState<AIWorkflowDefinition>(fallbackDefinition)
+  const [workflowEditorKey, setWorkflowEditorKey] = useState(0)
 
   const [aiConfigs, setAIConfigs] = useState<AIConfig[]>([])
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([])
@@ -180,6 +180,11 @@ export function AIAgentConfigWorkbench({
   useEffect(() => {
     setCurrentAgentId(agentId ?? null)
   }, [agentId])
+
+  const replaceWorkflowDefinition = useCallback((nextDefinition: AIWorkflowDefinition) => {
+    setDefinition(nextDefinition)
+    setWorkflowEditorKey((current) => current + 1)
+  }, [])
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -227,7 +232,7 @@ export function AIAgentConfigWorkbench({
         setSelectedTeamIds([])
         setSelectedSkillIds([])
         setDirectTools([])
-        setDefinition(defaultDefinition ?? fallbackDefinition)
+        replaceWorkflowDefinition(defaultDefinition ?? fallbackDefinition)
         setValidation(null)
         return
       }
@@ -259,14 +264,14 @@ export function AIAgentConfigWorkbench({
       setSelectedTeamIds((agentDetail.teams ?? []).map((team) => team.id))
       setSelectedSkillIds(agentDetail.skillIds ?? [])
       setDirectTools(agentDetail.directTools ?? [])
-      setDefinition(workflowDetail.draftDefinition ?? defaultDefinition ?? fallbackDefinition)
+      replaceWorkflowDefinition(workflowDetail.draftDefinition ?? defaultDefinition ?? fallbackDefinition)
       setValidation(null)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to load Agent config")
     } finally {
       setLoading(false)
     }
-  }, [currentAgentId])
+  }, [currentAgentId, replaceWorkflowDefinition])
 
   useEffect(() => {
     void loadData()
@@ -463,6 +468,21 @@ export function AIAgentConfigWorkbench({
     }
   }
 
+  async function restoreDefaultWorkflow() {
+    if (savingWorkflow || loading) return
+    setSavingWorkflow(true)
+    try {
+      const defaultDefinition = await fetchAIWorkflowDefaultDefinition()
+      replaceWorkflowDefinition(defaultDefinition ?? fallbackDefinition)
+      setValidation(null)
+      toast.success("已恢复默认流程，保存草稿或发布后生效")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "恢复默认流程失败")
+    } finally {
+      setSavingWorkflow(false)
+    }
+  }
+
   async function publishWorkflow() {
     if (!currentAgentId) return
     setSavingWorkflow(true)
@@ -539,39 +559,7 @@ export function AIAgentConfigWorkbench({
         </div>
         <div className="flex items-center gap-2">
           {activeSection === "workflow" ? (
-            <>
-              {validation ? (
-                <Badge variant={validation.valid ? "default" : "destructive"}>
-                  {validation.valid ? "校验通过" : `${validation.errors.length} 个问题`}
-                </Badge>
-              ) : null}
-              <Button
-                type="button"
-                variant="outline"
-                disabled={savingWorkflow || loading || !currentAgentId}
-                onClick={validateWorkflowDraft}
-              >
-                <CheckCircle2Icon className="size-4" />
-                校验
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={savingWorkflow || loading || !currentAgentId}
-                onClick={saveWorkflowDraft}
-              >
-                <SaveIcon className="size-4" />
-                保存草稿
-              </Button>
-              <Button
-                type="button"
-                disabled={savingWorkflow || loading || !currentAgentId}
-                onClick={publishWorkflow}
-              >
-                <SendIcon className="size-4" />
-                发布流程
-              </Button>
-            </>
+            null
           ) : (
             <>
               <Button
@@ -824,9 +812,18 @@ export function AIAgentConfigWorkbench({
 
               {activeSection === "workflow" ? (
                 <WorkflowEditor
+                  key={workflowEditorKey}
                   definition={definition}
                   nodeSpecs={nodeSpecs}
                   onDefinitionChange={setDefinition}
+                  onRestoreDefault={restoreDefaultWorkflow}
+                  restoreDefaultDisabled={savingWorkflow || loading}
+                  onValidate={validateWorkflowDraft}
+                  validateDisabled={savingWorkflow || loading || !currentAgentId}
+                  onSaveDraft={saveWorkflowDraft}
+                  saveDraftDisabled={savingWorkflow || loading || !currentAgentId}
+                  onPublish={publishWorkflow}
+                  publishDisabled={savingWorkflow || loading || !currentAgentId}
                 />
               ) : null}
 

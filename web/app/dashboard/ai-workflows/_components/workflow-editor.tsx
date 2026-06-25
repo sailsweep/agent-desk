@@ -36,6 +36,9 @@ import {
   PanelLeftOpenIcon,
   PlusIcon,
   Redo2Icon,
+  RotateCcwIcon,
+  SaveIcon,
+  SendIcon,
   Undo2Icon,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -192,10 +195,26 @@ export function WorkflowEditor({
   definition,
   nodeSpecs,
   onDefinitionChange,
+  onRestoreDefault,
+  restoreDefaultDisabled = false,
+  onValidate,
+  validateDisabled = false,
+  onSaveDraft,
+  saveDraftDisabled = false,
+  onPublish,
+  publishDisabled = false,
 }: {
   definition: AIWorkflowDefinition
   nodeSpecs: AIWorkflowNodeSpec[]
   onDefinitionChange: (definition: AIWorkflowDefinition) => void
+  onRestoreDefault?: () => void
+  restoreDefaultDisabled?: boolean
+  onValidate?: () => void
+  validateDisabled?: boolean
+  onSaveDraft?: () => void
+  saveDraftDisabled?: boolean
+  onPublish?: () => void
+  publishDisabled?: boolean
 }) {
   const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowFlowNode>(
     toFlowNodes(definition)
@@ -943,11 +962,21 @@ export function WorkflowEditor({
           </ReactFlow>
           <div className="absolute left-3 top-3 z-20 flex items-center gap-2">
             <WorkflowValidationBadge errors={validation.errors} valid={validation.valid} />
+            <WorkflowCanvasActions
+              onValidate={onValidate}
+              validateDisabled={validateDisabled}
+              onSaveDraft={onSaveDraft}
+              saveDraftDisabled={saveDraftDisabled}
+              onPublish={onPublish}
+              publishDisabled={publishDisabled}
+            />
             <WorkflowHistoryControls
               canUndo={historyAvailability.canUndo}
               canRedo={historyAvailability.canRedo}
               onUndo={undoWorkflowEdit}
               onRedo={redoWorkflowEdit}
+              onRestoreDefault={onRestoreDefault}
+              restoreDefaultDisabled={restoreDefaultDisabled}
             />
           </div>
           {propertyPanelNode || propertyPanelEdge ? (
@@ -1609,16 +1638,84 @@ function WorkflowValidationBadge({
   )
 }
 
+function WorkflowCanvasActions({
+  onValidate,
+  validateDisabled,
+  onSaveDraft,
+  saveDraftDisabled,
+  onPublish,
+  publishDisabled,
+}: {
+  onValidate?: () => void
+  validateDisabled?: boolean
+  onSaveDraft?: () => void
+  saveDraftDisabled?: boolean
+  onPublish?: () => void
+  publishDisabled?: boolean
+}) {
+  if (!onValidate && !onSaveDraft && !onPublish) {
+    return null
+  }
+
+  return (
+    <div className="flex overflow-hidden rounded-md border bg-background/95 shadow-sm">
+      {onValidate ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 rounded-none px-2 text-xs text-muted-foreground hover:text-foreground"
+          onClick={onValidate}
+          disabled={validateDisabled}
+        >
+          <CheckCircle2Icon className="size-3.5" />
+          校验
+        </Button>
+      ) : null}
+      {onSaveDraft ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 rounded-none border-l px-2 text-xs text-muted-foreground hover:text-foreground"
+          onClick={onSaveDraft}
+          disabled={saveDraftDisabled}
+        >
+          <SaveIcon className="size-3.5" />
+          保存草稿
+        </Button>
+      ) : null}
+      {onPublish ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 rounded-none border-l px-2 text-xs font-medium text-foreground hover:text-foreground"
+          onClick={onPublish}
+          disabled={publishDisabled}
+        >
+          <SendIcon className="size-3.5" />
+          发布流程
+        </Button>
+      ) : null}
+    </div>
+  )
+}
+
 function WorkflowHistoryControls({
   canUndo,
   canRedo,
   onUndo,
   onRedo,
+  onRestoreDefault,
+  restoreDefaultDisabled,
 }: {
   canUndo: boolean
   canRedo: boolean
   onUndo: () => void
   onRedo: () => void
+  onRestoreDefault?: () => void
+  restoreDefaultDisabled?: boolean
 }) {
   return (
     <div className="flex overflow-hidden rounded-md border bg-background/95 shadow-sm">
@@ -1646,6 +1743,20 @@ function WorkflowHistoryControls({
       >
         <Redo2Icon className="size-3.5" />
       </Button>
+      {onRestoreDefault ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-7 rounded-none border-l text-muted-foreground hover:text-foreground"
+          onClick={onRestoreDefault}
+          disabled={restoreDefaultDisabled}
+          aria-label="恢复默认"
+          title="恢复默认"
+        >
+          <RotateCcwIcon className="size-3.5" />
+        </Button>
+      ) : null}
     </div>
   )
 }
