@@ -80,8 +80,8 @@ const auditEdgeTypes = {
 }
 
 const fitViewOptions = {
-  padding: 0.18,
-  minZoom: 0.45,
+  padding: 0.12,
+  minZoom: 0.32,
   maxZoom: 1,
 }
 
@@ -90,6 +90,11 @@ const defaultEdgeOptions = {
   markerEnd: {
     type: MarkerType.ArrowClosed,
   },
+}
+
+const auditLayoutScale = {
+  x: 1.35,
+  y: 1.15,
 }
 
 export function WorkflowRunAuditGraph({ run }: { run: AIWorkflowRun }) {
@@ -111,7 +116,7 @@ export function WorkflowRunAuditGraph({ run }: { run: AIWorkflowRun }) {
       return {
         id: node.id,
         type: "auditNode",
-        position: node.position ?? { x: 0, y: 0 },
+        position: scaleAuditPosition(node.position),
         data: {
           nodeId: node.id,
           nodeType: node.type,
@@ -150,8 +155,8 @@ export function WorkflowRunAuditGraph({ run }: { run: AIWorkflowRun }) {
   }
 
   return (
-    <div className="grid min-h-[560px] overflow-hidden rounded-md border bg-background lg:grid-cols-[minmax(0,1fr)_390px]">
-      <div className="h-[560px] min-w-0 border-b bg-muted/10 lg:border-b-0 lg:border-r">
+    <div className="grid min-h-[600px] overflow-hidden rounded-md border bg-background lg:grid-cols-[minmax(0,1fr)_390px]">
+      <div className="h-[600px] min-w-0 border-b bg-muted/10 lg:border-b-0 lg:border-r">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -242,18 +247,18 @@ function AuditCanvasNode({ data }: NodeProps<AuditNode>) {
 
   if (condition) {
     return (
-      <div className={cn("relative flex size-32 items-center justify-center opacity-60", executed && "opacity-100")}>
+      <div className={cn("relative flex size-24 items-center justify-center opacity-60", executed && "opacity-100")}>
         <Handle type="target" position={Position.Left} className="!size-2.5 !border-0 !bg-muted-foreground/50" />
         <div
           className={cn(
-            "absolute inset-4 rotate-45 rounded-lg border shadow-sm transition-all",
+            "absolute inset-3 rotate-45 rounded-lg border shadow-sm transition-all",
             toneClass,
             selected && "ring-4 ring-primary/15"
           )}
         />
-        <div className="relative z-10 flex max-w-22 flex-col items-center text-center">
-          <GitBranchIcon className="mb-1 size-4" />
-          <div className="line-clamp-2 text-xs font-medium leading-tight">{data.name}</div>
+        <div className="relative z-10 flex max-w-18 flex-col items-center text-center">
+          <GitBranchIcon className="mb-0.5 size-3.5" />
+          <div className="line-clamp-2 text-[11px] font-medium leading-tight">{data.name}</div>
           <div className="mt-1 text-[10px] opacity-75">{data.statusName || "未执行"}</div>
         </div>
         <Handle type="source" position={Position.Right} className="!size-2.5 !border-0 !bg-muted-foreground/50" />
@@ -264,22 +269,22 @@ function AuditCanvasNode({ data }: NodeProps<AuditNode>) {
   return (
     <div
       className={cn(
-        "w-52 overflow-hidden rounded-md border bg-background shadow-sm opacity-55 transition-all",
+        "w-40 overflow-hidden rounded-md border bg-background shadow-sm opacity-55 transition-all",
         executed && "opacity-100",
         selected && "ring-4 ring-primary/15"
       )}
     >
       <Handle type="target" position={Position.Left} className="!size-2.5 !border-0 !bg-muted-foreground/50" />
-      <div className={cn("border-b px-3 py-2", toneClass)}>
-        <div className="flex items-center gap-2">
-          {failed ? <AlertTriangleIcon className="size-4 shrink-0" /> : <CheckCircle2Icon className="size-4 shrink-0" />}
+      <div className={cn("border-b px-2.5 py-1.5", toneClass)}>
+        <div className="flex items-center gap-1.5">
+          {failed ? <AlertTriangleIcon className="size-3.5 shrink-0" /> : <CheckCircle2Icon className="size-3.5 shrink-0" />}
           <div className="min-w-0">
-            <div className="truncate text-sm font-medium">{data.name}</div>
+            <div className="truncate text-xs font-medium">{data.name}</div>
             <div className="truncate text-[11px] opacity-75">{data.nodeType}</div>
           </div>
         </div>
       </div>
-      <div className="flex items-center justify-between gap-2 px-3 py-2 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-[11px] text-muted-foreground">
         <span>{data.statusName || "未执行"}</span>
         {executed ? (
           <span className="inline-flex items-center gap-1">
@@ -305,7 +310,7 @@ function AuditSidePanel({
   const branchDecision = extractBranchDecision(outputValue)
 
   return (
-    <ScrollArea className="h-[560px]">
+    <ScrollArea className="h-[600px]">
       <div className="space-y-4 p-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -352,6 +357,13 @@ function AuditMeta({ label, value }: { label: string; value: string }) {
       <div className="truncate font-medium">{value}</div>
     </div>
   )
+}
+
+function scaleAuditPosition(position: AIWorkflowDefinition["nodes"][number]["position"] | undefined) {
+  return {
+    x: Math.round((position?.x ?? 0) * auditLayoutScale.x),
+    y: Math.round((position?.y ?? 0) * auditLayoutScale.y),
+  }
 }
 
 function BranchDecisionBlock({ decision }: { decision: BranchDecision }) {

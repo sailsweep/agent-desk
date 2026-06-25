@@ -380,30 +380,29 @@ function WorkflowRunDetailDialog({
       {loading ? (
         <div className="py-10 text-sm text-muted-foreground">{t("workflowRun.loadingDetail")}</div>
       ) : run ? (
-        <div className="space-y-4">
-          <div className="grid gap-2 rounded-md border bg-muted/20 p-3 text-sm md:grid-cols-2">
-            <DetailRow label={t("workflowRun.workflow")} value={run.workflowName || `#${run.workflowId}`} />
-            <DetailRow label={t("workflowRun.version")} value={`v${run.workflowVersion || "-"} / #${run.workflowVersionId}`} />
-            <DetailRow label={t("workflowRun.agent")} value={run.aiAgentName || `#${run.aiAgentId}`} />
-            <DetailRow label={t("workflowRun.status")} value={formatRunStatus(run)} />
-            <DetailRow
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/20 px-2.5 py-2 text-xs">
+            <CompactRunMeta label={t("workflowRun.workflow")} value={run.workflowName || `#${run.workflowId}`} />
+            <CompactRunMeta label={t("workflowRun.version")} value={`v${run.workflowVersion || "-"} / #${run.workflowVersionId}`} />
+            <CompactRunMeta label={t("workflowRun.agent")} value={run.aiAgentName || `#${run.aiAgentId}`} />
+            <CompactRunMeta label={t("workflowRun.status")} value={formatRunStatus(run)} />
+            <CompactRunMeta
               label={t("workflowRun.conversationId")}
               value={
                 <Button
                   type="button"
                   variant="link"
-                  className="h-auto min-w-0 px-0 py-0 font-medium"
+                  className="h-auto px-0 py-0 text-xs font-medium"
                   onClick={() => void onOpenConversation(run.conversationId)}
                 >
                   #{run.conversationId}
                 </Button>
               }
             />
-            <DetailRow label={t("workflowRun.messageId")} value={`#${run.messageId}`} />
-            <DetailRow label={t("workflowRun.startedAt")} value={run.startedAt ? formatDateTime(run.startedAt) : "-"} />
-            <DetailRow label={t("workflowRun.endedAt")} value={run.endedAt ? formatDateTime(run.endedAt) : "-"} />
-            <DetailRow label={t("workflowRun.duration")} value={`${run.durationMs || 0} ms`} />
-            <DetailRow label={t("workflowRun.interruptNode")} value={run.interruptNodeId || "-"} />
+            <CompactRunMeta label={t("workflowRun.messageId")} value={`#${run.messageId}`} />
+            <CompactRunMeta label={t("workflowRun.startedAt")} value={run.startedAt ? formatDateTime(run.startedAt) : "-"} />
+            <CompactRunMeta label={t("workflowRun.duration")} value={`${run.durationMs || 0} ms`} />
+            {run.interruptNodeId ? <CompactRunMeta label={t("workflowRun.interruptNode")} value={run.interruptNodeId} /> : null}
           </div>
           {run.errorMessage ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
@@ -499,6 +498,15 @@ function DetailRow({ label, value }: { label: string; value: ReactNode }) {
       <span className="shrink-0 text-xs text-muted-foreground">{label}</span>
       <span className="min-w-0 truncate font-medium">{value || "-"}</span>
     </div>
+  )
+}
+
+function CompactRunMeta({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <span className="inline-flex max-w-full items-center gap-1.5 rounded-md border bg-background px-2 py-1">
+      <span className="shrink-0 text-muted-foreground">{label}</span>
+      <span className="min-w-0 truncate font-medium">{value || "-"}</span>
+    </span>
   )
 }
 
