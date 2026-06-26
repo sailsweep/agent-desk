@@ -20,7 +20,7 @@ func (e *Error) Error() string {
 	if e == nil {
 		return ""
 	}
-	return e.Message(LocaleZhCN)
+	return e.Message(DefaultLocale)
 }
 
 func (e *Error) Message(locale string) string {

@@ -32,6 +32,7 @@ func TestNewServerRegistersGinRoutes(t *testing.T) {
 
 	expected := []string{
 		http.MethodPost + " /api/auth/login",
+		http.MethodGet + " /api/config",
 		http.MethodGet + " /api/health",
 		http.MethodGet + " /api/auth/oidc_login",
 		http.MethodGet + " /api/auth/oidc_callback",
@@ -93,8 +94,9 @@ func TestNewServerHealthEndpointIsPublic(t *testing.T) {
 	}
 }
 
-func TestNewServerExposesPublicAuthOptions(t *testing.T) {
+func TestNewServerExposesPublicConfig(t *testing.T) {
 	config.SetCurrent(&config.Config{
+		Language: "zh-CN",
 		Storage: config.StorageConfig{
 			Local: config.LocalStorageConfig{
 				Root:    "storage",
@@ -116,7 +118,7 @@ func TestNewServerExposesPublicAuthOptions(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	app.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/auth/options", nil))
+	app.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/config", nil))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status=%d want %d", rec.Code, http.StatusOK)
@@ -125,8 +127,9 @@ func TestNewServerExposesPublicAuthOptions(t *testing.T) {
 	var body struct {
 		Success bool `json:"success"`
 		Data    struct {
-			WxWorkEnabled bool `json:"wxworkEnabled"`
-			OIDCEnabled   bool `json:"oidcEnabled"`
+			Language      string `json:"language"`
+			WxWorkEnabled bool   `json:"wxworkEnabled"`
+			OIDCEnabled   bool   `json:"oidcEnabled"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
@@ -134,6 +137,9 @@ func TestNewServerExposesPublicAuthOptions(t *testing.T) {
 	}
 	if !body.Success {
 		t.Fatalf("success=false, body=%s", rec.Body.String())
+	}
+	if body.Data.Language != "zh-CN" {
+		t.Fatalf("language=%q want zh-CN", body.Data.Language)
 	}
 	if !body.Data.WxWorkEnabled {
 		t.Fatalf("wxworkEnabled=false want true")
@@ -143,6 +149,29 @@ func TestNewServerExposesPublicAuthOptions(t *testing.T) {
 	}
 	if strings.Contains(rec.Body.String(), "must-not-leak") {
 		t.Fatalf("response leaked sensitive OIDC config: %s", rec.Body.String())
+	}
+}
+
+func TestNewServerDoesNotExposeLegacyAuthOptions(t *testing.T) {
+	config.SetCurrent(&config.Config{
+		Storage: config.StorageConfig{
+			Local: config.LocalStorageConfig{
+				Root:    "storage",
+				BaseURL: "/storage",
+			},
+		},
+	})
+
+	app, err := NewServer()
+	if err != nil {
+		t.Fatalf("NewServer() error = %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+	app.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/auth/options", nil))
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status=%d want %d, body=%s", rec.Code, http.StatusNotFound, rec.Body.String())
 	}
 }
 

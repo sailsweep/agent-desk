@@ -86,7 +86,7 @@ func (e *I18nError) Error() string {
 	if e == nil {
 		return ""
 	}
-	return e.Message(i18nx.LocaleZhCN)
+	return e.Message(i18nx.DefaultLocale)
 }
 
 func (e *I18nError) Unwrap() error {

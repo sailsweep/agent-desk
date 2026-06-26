@@ -30,9 +30,10 @@ func Login(ctx *gin.Context) {
 	httpx.WriteJSON(ctx, ret)
 }
 
-func AuthOptions(ctx *gin.Context) {
+func PublicConfig(ctx *gin.Context) {
 	cfg := config.Current()
-	httpx.WriteJSON(ctx, &response.AuthOptionsResponse{
+	httpx.WriteJSON(ctx, &response.PublicConfigResponse{
+		Language:      cfg.LanguageOrDefault(),
 		WxWorkEnabled: cfg.WxWork.Enabled,
 		OIDCEnabled:   cfg.OIDC.Enabled,
 	})

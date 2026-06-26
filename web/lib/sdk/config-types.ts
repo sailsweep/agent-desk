@@ -11,6 +11,7 @@ export type AgentDeskConfig = {
   getUserToken?: () => string | Promise<string>
   title?: string
   subtitle?: string
+  language?: string
   position?: "left" | "right"
   themeColor?: string
   width?: string

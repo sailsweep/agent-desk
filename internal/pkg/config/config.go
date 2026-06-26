@@ -9,6 +9,7 @@ import (
 )
 
 type Config struct {
+	Language        string                `yaml:"language"`
 	Server          ServerConfig          `yaml:"server"`
 	DB              DBConfig              `yaml:"db"`
 	Logger          LoggerConfig          `yaml:"logger"`
@@ -19,6 +20,17 @@ type Config struct {
 	WxWork          WxWorkConfig          `yaml:"wxWork"`
 	OIDC            OIDCConfig            `yaml:"oidc"`
 	CustomerSession CustomerSessionConfig `yaml:"customerSession"`
+}
+
+func (c Config) LanguageOrDefault() string {
+	switch strings.ToLower(strings.TrimSpace(c.Language)) {
+	case "zh", "zh-cn", "zh_cn", "zh-hans":
+		return "zh-CN"
+	case "en", "en-us", "en_us":
+		return "en-US"
+	default:
+		return "zh-CN"
+	}
 }
 
 type WxWorkNotifyConfig struct {

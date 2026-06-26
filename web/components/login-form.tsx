@@ -7,7 +7,8 @@ import { startTransition, useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import { useAuth } from "@/components/auth-provider"
-import { fetchAuthOptions, loginWithPassword, type AuthOptions } from "@/lib/api/auth"
+import { loginWithPassword } from "@/lib/api/auth"
+import { fetchPublicConfig, type PublicConfig } from "@/lib/api/config"
 import { useI18n } from "@/i18n/provider"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -40,15 +41,15 @@ export function LoginForm({
   const { session } = useAuth()
   const [isPending, setIsPending] = useState(false)
   const [isWxWorkEnv, setIsWxWorkEnv] = useState(false)
-  const [authOptions, setAuthOptions] = useState<AuthOptions | null>(null)
-  const [authOptionsError, setAuthOptionsError] = useState<string | null>(null)
+  const [publicConfig, setPublicConfig] = useState<PublicConfig | null>(null)
+  const [publicConfigError, setPublicConfigError] = useState<string | null>(null)
   const nextPath = searchParams.get("next")
   const wxworkError = searchParams.get("wxworkError")
   const oidcError = searchParams.get("oidcError")
   const redirectPath =
     nextPath && nextPath.startsWith("/") ? nextPath : "/dashboard"
   const enabledProviderCount =
-    Number(authOptions?.wxworkEnabled) + Number(authOptions?.oidcEnabled)
+    Number(publicConfig?.wxworkEnabled) + Number(publicConfig?.oidcEnabled)
 
   useEffect(() => {
     if (session) {
@@ -75,17 +76,17 @@ export function LoginForm({
   useEffect(() => {
     let cancelled = false
 
-    void fetchAuthOptions()
+    void fetchPublicConfig()
       .then((options) => {
         if (!cancelled) {
-          setAuthOptions(options)
-          setAuthOptionsError(null)
+          setPublicConfig(options)
+          setPublicConfigError(null)
         }
       })
       .catch((error) => {
         if (!cancelled) {
-          setAuthOptions(null)
-          setAuthOptionsError(error instanceof Error ? error.message : "")
+          setPublicConfig(null)
+          setPublicConfigError(error instanceof Error ? error.message : "")
         }
       })
 
@@ -115,7 +116,7 @@ export function LoginForm({
     }
   }
 
-  if (authOptionsError) {
+  if (publicConfigError) {
     return (
       <div className={cn("flex flex-col gap-6", className)} {...props}>
         <Card className="overflow-hidden p-0">
@@ -124,7 +125,7 @@ export function LoginForm({
             <div className="space-y-1">
               <h1 className="text-lg font-semibold">{t("auth.optionsLoadFailed")}</h1>
               <p className="text-sm text-muted-foreground">
-                {authOptionsError || t("api.requestFailed")}
+                {publicConfigError || t("api.requestFailed")}
               </p>
             </div>
           </CardContent>
@@ -133,7 +134,7 @@ export function LoginForm({
     )
   }
 
-  if (!authOptions) {
+  if (!publicConfig) {
     return (
       <div className={cn("flex flex-col gap-6", className)} {...props}>
         <Card className="overflow-hidden p-0">
@@ -206,7 +207,7 @@ export function LoginForm({
                       enabledProviderCount === 1 ? "grid-cols-1" : "grid-cols-2"
                     )}
                   >
-                    {authOptions.wxworkEnabled ? (
+                    {publicConfig.wxworkEnabled ? (
                       <Button
                         type="button"
                         variant="outline"
@@ -228,7 +229,7 @@ export function LoginForm({
                         <span>{t("auth.wxworkSignIn")}</span>
                       </Button>
                     ) : null}
-                    {authOptions.oidcEnabled ? (
+                    {publicConfig.oidcEnabled ? (
                       <Button
                         type="button"
                         variant="outline"

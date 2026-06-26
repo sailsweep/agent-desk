@@ -5,13 +5,11 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/text/language"
 )
 
 const (
-	LocaleZhCN    = "zh-CN"
-	LocaleEnUS    = "en-US"
-	DefaultLocale = LocaleEnUS
+	LocaleZhCN = "zh-CN"
+	LocaleEnUS = "en-US"
 )
 
 var supportedLocales = map[string]string{
@@ -22,6 +20,12 @@ var supportedLocales = map[string]string{
 	"en":      LocaleEnUS,
 	"en-us":   LocaleEnUS,
 	"en_us":   LocaleEnUS,
+}
+
+var DefaultLocale = LocaleZhCN
+
+func SetDefaultLocale(locale string) {
+	DefaultLocale = NormalizeLocale(locale)
 }
 
 func NormalizeLocale(value string) string {
@@ -35,19 +39,7 @@ func NormalizeLocale(value string) string {
 	return DefaultLocale
 }
 
-func ResolveRequestLocale(req *http.Request) string {
-	if req == nil {
-		return DefaultLocale
-	}
-	if locale := normalizeSupportedLocale(req.Header.Get("X-Locale")); locale != "" {
-		return locale
-	}
-	if locale := resolveAcceptLanguage(req.Header.Get("Accept-Language")); locale != "" {
-		return locale
-	}
-	if locale := normalizeSupportedLocale(req.URL.Query().Get("locale")); locale != "" {
-		return locale
-	}
+func ResolveRequestLocale(_ *http.Request) string {
 	return DefaultLocale
 }
 
@@ -56,32 +48,4 @@ func Middleware() gin.HandlerFunc {
 		SetLocale(ctx, ResolveRequestLocale(ctx.Request))
 		ctx.Next()
 	}
-}
-
-func normalizeSupportedLocale(value string) string {
-	key := strings.ToLower(strings.TrimSpace(value))
-	if key == "" {
-		return ""
-	}
-	if locale, ok := supportedLocales[key]; ok {
-		return locale
-	}
-	return ""
-}
-
-func resolveAcceptLanguage(value string) string {
-	tags, _, err := language.ParseAcceptLanguage(value)
-	if err != nil {
-		return ""
-	}
-	for _, tag := range tags {
-		if locale := normalizeSupportedLocale(tag.String()); locale != "" {
-			return locale
-		}
-		base, _ := tag.Base()
-		if locale := normalizeSupportedLocale(base.String()); locale != "" {
-			return locale
-		}
-	}
-	return ""
 }

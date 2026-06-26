@@ -19,7 +19,8 @@ type LoginResponse struct {
 	Roles       []string          `json:"roles"`
 }
 
-type AuthOptionsResponse struct {
-	WxWorkEnabled bool `json:"wxworkEnabled"`
-	OIDCEnabled   bool `json:"oidcEnabled"`
+type PublicConfigResponse struct {
+	Language      string `json:"language"`
+	WxWorkEnabled bool   `json:"wxworkEnabled"`
+	OIDCEnabled   bool   `json:"oidcEnabled"`
 }

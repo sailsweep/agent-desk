@@ -12,10 +12,10 @@ import {
 import {
   DEFAULT_LOCALE,
   type AppLocale,
-  readStoredLocale,
-  writeStoredLocale,
+  configureLocale,
 } from "@/i18n/config"
 import { translateMessage } from "@/i18n/messages"
+import { fetchPublicConfig } from "@/lib/api/config"
 
 type LocaleContextValue = {
   locale: AppLocale
@@ -34,11 +34,24 @@ export function AppI18nProvider({ children }: { children: ReactNode }) {
   const [isLocaleReady, setIsLocaleReady] = useState(false)
 
   useEffect(() => {
-    const storedLocale = readStoredLocale()
-    setLocaleState(storedLocale)
-    document.documentElement.lang = storedLocale
-    document.title = translateMessage(storedLocale, "app.metadataTitle")
-    setIsLocaleReady(true)
+    let cancelled = false
+
+    fetchPublicConfig()
+      .then((config) => configureLocale(config.language))
+      .catch(() => configureLocale(DEFAULT_LOCALE))
+      .then((configuredLocale) => {
+        if (cancelled) {
+          return
+        }
+        setLocaleState(configuredLocale)
+        document.documentElement.lang = configuredLocale
+        document.title = translateMessage(configuredLocale, "app.metadataTitle")
+        setIsLocaleReady(true)
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {
@@ -49,12 +62,7 @@ export function AppI18nProvider({ children }: { children: ReactNode }) {
     () => ({
       locale,
       t: (key, values) => translateMessage(locale, key, values),
-      setLocale: (nextLocale) => {
-        setLocaleState(nextLocale)
-        writeStoredLocale(nextLocale)
-        document.documentElement.lang = nextLocale
-        document.title = translateMessage(nextLocale, "app.metadataTitle")
-      },
+      setLocale: () => {},
     }),
     [locale]
   )

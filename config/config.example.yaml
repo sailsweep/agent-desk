@@ -1,3 +1,5 @@
+language: zh-CN
+
 server:
   port: 8083
   cors:

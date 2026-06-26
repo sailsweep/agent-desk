@@ -3,7 +3,6 @@
 import Image from "next/image"
 import Link from "next/link"
 
-import { LocaleSwitcher } from "@/components/locale-switcher"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAppLocale, useI18n } from "@/i18n/provider"
 import enUSMessages from "@/messages/en-US.json"
@@ -39,7 +38,7 @@ export function LegalDocumentPage({ type }: { type: LegalPageType }) {
   return (
     <main className="min-h-svh bg-muted px-6 py-8 md:px-10">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-        <header className="flex items-center justify-between gap-4">
+        <header className="flex items-center gap-4">
           <div className="flex items-center gap-2 font-medium">
             <Image
               src="/images/logo.svg"
@@ -51,7 +50,6 @@ export function LegalDocumentPage({ type }: { type: LegalPageType }) {
             />
             <span>{t("app.brand")}</span>
           </div>
-          <LocaleSwitcher />
         </header>
 
         <Card className="bg-card/95">

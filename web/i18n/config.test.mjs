@@ -25,7 +25,7 @@ async function loadConfig() {
 test("normalizes supported locale aliases", async () => {
   const { DEFAULT_LOCALE, normalizeLocale } = await loadConfig()
 
-  assert.equal(DEFAULT_LOCALE, "en-US")
+  assert.equal(DEFAULT_LOCALE, "zh-CN")
   assert.equal(normalizeLocale("zh-CN"), "zh-CN")
   assert.equal(normalizeLocale("zh_CN"), "zh-CN")
   assert.equal(normalizeLocale("zh"), "zh-CN")
@@ -35,26 +35,11 @@ test("normalizes supported locale aliases", async () => {
   assert.equal(normalizeLocale("fr-FR"), DEFAULT_LOCALE)
 })
 
-test("resolves browser locale from stored value before navigator languages", async () => {
-  const { resolveBrowserLocale } = await loadConfig()
+test("reads the configured locale without browser language detection", async () => {
+  const { configureLocale, readStoredLocale } = await loadConfig()
 
-  assert.equal(
-    resolveBrowserLocale({
-      storedLocale: "en-US",
-      navigatorLanguages: ["zh-CN"],
-    }),
-    "en-US"
-  )
-})
+  assert.equal(readStoredLocale(), "zh-CN")
 
-test("falls back through navigator languages", async () => {
-  const { resolveBrowserLocale } = await loadConfig()
-
-  assert.equal(
-    resolveBrowserLocale({
-      storedLocale: "",
-      navigatorLanguages: ["fr-FR", "en"],
-    }),
-    "en-US"
-  )
+  configureLocale("en-US")
+  assert.equal(readStoredLocale(), "en-US")
 })

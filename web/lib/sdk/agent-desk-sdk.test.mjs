@@ -50,14 +50,21 @@ async function loadSdk(config) {
   const sandbox = {
     URL,
     console,
-    fetch: async () => ({
-      json: async () => ({
-        success: true,
-        data: {
-          title: "\u5728\u7ebf\u5ba2\u670d",
-          themeColor: "#2563eb",
-        },
-      }),
+    fetch: async (url) => ({
+      json: async () =>
+        String(url).endsWith("/api/config")
+          ? {
+              success: true,
+              data: {
+                language: "en-US",
+              },
+            }
+          : {
+              success: true,
+              data: {
+                themeColor: "#2563eb",
+              },
+            },
     }),
     document: {
       body,
@@ -95,7 +102,7 @@ async function loadSdk(config) {
   return sandbox
 }
 
-async function flushPromises(count = 5) {
+async function flushPromises(count = 10) {
   for (let i = 0; i < count; i += 1) {
     await Promise.resolve()
   }
@@ -133,6 +140,7 @@ test("launcher click creates chat iframe with a freshly resolved userToken", asy
   )
 
   assert.ok(launcher)
+  assert.equal(launcher.children.at(-1)?.textContent, "Support")
 
   launcher.click()
   await flushPromises()

@@ -7,6 +7,7 @@ import type {
 type NormalizedAgentDeskConfig = AgentDeskConfig & {
   baseUrl: string
   channelId: string
+  language: string
   position: "left" | "right"
   themeColor: string
   width: string
@@ -38,22 +39,23 @@ type WidgetConfigResponse = {
   >>
 }
 
-function getWidgetLocale() {
-  try {
-    const stored = window.localStorage?.getItem("cs_ai_agent_locale")
-    const language = stored || document.documentElement.lang || window.navigator?.language || ""
-    return language.toLowerCase().startsWith("zh") ? "zh-CN" : "en-US"
-  } catch {
-    return "en-US"
+type PublicConfigResponse = {
+  success?: boolean
+  data?: {
+    language?: string
   }
 }
 
-function getDefaultWidgetTitle() {
-  return getWidgetLocale() === "en-US" ? "Support" : "\u5728\u7ebf\u5ba2\u670d"
+function normalizeWidgetLanguage(language: string | undefined) {
+  return String(language || "").toLowerCase().startsWith("en") ? "en-US" : "zh-CN"
 }
 
-function getLauncherText() {
-  return getWidgetLocale() === "en-US" ? "Support" : "\u5ba2\u670d"
+function getDefaultWidgetTitle(config?: NormalizedAgentDeskConfig | null) {
+  return normalizeWidgetLanguage(config?.language) === "en-US" ? "Support" : "\u5728\u7ebf\u5ba2\u670d"
+}
+
+function getLauncherText(config?: NormalizedAgentDeskConfig | null) {
+  return normalizeWidgetLanguage(config?.language) === "en-US" ? "Support" : "\u5ba2\u670d"
 }
 
 type FrameMessage =
@@ -65,8 +67,9 @@ type FrameMessage =
 (function () {
   const DEFAULT_CONFIG: Pick<
     NormalizedAgentDeskConfig,
-    "position" | "themeColor" | "width"
+    "language" | "position" | "themeColor" | "width"
   > = {
+    language: "zh-CN",
     position: "right",
     themeColor: "#0f6cbd",
     width: "380px",
@@ -103,6 +106,7 @@ type FrameMessage =
       delete merged.apiBaseUrl
     }
     merged.channelId = String(merged.channelId || "")
+    merged.language = normalizeWidgetLanguage(String(merged.language || "zh-CN"))
     if (merged.externalId) {
       merged.externalId = String(merged.externalId)
     }
@@ -205,6 +209,28 @@ type FrameMessage =
           return config
         }
         return mergeWidgetConfig(config, payload.data || {})
+      })
+      .catch(() => config)
+  }
+
+  function fetchPublicConfig(config: NormalizedAgentDeskConfig) {
+    const baseUrl = String(config.apiBaseUrl || config.baseUrl || "").replace(/\/$/, "")
+    if (!baseUrl || typeof fetch !== "function") {
+      return Promise.resolve(config)
+    }
+    return fetch(`${baseUrl}/api/config`, {
+      method: "GET",
+      cache: "no-store",
+    })
+      .then((response) => response.json() as Promise<PublicConfigResponse>)
+      .then((payload) => {
+        if (!payload || payload.success === false) {
+          return config
+        }
+        return normalizeConfig({
+          ...config,
+          language: payload.data?.language || config.language,
+        })
       })
       .catch(() => config)
   }
@@ -369,7 +395,7 @@ type FrameMessage =
 
     state.frame = document.createElement("iframe")
     state.frame.dataset.agentDeskWidget = "frame"
-    state.frame.title = state.config.title || getDefaultWidgetTitle()
+    state.frame.title = state.config.title || getDefaultWidgetTitle(state.config)
     state.frame.src = state.frameUrl.toString()
     applyFrameLayout()
     state.frame.style.display = "block"
@@ -435,7 +461,7 @@ type FrameMessage =
     const text = document.createElement("span")
     button.type = "button"
     button.dataset.agentDeskWidget = "launcher"
-    button.setAttribute("aria-label", config.title || getDefaultWidgetTitle())
+    button.setAttribute("aria-label", config.title || getDefaultWidgetTitle(config))
     icon.setAttribute("viewBox", "0 0 24 24")
     icon.setAttribute("fill", "none")
     icon.setAttribute("stroke", "currentColor")
@@ -451,7 +477,7 @@ type FrameMessage =
       path.setAttribute("d", pathData)
       icon.appendChild(path)
     })
-    text.textContent = getLauncherText()
+    text.textContent = getLauncherText(config)
     text.style.display = "block"
     button.style.position = "fixed"
     button.style.bottom = "24px"
@@ -504,15 +530,17 @@ type FrameMessage =
     }
 
     state.configLoading = true
-    fetchWidgetConfig(state.config).then((nextConfig) => {
-      state.configLoading = false
-      state.config = normalizeConfig(nextConfig)
-      if (state.button?.parentNode) {
-        state.button.parentNode.removeChild(state.button)
-        state.button = null
-      }
-      createLauncher()
-    })
+    fetchPublicConfig(state.config)
+      .then((nextConfig) => fetchWidgetConfig(nextConfig))
+      .then((nextConfig) => {
+        state.configLoading = false
+        state.config = normalizeConfig(nextConfig)
+        if (state.button?.parentNode) {
+          state.button.parentNode.removeChild(state.button)
+          state.button = null
+        }
+        createLauncher()
+      })
   }
 
   function destroy() {

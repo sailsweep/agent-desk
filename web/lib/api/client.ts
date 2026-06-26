@@ -1,5 +1,4 @@
 import { expireSession, readSession } from "@/lib/auth"
-import { readStoredLocale } from "@/i18n/config"
 import { translateCurrentMessage } from "@/i18n/messages"
 
 const API_BASE_URL =
@@ -50,9 +49,6 @@ function buildRequestHeaders(headers: HeadersInit | undefined, skipAuth?: boolea
   ) {
     authHeaders.set("Content-Type", "application/json")
   }
-  const locale = readStoredLocale()
-  authHeaders.set("Accept-Language", locale)
-  authHeaders.set("X-Locale", locale)
   return authHeaders
 }
 

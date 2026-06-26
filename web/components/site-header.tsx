@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react"
 import { usePathname } from "next/navigation"
 
-import { LocaleSwitcher } from "@/components/locale-switcher"
 import { PaletteToggle } from "@/components/palette-toggle"
 import { RealtimeConnectionStatus } from "@/components/realtime-connection-status"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -78,7 +77,6 @@ export function SiteHeader() {
           </div>
         </div>
         <div className="flex shrink-0 items-center justify-end gap-2">
-          <LocaleSwitcher />
           <PaletteToggle />
           <ThemeToggle />
         </div>

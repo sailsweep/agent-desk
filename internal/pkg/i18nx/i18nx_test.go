@@ -9,27 +9,24 @@ import (
 )
 
 func TestNormalizeLocale(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
 		name string
 		in   string
 		want string
 	}{
-		{name: "default for blank", in: "", want: LocaleEnUS},
+		{name: "default for blank", in: "", want: LocaleZhCN},
 		{name: "exact chinese", in: "zh-CN", want: LocaleZhCN},
 		{name: "underscore chinese", in: "zh_CN", want: LocaleZhCN},
 		{name: "short chinese", in: "zh", want: LocaleZhCN},
 		{name: "exact english", in: "en-US", want: LocaleEnUS},
 		{name: "underscore english", in: "en_US", want: LocaleEnUS},
 		{name: "short english", in: "en", want: LocaleEnUS},
-		{name: "unsupported falls back", in: "fr-FR", want: LocaleEnUS},
+		{name: "unsupported falls back", in: "fr-FR", want: LocaleZhCN},
 	}
 
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			if got := NormalizeLocale(tt.in); got != tt.want {
 				t.Fatalf("NormalizeLocale(%q) = %q, want %q", tt.in, got, tt.want)
 			}
@@ -37,36 +34,33 @@ func TestNormalizeLocale(t *testing.T) {
 	}
 }
 
-func TestResolveLocaleFromHeaders(t *testing.T) {
-	t.Parallel()
-
+func TestResolveLocaleUsesDefaultLocale(t *testing.T) {
+	SetDefaultLocale(LocaleZhCN)
 	req := httptest.NewRequest(http.MethodGet, "/api/dashboard/user/list", nil)
 	req.Header.Set("Accept-Language", "fr-FR, en-US;q=0.9, zh-CN;q=0.8")
 
-	if got := ResolveRequestLocale(req); got != LocaleEnUS {
-		t.Fatalf("ResolveRequestLocale() = %q, want %q", got, LocaleEnUS)
+	if got := ResolveRequestLocale(req); got != LocaleZhCN {
+		t.Fatalf("ResolveRequestLocale() = %q, want %q", got, LocaleZhCN)
 	}
 }
 
-func TestResolveLocalePrefersXLocale(t *testing.T) {
-	t.Parallel()
-
+func TestResolveLocaleIgnoresRequestLocaleHeaders(t *testing.T) {
+	SetDefaultLocale(LocaleZhCN)
 	req := httptest.NewRequest(http.MethodGet, "/api/dashboard/user/list", nil)
 	req.Header.Set("X-Locale", "en-US")
 	req.Header.Set("Accept-Language", "zh-CN")
 
-	if got := ResolveRequestLocale(req); got != LocaleEnUS {
-		t.Fatalf("ResolveRequestLocale() = %q, want %q", got, LocaleEnUS)
+	if got := ResolveRequestLocale(req); got != LocaleZhCN {
+		t.Fatalf("ResolveRequestLocale() = %q, want %q", got, LocaleZhCN)
 	}
 }
 
-func TestTranslateFallsBackToEnglish(t *testing.T) {
-	t.Parallel()
-
+func TestTranslateUsesConfiguredDefaultForUnsupportedLocale(t *testing.T) {
+	SetDefaultLocale(LocaleZhCN)
 	if got := TLocale(LocaleEnUS, "error.auth.expired"); got != "Your session has expired. Please sign in again." {
 		t.Fatalf("english translation = %q", got)
 	}
-	if got := TLocale("fr-FR", "error.auth.expired"); got != "Your session has expired. Please sign in again." {
+	if got := TLocale("fr-FR", "error.auth.expired"); got != "未登录或登录已过期" {
 		t.Fatalf("fallback translation = %q", got)
 	}
 }
@@ -143,6 +137,7 @@ func TestGetfFallsBackToKey(t *testing.T) {
 }
 
 func TestMiddlewareStoresLocale(t *testing.T) {
+	SetDefaultLocale(LocaleZhCN)
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	router.Use(Middleware())
@@ -159,7 +154,7 @@ func TestMiddlewareStoresLocale(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusOK)
 	}
-	if got := recorder.Body.String(); got != LocaleEnUS {
-		t.Fatalf("middleware locale = %q, want %q", got, LocaleEnUS)
+	if got := recorder.Body.String(); got != LocaleZhCN {
+		t.Fatalf("middleware locale = %q, want %q", got, LocaleZhCN)
 	}
 }

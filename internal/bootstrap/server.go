@@ -26,6 +26,7 @@ import (
 
 func NewServer() (*gin.Engine, error) {
 	cfg := config.Current()
+	i18nx.SetDefaultLocale(cfg.LanguageOrDefault())
 
 	gin.SetMode(gin.ReleaseMode)
 	printBanner()
@@ -156,6 +157,7 @@ func addRouter(app *gin.Engine) {
 
 	apiGroup := app.Group("/api")
 	apiGroup.GET("/health", api.Health)
+	apiGroup.GET("/config", api.PublicConfig)
 	registerApiAuthRoutes(apiGroup.Group("/auth"))
 	registerApiChannelRoutes(apiGroup.Group("/channel"))
 	registerApiCustomerRoutes(apiGroup.Group("/customer"))

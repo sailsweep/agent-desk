@@ -4,6 +4,7 @@ import (
 	"agent-desk/internal/ai/rag/vectordb"
 	"agent-desk/internal/oidcclient"
 	"agent-desk/internal/pkg/config"
+	"agent-desk/internal/pkg/i18nx"
 	"agent-desk/internal/pkg/logx"
 	"agent-desk/internal/services/cronx"
 	"agent-desk/internal/wxwork"
@@ -20,6 +21,7 @@ func Init(configPath string) error {
 		return err
 	}
 	config.SetCurrent(cfg)
+	i18nx.SetDefaultLocale(cfg.LanguageOrDefault())
 
 	logx.Init(logx.Config{
 		Level:     cfg.Logger.Level,

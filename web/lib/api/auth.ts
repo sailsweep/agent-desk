@@ -6,17 +6,6 @@ export type LoginRequest = {
   password: string
 }
 
-export type AuthOptions = {
-  wxworkEnabled: boolean
-  oidcEnabled: boolean
-}
-
-export async function fetchAuthOptions() {
-  return request<AuthOptions>("/api/auth/options", {
-    skipAuth: true,
-  })
-}
-
 export async function loginWithPassword(payload: LoginRequest) {
   const data = await request<AuthSession>("/api/auth/login", {
     method: "POST",

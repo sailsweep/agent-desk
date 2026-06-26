@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 import { ChangePasswordDialog } from "@/components/change-password-dialog"
-import { LocaleSwitcher } from "@/components/locale-switcher"
 import { PaletteToggle } from "@/components/palette-toggle"
 import { RealtimeConnectionStatus } from "@/components/realtime-connection-status"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -36,7 +35,6 @@ export function WorkbenchHeader() {
           <div className="hidden sm:block">
             <RealtimeConnectionStatus status={realtimeStatus} compact />
           </div>
-          <LocaleSwitcher />
           <PaletteToggle />
           <ThemeToggle />
           <WorkbenchUserMenu />
