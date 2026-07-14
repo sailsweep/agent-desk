@@ -93,6 +93,7 @@ help:
 	@echo "  make enums      Generate frontend enums"
 	@echo "  make help       Show this help"
 
+ifeq ($(LANCEDB),1)
 dev: _lancedb-check
 	@AGENT_DESK_SERVER_PORT="$(DEV_PORT)" CGO_ENABLED=1 CGO_CFLAGS="$(LANCEDB_CGO_CFLAGS)" CGO_LDFLAGS="$(LANCEDB_CGO_LDFLAGS)" \
 		$(GO) run -tags "dev lancedb" $(MAIN) & \
@@ -108,6 +109,23 @@ dev: _lancedb-check
 	done; \
 	echo "Server is ready; starting web dev server..."; \
 	$(MAKE) _web-dev
+else
+dev:
+	@AGENT_DESK_SERVER_PORT="$(DEV_PORT)" \
+		$(GO) run -tags "dev" $(MAIN) & \
+	server_pid=$$!; \
+	trap 'kill $$server_pid 2>/dev/null || true' EXIT INT TERM; \
+	echo "Waiting for server at $(DEV_SERVER_URL)..."; \
+	until curl -fsS "$(DEV_SERVER_URL)" >/dev/null 2>&1; do \
+		if ! kill -0 $$server_pid 2>/dev/null; then \
+			wait $$server_pid; \
+			exit $$?; \
+		fi; \
+		sleep 1; \
+	done; \
+	echo "Server is ready; starting web dev server..."; \
+	$(MAKE) _web-dev
+endif
 
 ifeq ($(LANCEDB),1)
 build: _lancedb-check _prepare-dist _web-build-spa
