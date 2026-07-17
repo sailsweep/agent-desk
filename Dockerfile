@@ -9,7 +9,11 @@ WORKDIR /src/web
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN corepack enable && corepack prepare pnpm@10.30.2 --activate
+RUN if command -v corepack >/dev/null 2>&1; then \
+		corepack enable && corepack prepare pnpm@10.30.2 --activate; \
+	else \
+		npm install -g pnpm@10.30.2; \
+	fi
 COPY web/package.json web/pnpm-lock.yaml web/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
@@ -49,7 +53,7 @@ COPY config/config.example.yaml /ops/app/config.yaml
 RUN chmod +x /ops/app/agent-desk
 
 EXPOSE 8083
-VOLUME ["/ops/app/data"]
+VOLUME ["/ops/app/data", "/ops/app/logs", "/ops/app/config.yaml"]
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 	CMD wget -qO- http://127.0.0.1:8083/api/health >/dev/null || exit 1

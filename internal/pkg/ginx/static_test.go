@@ -53,6 +53,54 @@ func TestDirHandlerWithSPA(t *testing.T) {
 	}
 }
 
+func TestDirHandlerServesExportedHTMLForExtensionlessRoute(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "index.html"), []byte("<html>spa</html>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "dashboard.html"), []byte("<html>dashboard</html>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "dashboard"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "dashboard", "__next.dashboard.txt"), []byte("rsc payload"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "dashboard", "login.html"), []byte("<html>login</html>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	handler := DirHandler(http.Dir(root), DirOptions{
+		ShowList:  false,
+		SPA:       true,
+		IndexName: "index.html",
+	})
+
+	tests := []struct {
+		path     string
+		wantBody string
+	}{
+		{path: "/dashboard", wantBody: "<html>dashboard</html>"},
+		{path: "/dashboard/login", wantBody: "<html>login</html>"},
+	}
+
+	for _, tt := range tests {
+		rec := httptest.NewRecorder()
+		ctx, _ := gin.CreateTestContext(rec)
+		ctx.Request = httptest.NewRequest(http.MethodGet, tt.path, nil)
+
+		handler(ctx)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s status=%d want %d; body=%q", tt.path, rec.Code, http.StatusOK, rec.Body.String())
+		}
+		if strings.TrimSpace(rec.Body.String()) != tt.wantBody {
+			t.Fatalf("%s body=%q want %q", tt.path, strings.TrimSpace(rec.Body.String()), tt.wantBody)
+		}
+	}
+}
+
 func TestStaticFilesDoesNotOpenDirectories(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "file.txt"), []byte("content"), 0o644); err != nil {

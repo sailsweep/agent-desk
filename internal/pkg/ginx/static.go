@@ -122,7 +122,17 @@ func DirHandler(fileSystem http.FileSystem, options DirOptions) gin.HandlerFunc 
 						return
 					}
 				}
-				if !options.ShowList {
+				if path.Ext(name) == "" {
+					served, err := serveRegularFile(ctx, fileSystem, name+".html")
+					if err != nil {
+						ctx.AbortWithStatus(http.StatusInternalServerError)
+						return
+					}
+					if served {
+						return
+					}
+				}
+				if !options.ShowList && !options.SPA {
 					ctx.AbortWithStatus(http.StatusNotFound)
 					return
 				}
@@ -133,6 +143,15 @@ func DirHandler(fileSystem http.FileSystem, options DirOptions) gin.HandlerFunc 
 		} else if !os.IsNotExist(err) {
 			ctx.AbortWithStatus(http.StatusInternalServerError)
 			return
+		} else if path.Ext(name) == "" {
+			served, err := serveRegularFile(ctx, fileSystem, name+".html")
+			if err != nil {
+				ctx.AbortWithStatus(http.StatusInternalServerError)
+				return
+			}
+			if served {
+				return
+			}
 		}
 
 		if options.SPA && options.IndexName != "" {
@@ -158,6 +177,27 @@ func DirHandler(fileSystem http.FileSystem, options DirOptions) gin.HandlerFunc 
 
 		ctx.AbortWithStatus(http.StatusNotFound)
 	}
+}
+
+func serveRegularFile(ctx *gin.Context, fileSystem http.FileSystem, name string) (bool, error) {
+	file, err := fileSystem.Open(name)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	defer file.Close()
+
+	info, err := file.Stat()
+	if err != nil {
+		return false, err
+	}
+	if info.IsDir() {
+		return false, nil
+	}
+	serveFile(ctx, name, file, info)
+	return true, nil
 }
 
 func serveFile(ctx *gin.Context, name string, file http.File, info os.FileInfo) {
