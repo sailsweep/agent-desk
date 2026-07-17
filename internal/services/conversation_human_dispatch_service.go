@@ -20,8 +20,8 @@ import (
 var ConversationHumanDispatchService = newConversationHumanDispatchService()
 
 var (
-	HandoffWaitingMessage  = HandoffWaitingMessageForLocale(i18nx.DefaultLocale)
-	HandoffOffHoursMessage = HandoffOffHoursMessageForLocale(i18nx.DefaultLocale)
+	HandoffWaitingMessage  = HandoffWaitingMessageForLocale(i18nx.LocaleZhCN)
+	HandoffOffHoursMessage = HandoffOffHoursMessageForLocale(i18nx.LocaleZhCN)
 )
 
 func HandoffWaitingMessageForLocale(locale string) string {

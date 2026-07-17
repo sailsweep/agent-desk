@@ -38,7 +38,11 @@ func (f *ChatModelFactory) Build(ctx context.Context, aiConfig models.AIConfig) 
 	if extraFields := providerExtraFields(aiConfig); len(extraFields) > 0 {
 		conf.ExtraFields = extraFields
 	}
-	return openai.NewChatModel(ctx, conf)
+	chatModel, err := openai.NewChatModel(ctx, conf)
+	if err != nil {
+		return nil, err
+	}
+	return newUpstreamLoggingChatModel(chatModel, aiConfig), nil
 }
 
 func isAzureOpenAIBaseURL(baseURL string) bool {

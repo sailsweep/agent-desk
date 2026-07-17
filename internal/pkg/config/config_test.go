@@ -36,6 +36,35 @@ func TestLoadReadsCORSAllowedOrigins(t *testing.T) {
 	}
 }
 
+func TestLoadReadsAIUpstreamLogConfig(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	content := []byte(`aiUpstreamLog:
+  enabled: true
+  dir: .codex/logs
+  filename: ai-upstream.log
+  maxStringRunes: 1200
+  maxArrayItems: 20
+`)
+	if err := os.WriteFile(path, content, 0600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	if !cfg.AIUpstreamLog.Enabled {
+		t.Fatal("expected AIUpstreamLog.Enabled=true")
+	}
+	if cfg.AIUpstreamLog.Dir != ".codex/logs" || cfg.AIUpstreamLog.Filename != "ai-upstream.log" {
+		t.Fatalf("unexpected upstream log path config: %+v", cfg.AIUpstreamLog)
+	}
+	if cfg.AIUpstreamLog.MaxStringRunes != 1200 || cfg.AIUpstreamLog.MaxArrayItems != 20 {
+		t.Fatalf("unexpected upstream log limits: %+v", cfg.AIUpstreamLog)
+	}
+}
+
 func TestLoadOverridesValuesFromEnvironment(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.yaml")
 	content := []byte(`server:

@@ -15,6 +15,9 @@ func buildFAQChunkModel(knowledgeBase models.KnowledgeBase, faq models.Knowledge
 	chunkID := buildKnowledgeFAQChunkVectorID(knowledgeBase.ID, faq.ID, 0)
 	now := time.Now()
 	sectionPath := loadKnowledgeDirectoryPath(faq.DirectoryID)
+	if sectionPath == "" {
+		sectionPath = extractFAQCategoryPathFromRemark(faq.Remark)
+	}
 	return models.KnowledgeChunk{
 		KnowledgeBaseID: knowledgeBase.ID,
 		FaqID:           faq.ID,

@@ -332,10 +332,12 @@ func (s *authService) loadUserRoles(tx *gorm.DB, userID int64) ([]models.Role, e
 
 func (s *authService) loadUserPermissionCodes(tx *gorm.DB, userID int64) ([]string, error) {
 	permissionRows := make([]struct {
-		Code string
+		Code   string
+		SortNo int
+		ID     int64
 	}, 0)
 	db := tx.Table("t_permission AS p").
-		Select("DISTINCT p.code").
+		Select("DISTINCT p.code, p.sort_no, p.id").
 		Joins("JOIN t_role_permission AS rp ON rp.permission_id = p.id").
 		Joins("JOIN t_user_role AS ur ON ur.role_id = rp.role_id").
 		Where("ur.user_id = ?", userID).

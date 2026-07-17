@@ -19,6 +19,7 @@ type RetrieveResult struct {
 	SectionPath     string  `json:"sectionPath"`
 	Content         string  `json:"content"`
 	Score           float32 `json:"score"`
+	RerankScore     float64 `json:"rerankScore"`
 	ChunkType       string  `json:"chunkType"`
 }
 

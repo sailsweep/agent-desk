@@ -112,32 +112,6 @@ func truncateForLog(text string, limit int) string {
 	return string(runes[:limit]) + "..."
 }
 
-func (s *retrieve) RetrieveWithRerank(ctx context.Context, req RetrieveRequest, rerankLimit int) ([]RetrieveResult, error) {
-	results, err := s.Retrieve(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(results) <= rerankLimit {
-		return results, nil
-	}
-
-	rerankedResults, err := s.rerank(ctx, req.Query, results, rerankLimit)
-	if err != nil {
-		slog.Warn("Rerank failed, returning original results", "error", err)
-		if len(results) > rerankLimit {
-			return results[:rerankLimit], nil
-		}
-		return results, nil
-	}
-
-	return rerankedResults, nil
-}
-
-func (s *retrieve) rerank(ctx context.Context, query string, results []RetrieveResult, limit int) ([]RetrieveResult, error) {
-	return Rerank.RerankResults(ctx, query, results, limit)
-}
-
 func (s *retrieve) GetKnowledgeBaseStats(ctx context.Context, knowledgeBaseID int64) (*KnowledgeBaseStats, error) {
 	knowledgeBase := repositories.KnowledgeBaseRepository.Get(sqls.DB(), knowledgeBaseID)
 	if knowledgeBase == nil {

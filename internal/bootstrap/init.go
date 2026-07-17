@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"agent-desk/internal/ai"
 	"agent-desk/internal/ai/rag/vectordb"
 	"agent-desk/internal/oidcclient"
 	"agent-desk/internal/pkg/config"
@@ -27,6 +28,13 @@ func Init(configPath string) error {
 		Level:     cfg.Logger.Level,
 		Format:    cfg.Logger.Format,
 		AddSource: cfg.Logger.AddSource,
+	})
+	ai.InitUpstreamLogger(ai.UpstreamLogConfig{
+		Enabled:        cfg.AIUpstreamLog.Enabled,
+		Dir:            cfg.AIUpstreamLog.Dir,
+		Filename:       cfg.AIUpstreamLog.Filename,
+		MaxStringRunes: cfg.AIUpstreamLog.MaxStringRunes,
+		MaxArrayItems:  cfg.AIUpstreamLog.MaxArrayItems,
 	})
 
 	if _, err := InitDB(cfg.DB); err != nil {

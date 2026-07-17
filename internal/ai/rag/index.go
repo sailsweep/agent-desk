@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"agent-desk/internal/ai"
@@ -290,6 +291,9 @@ func (s *index) RebuildKnowledgeBaseIndex(ctx context.Context, knowledgeBaseID i
 
 func buildFAQChunkContent(faq models.KnowledgeFAQ) string {
 	parts := []string{fmt.Sprintf("问题：%s", faq.Question)}
+	if categoryPath := extractFAQCategoryPathFromRemark(faq.Remark); categoryPath != "" {
+		parts = append(parts, fmt.Sprintf("分类路径：%s", categoryPath))
+	}
 	var similarQuestions []string
 	if faq.SimilarQuestions != "" {
 		_ = json.Unmarshal([]byte(faq.SimilarQuestions), &similarQuestions)
@@ -309,6 +313,24 @@ func buildFAQChunkContent(faq models.KnowledgeFAQ) string {
 		content += part
 	}
 	return content
+}
+
+func extractFAQCategoryPathFromRemark(remark string) string {
+	for _, line := range strings.Split(strings.ReplaceAll(remark, "\r\n", "\n"), "\n") {
+		line = strings.TrimSpace(strings.ReplaceAll(line, "\r", ""))
+		if line == "" {
+			continue
+		}
+		value, ok := strings.CutPrefix(line, "分类：")
+		if !ok {
+			value, ok = strings.CutPrefix(line, "分类:")
+		}
+		if !ok {
+			continue
+		}
+		return strings.TrimSpace(value)
+	}
+	return ""
 }
 
 func joinSimilarQuestions(items []string) string {

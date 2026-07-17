@@ -13,6 +13,7 @@ type Config struct {
 	Server          ServerConfig          `yaml:"server"`
 	DB              DBConfig              `yaml:"db"`
 	Logger          LoggerConfig          `yaml:"logger"`
+	AIUpstreamLog   AIUpstreamLogConfig   `yaml:"aiUpstreamLog"`
 	Auth            AuthConfig            `yaml:"auth"`
 	Storage         StorageConfig         `yaml:"storage"`
 	VectorDB        VectorDBConfig        `yaml:"vectorDB"`
@@ -72,6 +73,14 @@ type LoggerConfig struct {
 	Level     string `yaml:"level"`
 	Format    string `yaml:"format"`
 	AddSource bool   `yaml:"addSource"`
+}
+
+type AIUpstreamLogConfig struct {
+	Enabled        bool   `yaml:"enabled"`
+	Dir            string `yaml:"dir"`
+	Filename       string `yaml:"filename"`
+	MaxStringRunes int    `yaml:"maxStringRunes"`
+	MaxArrayItems  int    `yaml:"maxArrayItems"`
 }
 
 type AuthConfig struct {

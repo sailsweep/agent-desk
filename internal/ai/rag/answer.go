@@ -3,6 +3,7 @@ package rag
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -47,6 +48,7 @@ func (s *answer) DebugSearch(ctx context.Context, req request.KnowledgeSearchReq
 			SectionPath:     item.SectionPath,
 			Content:         item.Content,
 			Score:           float64(item.Score),
+			RerankScore:     item.RerankScore,
 		})
 	}
 
@@ -98,6 +100,7 @@ func (s *answer) DebugAnswer(ctx context.Context, req request.KnowledgeAnswerReq
 			SectionPath:     item.SectionPath,
 			Content:         item.Content,
 			Score:           score,
+			RerankScore:     item.RerankScore,
 		})
 	}
 	citations := buildKnowledgeCitations(hits, 3)
@@ -224,6 +227,7 @@ func buildContextHits(results []RetrieveResult) []response.KnowledgeSearchResult
 			SectionPath:     item.SectionPath,
 			Content:         item.Content,
 			Score:           float64(item.Score),
+			RerankScore:     item.RerankScore,
 		})
 	}
 	return hits
@@ -293,14 +297,21 @@ func (s *answer) retrieve(req request.KnowledgeSearchRequest, ctx context.Contex
 	defaultRerankLimit := resolveDefaultRerankLimit(knowledgeBases)
 	rerankLimit := resolveRerankLimit(req.RerankLimit, defaultRerankLimit)
 	if rerankLimit > 0 && len(results) > rerankLimit {
-		return Retrieve.RetrieveWithRerank(ctx, RetrieveRequest{
-			KnowledgeBaseIDs: req.KnowledgeBaseIDs,
-			Query:            req.Question,
-			TopK:             req.TopK,
-			ScoreThreshold:   req.ScoreThreshold,
-		}, rerankLimit)
+		rerankedResults, err := Rerank.RerankResults(ctx, req.Question, results, rerankLimit)
+		if err != nil {
+			slog.Warn("Rerank failed, returning original results", "error", err)
+			return limitRetrieveResults(results, rerankLimit), nil
+		}
+		return rerankedResults, nil
 	}
 	return results, nil
+}
+
+func limitRetrieveResults(results []RetrieveResult, limit int) []RetrieveResult {
+	if limit <= 0 || len(results) <= limit {
+		return results
+	}
+	return results[:limit]
 }
 
 func (s *answer) loadKnowledgeBases(knowledgeBaseIDs []int64) []models.KnowledgeBase {

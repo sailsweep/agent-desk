@@ -45,6 +45,37 @@ func TestBuildFAQChunkModel(t *testing.T) {
 	}
 }
 
+func TestBuildFAQChunkContentIncludesCategoryPathFromRemark(t *testing.T) {
+	faq := models.KnowledgeFAQ{
+		Question: "怎么申请报销？",
+		Answer:   "飞书首页搜索汇联易，新建报销单后提交。",
+		Remark: "来源：财务知识库 第23行\n" +
+			"分类：财务类 / 报销 / 报销咨询\n" +
+			"更新时间：2026-06-26",
+	}
+
+	content := buildFAQChunkContent(faq)
+	if !strings.Contains(content, "分类路径：财务类 / 报销 / 报销咨询") {
+		t.Fatalf("expected category path in content, got %q", content)
+	}
+}
+
+func TestBuildFAQChunkModelFallsBackToRemarkCategoryPath(t *testing.T) {
+	knowledgeBase := models.KnowledgeBase{ID: 11}
+	faq := models.KnowledgeFAQ{
+		ID:       22,
+		Question: "怎么申请报销？",
+		Remark: "来源：财务知识库 第23行\n" +
+			"分类：财务类 / 报销 / 报销咨询\n" +
+			"更新时间：2026-06-26",
+	}
+
+	chunk, _ := buildFAQChunkModel(knowledgeBase, faq, "问题：怎么申请报销？\n回答：飞书首页搜索汇联易。")
+	if chunk.SectionPath != "财务类 / 报销 / 报销咨询" {
+		t.Fatalf("expected section path from remark category, got %q", chunk.SectionPath)
+	}
+}
+
 func TestNormalizeContextResultsMergesAndDedupes(t *testing.T) {
 	results := normalizeContextResults([]RetrieveResult{
 		{DocumentID: 1, ChunkNo: 1, SectionPath: "A", Content: "第一段", Score: 0.7},
